@@ -1,0 +1,134 @@
+@font-face {
+  font-family: Stem;
+  src: url('./assets/fonts/Stem-Regular.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Stem;
+  src: url('./assets/fonts/Stem-Medium.otf') format('opentype');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Stem;
+  src: url('./assets/fonts/Stem-Bold.otf') format('opentype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light dark;
+  font: 16px/1.55 Inter, system-ui, sans-serif;
+  background: Canvas;
+  color: CanvasText;
+  --border: color-mix(in srgb, CanvasText 20%, transparent);
+  --row-border: color-mix(in srgb, CanvasText 13%, transparent);
+}
+
+body {
+  margin: 0;
+}
+
+.catalog {
+  max-width: 64rem;
+  margin-inline: auto;
+  padding: 3.5rem 1.25rem;
+}
+
+.catalog header {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.catalog h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(2.1rem, 6vw, 3.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+}
+
+.catalog h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.65rem;
+}
+
+.catalog nav,
+.catalog .paint-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.1rem;
+}
+
+.catalog section {
+  margin-block: 2.5rem;
+  scroll-margin-block-start: 1rem;
+}
+
+.catalog .section-meta {
+  margin: 0 0 1rem;
+}
+
+.catalog details {
+  margin-block: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+}
+
+.catalog summary {
+  padding: 0.7rem 1rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.catalog summary span {
+  margin-inline-start: 0.4rem;
+  font-weight: normal;
+  opacity: 0.72;
+}
+
+.catalog .table-scroll {
+  overflow-x: auto;
+}
+
+.catalog table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.catalog th,
+.catalog td {
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--row-border);
+  text-align: start;
+}
+
+.catalog thead th {
+  background: color-mix(in srgb, CanvasText 5%, transparent);
+  white-space: nowrap;
+}
+
+.catalog tbody th {
+  font-weight: normal;
+  min-width: 11rem;
+}
+
+.catalog .swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  white-space: nowrap;
+}
+
+.catalog .swatch-sample {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.2rem;
+}

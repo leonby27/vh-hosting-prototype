@@ -1,0 +1,521 @@
+.antivirus-intro {
+  min-block-size: 358px;
+}
+
+.antivirus-intro .sites-promo-art {
+  inset: -25px -46px auto auto;
+  width: 333px;
+  height: 333px;
+  transform: none;
+}
+
+.antivirus-intro .sites-promo-art img {
+  inset: 0;
+  width: 100%;
+  object-fit: contain;
+}
+
+.antivirus-intro-note:not([hidden]) {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-block-start: 16px;
+  color: var(--hosting-text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.antivirus-intro-note img {
+  flex: none;
+}
+
+.antivirus-plans {
+  --antivirus-recommendation-color: var(--hosting-primary-back);
+  display: grid;
+  gap: 12px;
+}
+
+.antivirus-plans h2 {
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.antivirus-plan-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.antivirus-plan-dots {
+  display: none;
+}
+
+.antivirus-plan {
+  position: relative;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  gap: 0;
+  min-inline-size: 0;
+  border-radius: 12px;
+  background: var(--hosting-surface);
+  box-shadow: 0 5px 20px rgb(27 54 74 / 3%);
+  cursor: pointer;
+}
+
+.antivirus-plan:has(:checked) {
+  outline: 2px solid var(--hosting-link-text);
+  outline-offset: -1px;
+}
+
+.hosting-shell[data-theme="dark"] .antivirus-plan:has(:checked):not(:has(:focus-visible)) {
+  outline-color: var(--antivirus-recommendation-color);
+}
+
+.antivirus-plan:has(:focus-visible) {
+  outline: 2px solid var(--hosting-focus);
+  outline-offset: 2px;
+}
+
+.antivirus-plan-summary,
+.antivirus-plan-details {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+.antivirus-plan-summary {
+  padding-block-start: 20px;
+}
+
+.antivirus-plan-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-block-end: 16px;
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.antivirus-plan-heading strong {
+  font-weight: 500;
+}
+
+.antivirus-plan-heading input {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  border: 0;
+  flex: none;
+  background: var(--antivirus-radio) center / auto no-repeat;
+  cursor: pointer;
+}
+
+.antivirus-rate {
+  font-size: 28px;
+  line-height: 32px;
+}
+
+.antivirus-plan-description,
+.antivirus-plan-details p {
+  color: var(--hosting-text);
+}
+
+.antivirus-plan-details {
+  border-block-start: 1px solid var(--hosting-line);
+}
+
+.antivirus-plan-details ul {
+  display: grid;
+  gap: 12px;
+  padding: 4px 0 0;
+  list-style: none;
+}
+
+.antivirus-plan-details li {
+  display: flex;
+  align-items: start;
+  gap: 4px;
+}
+
+.antivirus-plan-details li p {
+  margin-block-start: 2px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.antivirus-recommendation {
+  position: absolute;
+  inset: 0 0 auto auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 0 12px 0 12px;
+  background: var(--antivirus-recommendation-color);
+  color: white;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.antivirus-active .sites-active-count,
+.antivirus-active .sites-active-pay {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.antivirus-active[data-threats] .sites-active-count {
+  color: #f17d75;
+}
+
+.antivirus-payment-label {
+  position: relative;
+  flex: none;
+  overflow: clip;
+  white-space: nowrap;
+}
+
+.antivirus-payment-measure {
+  display: inline-block;
+  visibility: hidden;
+}
+
+.antivirus-payment-copy {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  opacity: 0;
+  transition: opacity var(--hosting-motion-reveal) ease-out;
+}
+
+.antivirus-payment-label[data-renew="false"] [data-renew="false"],
+.antivirus-payment-label[data-renew="true"] [data-renew="true"] {
+  opacity: 1;
+}
+
+@container sites (max-width: 560px) {
+  .antivirus-active .sites-active-buttons > [role="switch"] { order: 0; }
+}
+
+.sites-page .antivirus-active[data-threats] .sites-active-pay {
+  background: white;
+  color: #1b364a;
+}
+
+.sites-page .antivirus-active[data-threats] .sites-active-pay:hover {
+  background: #e8ebef;
+}
+
+.sites-page .sites-active-menu-panel .antivirus-disable-action {
+  margin-block-start: 4px;
+  border-block-start: 1px solid var(--hosting-line);
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+  color: var(--hosting-plan-danger);
+}
+
+.sites-antivirus .sites-dns-column {
+  width: max(140px, 43cqi);
+}
+
+.antivirus-linked-domains {
+  --antivirus-domain-entry-height: 28px;
+  --antivirus-domains-collapse-height: 24px;
+  padding-inline-end: 8px;
+  color: color-mix(in srgb, var(--hosting-title) 60%, var(--hosting-text));
+  font-weight: 400;
+}
+
+.sites-mobile-dns .antivirus-linked-domains {
+  color: var(--hosting-secondary);
+}
+
+.antivirus-domains-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-block-size: 26px;
+}
+
+.antivirus-domains-summary > span:first-child,
+.antivirus-domain-entry > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.antivirus-domains-count,
+.antivirus-domains-trigger {
+  flex: none;
+}
+
+.sites-page .antivirus-domains-trigger {
+  box-sizing: border-box;
+  min-block-size: 26px;
+  padding: 3px 8px;
+  border: 1px solid var(--hosting-line);
+  border-radius: 8px;
+  color: inherit;
+  font-size: 14px;
+  line-height: 18px;
+  transition: background-color var(--hosting-motion-color) ease;
+}
+
+.sites-page .antivirus-domains-trigger:hover {
+  background: var(--hosting-card-surface);
+}
+
+.sites-page .antivirus-domains-collapse {
+  block-size: var(--antivirus-domains-collapse-height);
+  color: var(--hosting-link-text);
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.antivirus-domains-collapse:hover {
+  text-decoration: underline;
+}
+
+.sites-page .antivirus-domains-list {
+  padding: 1px 0 0;
+  list-style: none;
+}
+
+.antivirus-domain-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-block-size: var(--antivirus-domain-entry-height);
+}
+
+.antivirus-domains-summary .antivirus-domain-entry {
+  min-block-size: 26px;
+}
+
+.antivirus-domain-disclosure[data-expanded="false"] .antivirus-domains-summary .antivirus-domain-link {
+  display: none;
+}
+
+.antivirus-domain-entry:is(:hover, :focus-within) {
+  color: var(--hosting-title);
+}
+
+.antivirus-domain-link {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 20px;
+  block-size: 20px;
+  box-sizing: border-box;
+  border: 1px solid var(--hosting-line);
+  border-radius: 8px;
+  background: var(--hosting-surface);
+  transition: opacity var(--hosting-motion-fast) ease, background-color var(--hosting-motion-color) ease;
+}
+
+.antivirus-domain-link .sites-icon img {
+  width: 14px;
+  height: 14px;
+}
+
+.antivirus-domain-link:hover {
+  background: var(--hosting-card-surface);
+}
+
+.antivirus-domain-tooltip {
+  position: absolute;
+  z-index: 2;
+  inset-block-end: calc(100% + 8px);
+  inset-inline-start: 50%;
+  translate: -50% 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--hosting-tooltip-back, #1b364a);
+  color: white;
+  font-size: 13px;
+  line-height: 16px;
+  white-space: nowrap;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--hosting-motion-fast) ease, visibility 0s var(--hosting-motion-fast);
+}
+
+.antivirus-domain-link:is(:hover, :focus-visible) .antivirus-domain-tooltip {
+  visibility: visible;
+  opacity: 1;
+  transition-delay: 300ms;
+}
+
+@media (hover: hover) {
+  .antivirus-domain-link {
+    opacity: 0;
+  }
+
+  .antivirus-domain-entry:is(:hover, :focus-within) .antivirus-domain-link {
+    opacity: 1;
+  }
+}
+
+@container sites (width > 560px) {
+  .sites-antivirus .sites-domain-row:has(.antivirus-domain-disclosure) > * {
+    padding-block: 15px 14px;
+    vertical-align: top;
+  }
+
+  .sites-antivirus .sites-domain-row:has(.antivirus-domain-disclosure) > .sites-domain-check {
+    padding-block-start: 18px;
+  }
+
+  .sites-antivirus .sites-domain-row:has(.antivirus-domain-disclosure) > .sites-domain-name {
+    padding-block-start: 20px;
+  }
+
+  .sites-antivirus .sites-domain-row:has(.antivirus-domain-disclosure) > .sites-domain-status {
+    padding-block-start: 16px;
+  }
+
+  .sites-antivirus .sites-domain-row:not([data-selected]):has(.antivirus-domain-disclosure[data-expanded="true"]) {
+    --sites-domain-row-background: var(--hosting-surface);
+    --sites-domain-badge-background: var(--hosting-card-surface);
+  }
+}
+
+.sites-domain-row[data-status="threat"] .sites-domain-status .sites-domain-badge {
+  background: var(--hosting-plan-danger);
+  color: white;
+}
+
+.sites-domain-row[data-status="missing"] .sites-domain-status .sites-domain-badge {
+  background: var(--hosting-plan-warning-back);
+  color: var(--hosting-network-warning);
+}
+
+.antivirus-report ul {
+  display: grid;
+  gap: 8px;
+  margin-block: 16px;
+  padding: 0;
+  list-style: none;
+  max-block-size: min(350px, 45vh);
+  overflow: auto;
+}
+
+.antivirus-report li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-block-end: 6px;
+  border-block-end: 1px solid var(--hosting-line);
+}
+
+:is(#antivirus-sites-title, #antivirus-plans-title, #antivirus-checkout-title) {
+  scroll-margin-block-start: 16px;
+}
+
+.hosting-shell[data-compact="true"] :is(#antivirus-sites-title, #antivirus-plans-title, #antivirus-checkout-title) {
+  scroll-margin-block-start: calc(var(--hosting-header-height) + 16px);
+}
+
+@container sites (max-width: 875px) {
+  .antivirus-intro .sites-promo-art {
+    inset-inline-end: -82px;
+    width: 290px;
+    height: 290px;
+  }
+
+  .antivirus-plan-summary {
+    padding-block-start: 26px;
+  }
+}
+
+@container sites (max-width: 700px) {
+  .antivirus-intro .sites-promo-art {
+    inset: auto;
+    width: 160px;
+    height: 160px;
+  }
+
+  .antivirus-plan-viewport {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .antivirus-plan-grid {
+    grid-auto-flow: column;
+    grid-template-columns: 16px repeat(3, calc(100% - 48px)) 16px;
+    gap: 8px;
+  }
+
+  .antivirus-plan-grid::before,
+  .antivirus-plan-grid::after {
+    content: "";
+    grid-row: span 2;
+  }
+
+  .antivirus-plan {
+    scroll-snap-align: center;
+  }
+
+  .antivirus-plan:has(:checked),
+  .antivirus-plan:has(:focus-visible) {
+    outline-offset: -2px;
+  }
+
+  .antivirus-plan-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .sites-page .antivirus-plan-dots button {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 32px;
+    border-radius: 50%;
+    color: var(--hosting-secondary);
+  }
+
+  .antivirus-plan-dots button span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .sites-page .antivirus-plan-dots button[aria-current] {
+    color: var(--hosting-link-text);
+  }
+}
+
+@container sites (max-width: 560px) {
+  .antivirus-linked-domains {
+    padding-inline-end: 0;
+    font-size: 13px;
+  }
+
+  .antivirus-domains-summary {
+    gap: 4px;
+    min-block-size: 0;
+  }
+
+  .antivirus-intro {
+    min-block-size: 0;
+  }
+}

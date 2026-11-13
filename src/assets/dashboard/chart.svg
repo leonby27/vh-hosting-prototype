@@ -1,0 +1,34 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="373" height="126" viewBox="0 0 373 126" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Group 18337">
+<path id="Vector 6" d="M24.0434 86.5L4 123H158.721H369V7L350.012 29L331.375 12L311.683 59.5L292.343 87L273.355 67L254.014 101L234.674 61L215.686 56L196.697 28L177.006 54.5L158.017 75L139.029 54.5L119.689 56.5L100.349 15L81.3603 26.5L62.3719 4L43.0318 95L24.0434 86.5Z" fill="url(#paint0_linear_0_5139)" fill-opacity="0.2"/>
+<path id="Vector 7" d="M4 122L23.7107 86.1506L43.0694 95.113L62.0762 3L81.0829 26.4017L100.09 14.4519L119.448 56.7741L138.455 54.2845L157.814 74.6987L177.173 54.2845L196.179 27.8954L215.538 55.2803L234.545 60.7573L253.904 101.088L273.262 66.2343L292.269 86.6485L311.628 58.7657L330.635 12.2259L349.993 27.8954L369 6.28033" stroke-width="2" stroke-linecap="round" stroke="#2977B5"/>
+<g id="Group 18336">
+<circle id="Ellipse 1" cx="4" cy="122" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 2" cx="24" cy="87" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 3" cx="43" cy="94" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 4" cx="62" cy="4" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 5" cx="81" cy="26" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 6" cx="100" cy="15" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 13" cx="234" cy="61" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 7" cx="119" cy="57" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 14" cx="254" cy="102" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 8" cx="139" cy="54" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 15" cx="273" cy="67" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 9" cx="158" cy="75" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 16" cx="292" cy="86" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 10" cx="177" cy="54" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 17" cx="311" cy="60" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 11" cx="196" cy="28" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 18" cx="330" cy="12" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 12" cx="215" cy="55" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 19" cx="350" cy="28" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+<circle id="Ellipse 20" cx="369" cy="6" r="3" fill="white" stroke-width="2" stroke="#2977B5"/>
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_5139" x1="81.3604" y1="26" x2="81.3604" y2="123" gradientUnits="userSpaceOnUse">
+<stop stop-color="#2977B5"/>
+<stop offset="1" stop-color="#2977B5" stop-opacity="0"/>
+</linearGradient>
+</defs>
+</svg>

@@ -1,0 +1,449 @@
+.hosting-shell dialog.top-up-dialog {
+  inline-size: min(580px, calc(100% - 32px));
+  max-inline-size: none;
+  max-block-size: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--hosting-title);
+}
+
+.top-up-form {
+  display: flex;
+  flex-direction: column;
+  max-block-size: inherit;
+}
+
+.top-up-scroll {
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.top-up-dialog :is(.top-up-scroll, .top-up-method-list) {
+  --top-up-scroll-thumb: color-mix(in srgb, var(--hosting-muted) 42%, transparent);
+  scrollbar-width: thin;
+  scrollbar-color: var(--top-up-scroll-thumb) transparent;
+}
+
+@supports selector(::-webkit-scrollbar) {
+  .top-up-dialog :is(.top-up-scroll, .top-up-method-list) {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
+  .top-up-dialog :is(.top-up-scroll, .top-up-method-list)::-webkit-scrollbar {
+    width: 15px;
+    background: transparent;
+  }
+
+  .top-up-dialog :is(.top-up-scroll, .top-up-method-list)::-webkit-scrollbar-track {
+    margin-block: 16px 8px;
+  }
+
+  .top-up-dialog :is(.top-up-scroll, .top-up-method-list)::-webkit-scrollbar-thumb {
+    /* The painted thumb is 4px wide, with a 2px radius at each end. */
+    border: solid transparent;
+    border-width: 0 8px 0 3px;
+    border-radius: 5px 10px 10px 5px / 2px;
+    background: var(--top-up-scroll-thumb) padding-box;
+  }
+
+  .top-up-dialog :is(.top-up-scroll, .top-up-method-list)::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--hosting-muted) 70%, transparent);
+  }
+}
+
+.top-up-header {
+  position: relative;
+  padding: 40px 40px 4px;
+}
+
+.hosting-shell button.top-up-close {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+}
+
+.hosting-shell button.top-up-close:hover {
+  background: var(--hosting-neutral-hover);
+}
+
+.top-up-close > span {
+  inline-size: 20px;
+  block-size: 20px;
+  background: var(--hosting-icon-secondary);
+  mask: var(--top-up-icon) center no-repeat;
+}
+
+.top-up-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 40px 12px;
+}
+
+.top-up-dialog p,
+.top-up-dialog ul {
+  margin: 0;
+}
+
+.top-up-description,
+.top-up-estimate {
+  color: var(--hosting-secondary);
+  font-weight: 400;
+}
+
+.top-up-notice {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--hosting-card-surface);
+  color: var(--hosting-text);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+}
+
+.top-up-amount {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 15px 15px 11px;
+  border: 1px solid var(--hosting-line);
+  border-radius: 12px;
+  color: var(--hosting-secondary);
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.top-up-amount:focus-within {
+  border-color: var(--hosting-plan-selected-line);
+  box-shadow: inset 0 0 0 1px var(--hosting-plan-selected-line);
+}
+
+.top-up-amount input {
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--hosting-title);
+  font: inherit;
+  font-weight: 700;
+}
+
+.top-up-estimate {
+  padding-block: 8px;
+}
+
+.top-up-periods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hosting-shell button.top-up-period {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-block-size: 96px;
+  padding: 11px;
+  border: 1px solid var(--hosting-line);
+  border-radius: 12px;
+  color: var(--hosting-text);
+  font-weight: 400;
+  line-height: 16px;
+  text-align: start;
+}
+
+.top-up-period strong {
+  color: var(--hosting-title);
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.hosting-shell .top-up-dialog :is(.top-up-period, .plan-payment-option):is([aria-pressed="true"], [data-selected="true"], :has(input:checked)) {
+  border-color: var(--hosting-plan-selected-line);
+  background: var(--hosting-plan-selected-back);
+  box-shadow: inset 0 0 0 1px var(--hosting-plan-selected-line);
+}
+
+.hosting-shell .top-up-dialog button.top-up-period[data-highlighted="true"] {
+  border-color: var(--hosting-top-up-year-border);
+  background: var(--hosting-plan-success-back);
+  box-shadow: inset 0 0 0 1px var(--hosting-top-up-year-border);
+}
+
+.top-up-discount,
+.top-up-savings {
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 500;
+}
+
+.top-up-discount {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  padding: 1px 4px 2px;
+  border-radius: 6px;
+  background: var(--hosting-icon-success);
+  color: white;
+}
+
+.top-up-savings {
+  color: var(--hosting-plan-credit);
+}
+
+.top-up-payment {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.top-up-payment legend {
+  color: var(--hosting-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.top-up-payment .plan-payment-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hosting-shell .top-up-dialog .plan-payment-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-block-size: 94px;
+  padding: 11px;
+  border: 1px solid var(--hosting-line);
+  border-radius: 12px;
+  color: var(--hosting-title);
+  cursor: pointer;
+}
+
+.top-up-dialog .plan-payment-label strong {
+  font-size: 14px;
+  line-height: 16px;
+}
+
+.top-up-dialog .plan-payment-label small {
+  overflow-wrap: anywhere;
+}
+
+.top-up-dialog .plan-payment-icon[data-tone="neutral"] {
+  background: var(--hosting-surface-3);
+}
+
+.top-up-dialog .plan-tinted-art {
+  mask-size: 20px;
+}
+
+.top-up-dialog .plan-check-line {
+  font-weight: 400;
+  color: var(--hosting-text);
+}
+
+.top-up-footer {
+  display: grid;
+  flex: none;
+  justify-items: center;
+  gap: 16px;
+  padding: 12px 40px 40px;
+}
+
+.top-up-footer[data-can-scroll-down="true"] {
+  box-shadow: inset 0 1px var(--hosting-line);
+}
+
+.hosting-shell .top-up-pay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  inline-size: 100%;
+  min-block-size: 48px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--hosting-network-green);
+  color: white;
+  font-size: 15px;
+  line-height: 18px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.hosting-shell .top-up-pay:hover {
+  background: var(--hosting-network-green-hover);
+}
+
+.hosting-shell .top-up-pay:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.top-up-security {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  color: var(--hosting-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+}
+
+.top-up-dialog img {
+  display: block;
+  flex: none;
+}
+
+.top-up-method-overlay {
+  position: fixed;
+  inset: 0;
+}
+
+.top-up-method-overlay .top-up-method-list {
+  position: fixed;
+  inset: var(--top-up-menu-top, auto) auto auto var(--top-up-menu-left, auto);
+  max-block-size: var(--top-up-menu-height, calc(100dvh - 16px));
+  overscroll-behavior: contain;
+}
+
+.hosting-shell .top-up-method-list ul {
+  padding-inline: 7px;
+  list-style: none;
+}
+
+.hosting-shell .top-up-method-list ul button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  inline-size: 100%;
+  min-block-size: 40px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: var(--hosting-title);
+  line-height: 16px;
+  text-align: start;
+}
+
+.hosting-shell .top-up-method-list button:is(:hover, [aria-pressed="true"]) {
+  background: var(--hosting-list-hover);
+}
+
+.hosting-shell .top-up-method-list .plan-payment-unlink button {
+  color: var(--hosting-text);
+}
+
+.hosting-shell[data-compact="true"] dialog.top-up-dialog {
+  inline-size: min(100%, var(--hosting-preview-width));
+  block-size: 100dvh;
+  max-block-size: 100dvh;
+  border-radius: 0;
+}
+
+.hosting-shell[data-compact="true"] .top-up-form {
+  block-size: 100%;
+}
+
+.hosting-shell[data-compact="true"] .top-up-scroll {
+  flex: 1;
+}
+
+.hosting-shell[data-compact="true"] .top-up-header {
+  padding: 20px 64px 12px 20px;
+}
+
+.hosting-shell[data-compact="true"] .top-up-header .top-up-close {
+  inset-block-start: 20px;
+  inset-inline-end: 20px;
+  background: var(--hosting-card-surface);
+}
+
+.hosting-shell[data-compact="true"] .top-up-body {
+  gap: 18px;
+  padding: 0 20px 12px;
+}
+
+.hosting-shell[data-compact="true"] .top-up-period {
+  min-block-size: 110px;
+}
+
+.hosting-shell[data-compact="true"] .top-up-payment .plan-payment-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hosting-shell[data-compact="true"] .top-up-footer {
+  gap: 8px;
+  padding: 20px 20px max(8px, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.hosting-shell[data-compact="true"] .top-up-method-overlay {
+  --hosting-menu-offset: 8px;
+  position: absolute;
+  display: flex;
+  align-items: flex-end;
+  background: rgb(0 0 0 / 50%);
+}
+
+.hosting-shell[data-compact="true"] .top-up-method-list {
+  position: relative;
+  inset: auto;
+  inline-size: 100%;
+  max-block-size: calc(100% - 16px);
+  padding: 0 0 max(12px, env(safe-area-inset-bottom));
+  border: 0;
+  border-radius: 16px 16px 0 0;
+}
+
+.top-up-method-list header {
+  position: sticky;
+  z-index: 1;
+  inset-block-start: 0;
+  padding: 18px 64px 18px 20px;
+  border-block-end: 1px solid var(--hosting-line);
+  background: var(--hosting-list-back);
+}
+
+.top-up-method-list h3 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 28px;
+}
+
+.top-up-method-list header .top-up-close {
+  inset-block-start: 16px;
+  inset-inline-end: 20px;
+  background: var(--hosting-card-surface);
+}
+
+.hosting-shell[data-compact="true"] .top-up-dialog .top-up-other-methods {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  min-block-size: 58px;
+}
+
+.hosting-shell[data-compact="true"] .top-up-other-methods .plan-payment-icon {
+  background: var(--hosting-card-surface);
+}

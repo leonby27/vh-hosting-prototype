@@ -1,0 +1,113 @@
+.hosting-shell dialog.hosting-warning-dialog {
+  inline-size: min(440px, calc(100% - 32px));
+  padding: 40px;
+  border: 0;
+}
+
+.hosting-warning-dialog form {
+  display: grid;
+  gap: 24px;
+  text-align: center;
+}
+
+.hosting-warning-copy {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+}
+
+.hosting-warning-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 72px;
+  block-size: 72px;
+  border-radius: 24px;
+  background: var(--hosting-warning-light);
+}
+
+.hosting-shell .hosting-warning-dialog p {
+  margin: 8px 0 0;
+  color: var(--hosting-text);
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.hosting-warning-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hosting-warning-actions > button:only-child {
+  grid-column: 1 / -1;
+}
+
+.hosting-shell .hosting-warning-actions button {
+  min-block-size: 40px;
+  padding: 8px 16px;
+  border: 1px solid var(--hosting-neutral-border);
+  border-radius: 12px;
+  background: var(--hosting-neutral-back);
+  font-size: 14px;
+  line-height: 16px;
+}
+
+.hosting-shell .hosting-warning-actions button:hover {
+  background: var(--hosting-neutral-hover);
+}
+
+.hosting-shell .hosting-warning-actions .hosting-warning-confirm {
+  border-color: transparent;
+  background: var(--hosting-plan-danger);
+  color: var(--hosting-light);
+}
+
+.hosting-shell .hosting-warning-actions .hosting-warning-confirm:hover {
+  background: var(--hosting-plan-danger-hover);
+}
+
+.hosting-warning-dialog button.hosting-warning-close {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+}
+
+.hosting-warning-dialog button.hosting-warning-close:hover {
+  background: var(--hosting-neutral-hover);
+}
+
+.hosting-shell[data-compact="true"] dialog.hosting-warning-dialog {
+  inset-block: auto 0;
+  inset-inline: 0;
+  inline-size: min(100%, var(--hosting-preview-width));
+  max-inline-size: none;
+  max-block-size: calc(100dvh - 16px);
+  margin-block: 0;
+  padding: 40px 20px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 16px 16px 0 0;
+}
+
+.hosting-shell[data-compact="true"] .hosting-warning-close {
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  background: var(--hosting-card-surface);
+}
+
+.hosting-warning-dialog img {
+  display: block;
+}
+
+.hosting-warning-close-icon {
+  background: var(--hosting-icon-info);
+  mask: var(--hosting-warning-close-icon) center / contain no-repeat;
+}
+
+.hosting-warning-close-icon img {
+  visibility: hidden;
+}
