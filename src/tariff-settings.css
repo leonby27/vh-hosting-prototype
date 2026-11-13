@@ -725,9 +725,6 @@
   .tariff-service-catalog .hosting-pressable:hover:enabled:not(:active) { translate: none; }
 }
 
-.tariff-changes-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
-.tariff-settings .tariff-changes-heading h2 { margin: 0; }
-
 .tariff-service-row {
   position: relative;
   display: grid;
@@ -811,15 +808,7 @@
 }
 
 .tariff-service-switch .hosting-switch { margin: 0; }
-.tariff-changes-heading { justify-content: space-between; margin-block-end: 8px; }
-.tariff-changes-heading h2 { scroll-margin-top: calc(var(--hosting-header-height) + 24px); }
-
-.tariff-settings .tariff-changes-heading button {
-  min-height: 32px;
-  color: var(--hosting-link-text);
-  font-size: 14px;
-}
-.tariff-settings .tariff-changes-heading button:hover { text-decoration: underline; }
+.tariff-settings .plan-changes-heading h2 { margin: 0; scroll-margin-top: calc(var(--hosting-header-height) + 24px); }
 
 .tariff-ip-dialog form { display: grid; gap: 16px; }
 .tariff-ip-dialog dl { margin: 0; }

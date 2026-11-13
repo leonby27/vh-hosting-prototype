@@ -21,6 +21,7 @@ const plusAdded = {
 const hostingRenewal = [{ id: 'hosting', title: 'Хостинг Optimo', description: 'Продление на месяц', amount: 1595 }]
 
 export const planChangeScenarios = [
+  { id: 'empty', title: 'Пустое состояние', items: [] },
   {
     id: 'one-service', title: 'Одна услуга',
     items: [{ id: 'ssl', title: 'SSL-сертификат', description: 'Продление для магазина на год', amount: 990 }],
@@ -62,9 +63,8 @@ export const planChangeScenarios = [
     credit: true,
   },
   {
-    id: 'no-charge', title: 'Доплачивать не нужно',
+    id: 'no-charge', title: 'Перенос времени резервного копирования',
     items: [{ id: 'backup', title: 'Резервное копирование', description: 'Перенос ежедневного копирования с 02:00 на 04:00', amount: 0 }],
-    totalLabel: 'Доплачивать не нужно',
     action: applyChanges,
   },
   {
@@ -74,7 +74,6 @@ export const planChangeScenarios = [
       id: 'protection-warning', tone: 'warning', icon: 'alert',
       description: 'После отключения трафик домена перестанет проходить через фильтры DDoS-Guard.',
     }],
-    totalLabel: 'Доплачивать не нужно',
     action: disableService,
   },
   {
@@ -119,7 +118,7 @@ export function ScenarioExample({ scenario }) {
   const showPayment = data.payment && total > 0
   const paymentGroup = getPaymentGroup(method, hasSavedCard)
   const action = remaining.length ? (showPayment ? paymentActions[paymentGroup.value] : data.action ?? applyChanges) : null
-  const totalLabel = remaining.length ? data.totalLabel ?? (showPayment ? 'К оплате' : 'Доплачивать не нужно') : 'Доплачивать не нужно'
+  const totalLabel = total === 0 ? 'К оплате' : data.totalLabel ?? 'К оплате'
   const notices = remaining.length ? data.notices?.filter(notice => notice.requires?.every(id => !removed.has(id)) ?? true) : []
 
   function update(group, id, patch) {
@@ -154,6 +153,7 @@ export function ScenarioExample({ scenario }) {
       <h3 id={heading}>{scenario.title}</h3>
       <PlanChanges
         label={null}
+        empty={items.length === 0 ? {} : undefined}
         items={items.map(item => ({
           ...item,
           removable: true,

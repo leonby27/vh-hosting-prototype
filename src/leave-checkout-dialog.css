@@ -1,0 +1,84 @@
+.hosting-shell dialog.hosting-leave-checkout {
+  inline-size: min(440px, calc(100% - 32px));
+  padding: 40px;
+  border: 0;
+}
+
+.hosting-shell[data-view="mobile"] dialog.hosting-leave-checkout {
+  inline-size: calc(min(100%, var(--hosting-preview-width)) - 32px);
+}
+
+.hosting-leave-checkout form,
+.hosting-leave-copy,
+.hosting-leave-actions {
+  display: grid;
+}
+
+.hosting-leave-checkout form { gap: 24px; text-align: center; }
+.hosting-leave-copy { justify-items: center; gap: 16px; }
+
+.hosting-leave-basket {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  inline-size: 120px;
+  block-size: 88px;
+}
+
+.hosting-leave-basket img {
+  position: absolute;
+  inset: -32px 0 auto;
+  inline-size: 120px;
+  block-size: 120px;
+}
+
+.hosting-leave-copy p {
+  margin: 8px 0 0;
+  color: var(--hosting-secondary);
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.hosting-leave-actions { gap: 12px; }
+
+.hosting-shell .hosting-leave-actions button {
+  min-block-size: 44px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 16px;
+}
+
+.hosting-shell .hosting-leave-actions button[value="checkout"] {
+  background: var(--hosting-primary-back);
+  color: var(--hosting-light);
+}
+
+.hosting-shell .hosting-leave-actions button[value="checkout"]:hover { background: var(--hosting-primary-hover); }
+
+.hosting-shell .hosting-leave-actions button[value="leave"] {
+  border: 1px solid var(--hosting-plan-outline-border);
+  background: var(--hosting-plan-outline-back);
+  color: var(--hosting-link-text);
+}
+
+.hosting-shell .hosting-leave-actions button[value="leave"]:hover { background: var(--hosting-plan-outline-hover); }
+
+.hosting-shell .hosting-leave-close {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+  display: grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 8px;
+}
+
+.hosting-leave-close:hover { background: var(--hosting-neutral-hover); }
+.hosting-leave-close img { display: block; }
+
+.hosting-shell[data-compact="true"] dialog.hosting-leave-checkout {
+  padding: 32px 20px 24px;
+}

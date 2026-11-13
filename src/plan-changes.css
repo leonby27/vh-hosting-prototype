@@ -4,6 +4,43 @@
   color: var(--hosting-title);
 }
 
+.plan-changes-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-block-end: 8px;
+}
+
+.plan-changes-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 700;
+}
+
+.plan-changes button.plan-changes-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-block-size: 24px;
+  color: var(--hosting-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.plan-changes button.plan-changes-cancel:is(:hover, :focus-visible) {
+  color: var(--hosting-title);
+}
+
+.plan-changes-cancel span {
+  inline-size: 16px;
+  block-size: 16px;
+  background: currentColor;
+  mask: var(--plan-cancel-icon) center / contain no-repeat;
+}
+
 .plan-changes-card {
   border-radius: 16px;
   background: var(--hosting-surface);
@@ -49,7 +86,11 @@
   background: var(--hosting-link);
 }
 
-.plan-preview-panel--full .plan-changes-card--split > .plan-changes-card-content {
+.plan-preview-checkout {
+  scroll-margin-block-start: calc(var(--hosting-header-height) + 24px);
+}
+
+:is(.plan-preview-panel--full, .plan-preview-panel--current) .plan-changes-card--split > .plan-changes-card-content {
   min-block-size: 1412px;
 }
 
@@ -79,6 +120,43 @@
   margin: 0;
   font-size: 18px;
   line-height: 24px;
+}
+
+.plan-changes-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 32px 20px;
+  color: var(--hosting-title);
+  text-align: center;
+}
+
+.plan-changes-empty-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 48px;
+  block-size: 48px;
+  border-radius: 50%;
+  background: var(--hosting-card-surface);
+}
+
+.plan-changes-empty-icon::before {
+  content: "";
+  inline-size: 24px;
+  block-size: 24px;
+  background: var(--hosting-icon-secondary);
+  mask: var(--plan-empty-icon) center / contain no-repeat;
+}
+
+.plan-changes-empty strong {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.plan-changes-empty p {
+  margin: 0;
+  color: var(--hosting-text);
+  font-weight: 400;
 }
 
 .plan-preview-scenario [role="status"]:empty {
@@ -590,12 +668,14 @@
 
 .plan-payment-disclosure {
   position: relative;
-  grid-column: 1 / -1;
   min-inline-size: 0;
 }
 
+.plan-payment-disclosure[data-wide] { grid-column: 1 / -1; }
+
 .plan-payment-trigger {
   inline-size: 100%;
+  block-size: 100%;
   text-align: start;
 }
 
@@ -621,6 +701,14 @@
 .plan-payment-panel:not([data-side="below"]) {
   --hosting-menu-offset: 8px;
   inset-block: auto calc(100% + 6px);
+}
+
+.plan-payment-disclosure:not([data-wide]) > .plan-payment-panel {
+  inline-size: min(calc(200% + 8px), 280px);
+}
+
+.plan-payment-disclosure:not([data-wide]):nth-child(even) > .plan-payment-panel {
+  inset-inline: auto 0;
 }
 
 .plan-changes .plan-payment-panel ul {
@@ -690,6 +778,11 @@
 
 .plan-payment-icon[data-tone="pink"] {
   background: var(--hosting-plan-icon-pink);
+}
+
+.plan-payment-icon .plan-payment-balance-art {
+  width: 16px;
+  height: 16px;
 }
 
 .plan-payment-icon[data-tone="sber"] {
@@ -881,7 +974,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .plan-preview-panel--full .plan-changes-card--split > .plan-changes-card-content {
+  :is(.plan-preview-panel--full, .plan-preview-panel--current) .plan-changes-card--split > .plan-changes-card-content {
     min-block-size: 0;
   }
 

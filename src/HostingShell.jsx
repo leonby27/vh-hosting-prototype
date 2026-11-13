@@ -7,6 +7,8 @@ import mobileLogo from './assets/hosting/mobile-logo.svg?no-inline'
 import mobileBalanceAdd from './assets/hosting/mobile-balance-add.svg?no-inline'
 import { HostingToast, HostingToastContext } from './hosting-toast.jsx'
 import { DropdownPanel } from './hosting-motion.jsx'
+import LeaveCheckoutDialog from './LeaveCheckoutDialog.jsx'
+import { PendingChangesContext } from './pending-changes.jsx'
 import './hosting-shell.css'
 
 const icons = {
@@ -29,6 +31,7 @@ const sidebarGroups = [
   ],
   [
     ['ide', 'IDE'],
+    ['api', 'API и AI-агенты'],
     ['ssh', 'SSH-консоль'],
     ['monitoring', 'Мониторинг нагрузки'],
     ['logs', 'Логи'],
@@ -95,6 +98,8 @@ function themeTokens(modeId, dark = false) {
     '--hosting-list-hover': palette.get('List/Item Hover'),
     '--hosting-chip': palette.get(dark ? 'Base/Surface 3' : 'Base/Surface 2'),
     '--hosting-menu-surface': palette.get(dark ? 'Base/Surface 2' : 'Base/On Background'),
+    '--hosting-tooltip-back': palette.get('Tooltip/Back'),
+    '--hosting-tooltip-content': palette.get('Tooltip/Content'),
     '--hosting-switch-off': palette.get('Form Controls/Switcher/Inactive'),
     '--hosting-switch-on': palette.get('Form Controls/Switcher/Active'),
     '--hosting-switch-thumb': palette.get('Form Controls/Switcher/Inverse'),
@@ -251,9 +256,15 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
     }
   }, [dropdown])
 
-  function select(label) {
+  function select(label, tab) {
     setDropdown(null)
-    onSelect(label)
+    onSelect(label, tab)
+  }
+
+  function followLink(event, label, tab) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    select(label, tab)
   }
 
   function toggleDropdown(name) {
@@ -311,11 +322,11 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
               select('Дашборд')
             }}><Icon name="dashboard" />Дашборд</button>
           </li>
-          <li><a className="hosting-menu-item" href="?sites=antivirus"><Icon name="domains" />Антивирус</a></li>
-          <li><a className="hosting-menu-item" href="?sites=network-protection"><Icon name="vps" />Сетевая защита</a></li>
-          <li><a className="hosting-menu-item" href="?tariff=services"><Icon name="plan" />Другие сервисы</a></li>
+          <li><a className="hosting-menu-item" href="?sites=antivirus" onClick={event => followLink(event, 'Сайты', 'antivirus')}><Icon name="domains" />Антивирус</a></li>
+          <li><a className="hosting-menu-item" href="?sites=network-protection" onClick={event => followLink(event, 'Сайты', 'network-protection')}><Icon name="vps" />Сетевая защита</a></li>
+          <li><a className="hosting-menu-item" href="?tariff=services" onClick={event => followLink(event, 'Настройки тарифа', 'services')}><Icon name="plan" />Другие сервисы</a></li>
           <li className="hosting-prototype-heading hosting-menu-divider">Компоненты</li>
-          <li><a className="hosting-menu-item" href="?changes"><Icon name="logs" />Что изменится</a></li>
+          <li><a className="hosting-menu-item" href="?changes" onClick={event => followLink(event, 'Что изменится')}><Icon name="logs" />Что изменится</a></li>
         </HeaderMenu>
         <div className="hosting-preview-switch" role="group" aria-label="Режим просмотра">
           {previewViews.map(([view, label]) => (
@@ -331,7 +342,7 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
       <div className="hosting-product-header">
         <div className="hosting-frame hosting-header-inner">
           <div className="hosting-brand">
-            <a href="./" aria-label="Timeweb Hosting">
+            <a href="./" aria-label="Timeweb Hosting" onClick={event => followLink(event, 'Дашборд')}>
               {compact ? <img src={mobileLogo} width="96" height="20" alt="Timeweb" />
                 : <img src={dark ? darkLogo : logo} width="186" height="26" alt="timeweb hosting" />}
             </a>
@@ -383,7 +394,6 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
             <button type="button" key={icon} aria-current={!menuOpen && selected === section ? 'page' : undefined} onClick={() => {
               if (selected !== section) {
                 select(section)
-                window.scrollTo(0, 0)
               } else if (menuOpen) onToggleMenu()
             }}>
               <span className="hosting-mobile-nav-icon">
@@ -476,7 +486,7 @@ function MobileMore({ open, onSelect }) {
   )
 }
 
-export default function HostingShell({ children, renderSection, initialSection = 'Дашборд', onSectionChange, getPageStates }) {
+export default function HostingShell({ children, renderSection, initialSection = 'Дашборд', onSectionChange, getPageStates, isCurrentSection }) {
   const [toast, setToast] = useState(null)
   const [selected, setSelected] = useState(initialSection)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -485,6 +495,8 @@ export default function HostingShell({ children, renderSection, initialSection =
   const [previewView, setPreviewView] = useState(readPreviewView)
   const [narrowViewport, setNarrowViewport] = useState(() => window.matchMedia(compactViewport).matches)
   const menuToggleRef = useRef(null)
+  const pending = useRef(null)
+  const [leaveDialog, setLeaveDialog] = useState(null)
   const compact = previewView === 'mobile' || narrowViewport
   const moreOpen = compact && menuOpen
 
@@ -506,15 +518,27 @@ export default function HostingShell({ children, renderSection, initialSection =
     }
   }, [dark])
 
-  function selectSection(label, tab) {
-    if (moreOpen) {
-      if (document.activeElement?.closest('#hosting-more')) menuToggleRef.current?.focus({ preventScroll: true })
-      window.scrollTo(0, 0)
+  function navigate(proceed) {
+    if (pending.current) {
+      setLeaveDialog({ ...pending.current, proceed })
+    } else {
+      proceed()
     }
-    if (label !== selected) setScreenState(current => ({ ...current, id: null }))
-    setSelected(label)
-    setMenuOpen(false)
-    onSectionChange?.(label, tab)
+  }
+
+  function selectSection(label, tab) {
+    if (label === selected && (isCurrentSection?.(label, tab) ?? true)) {
+      setMenuOpen(false)
+      return
+    }
+    navigate(() => {
+      if (moreOpen && document.activeElement?.closest('#hosting-more')) menuToggleRef.current?.focus({ preventScroll: true })
+      if (label !== selected) setScreenState(current => ({ ...current, id: null }))
+      setSelected(label)
+      setMenuOpen(false)
+      onSectionChange?.(label, tab)
+      window.scrollTo(0, 0)
+    })
   }
 
   function changePreview(view) {
@@ -527,7 +551,8 @@ export default function HostingShell({ children, renderSection, initialSection =
     }
   }
 
-  const states = moreOpen ? [] : getPageStates?.(selected) ?? []
+  // The scenario menu is reserved for states that need data or events the page cannot produce.
+  const states = moreOpen ? [] : (getPageStates?.(selected) ?? []).filter(state => state.requiresPreset)
   const activeState = states.some(state => state.id === screenState.id) ? screenState.id : 'initial'
   const content = renderSection ? renderSection(selected, selectSection, dark, screenState.id, compact) : children
 
@@ -558,14 +583,27 @@ export default function HostingShell({ children, renderSection, initialSection =
             {!compact && <Sidebar selected={selected} onSelect={selectSection} />}
             {compact && <MobileMore open={moreOpen} onSelect={selectSection} />}
             <main className={content ? 'hosting-content' : 'hosting-sheet'} aria-label={selected} hidden={moreOpen}>
-              <HostingToastContext value={setToast}>
-                <Fragment key={screenState.version}>{content}</Fragment>
-              </HostingToastContext>
+              <PendingChangesContext value={{ pending, navigate }}>
+                <HostingToastContext value={setToast}>
+                  <Fragment key={screenState.version}>{content}</Fragment>
+                </HostingToastContext>
+              </PendingChangesContext>
             </main>
           </div>
         </div>
       </div>
       <HostingToast toast={toast} setToast={setToast} />
+      {leaveDialog && <LeaveCheckoutDialog title={leaveDialog.title} description={leaveDialog.description} onClose={action => {
+        setLeaveDialog(null)
+        if (action === 'checkout') {
+          setMenuOpen(false)
+          requestAnimationFrame(leaveDialog.revealCheckout)
+        }
+        if (action === 'leave') {
+          leaveDialog.discard()
+          leaveDialog.proceed()
+        }
+      }} />}
     </div>
   )
 }

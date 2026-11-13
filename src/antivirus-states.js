@@ -42,15 +42,15 @@ export const antivirusStatusLabels = {
 export const antivirusStates = [
   { id: 'antivirus-selected', label: 'Выбраны 4 сайта' },
   { id: 'antivirus-connected', label: 'Антивирус подключён · угроз нет' },
-  { id: 'antivirus-threats', label: 'Обнаружены угрозы · все статусы' },
+  { id: 'antivirus-threats', label: 'Обнаружены угрозы · все статусы', requiresPreset: true },
   { id: 'antivirus-no-renewal', label: 'Антивирус подключён · без автопродления' },
   { id: 'antivirus-edit-sites', label: 'Изменение списка сайтов' },
   { id: 'antivirus-upgrade', label: 'Повышение уровня защиты' },
   { id: 'antivirus-downgrade', label: 'Понижение уровня защиты' },
   { id: 'antivirus-no-card', label: 'Оплата без сохранённой карты' },
-  { id: 'antivirus-many-sites', label: 'Длинный список · 50 сайтов' },
-  { id: 'antivirus-no-sites', label: 'На аккаунте нет сайтов' },
-  { id: 'antivirus-suspicious', label: 'Подозрительная активность' },
+  { id: 'antivirus-many-sites', label: 'Длинный список · 50 сайтов', requiresPreset: true },
+  { id: 'antivirus-no-sites', label: 'На аккаунте нет сайтов', requiresPreset: true },
+  { id: 'antivirus-suspicious', label: 'Подозрительная активность', requiresPreset: true },
   { id: 'antivirus-disable', label: 'Подтверждение отключения услуги' },
 ]
 
@@ -89,7 +89,7 @@ const presets = {
   'antivirus-many-sites': { ...active, sites: manySites, mode: 'sites', selected },
   'antivirus-no-sites': { sites: [] },
   'antivirus-suspicious': { suspicious: true },
-  'antivirus-disable': { ...active, mode: 'disable', dialog: 'disable' },
+  'antivirus-disable': { ...active, dialog: 'disable' },
 }
 
 function readSavedAntivirus() {

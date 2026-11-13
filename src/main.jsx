@@ -12,6 +12,7 @@ import { topUpStates } from './balance-top-up-states.js'
 import PlanChangesPreview from './PlanChangesPreview.jsx'
 import { planChangeScenarios } from './PlanChangesScenarios.jsx'
 import SitesSection from './SitesSection.jsx'
+import ApiAgents, { apiAgentsSection, apiTabs } from './ApiAgents.jsx'
 import { antivirusStates } from './antivirus-states.js'
 import { networkProtectionStates } from './network-protection-states.js'
 
@@ -160,6 +161,7 @@ const sitesSection = 'Сайты'
 const tariffSection = 'Настройки тарифа'
 const planChangesStates = [
   { id: 'saved-card', label: 'Динамический блок с сохранённой картой' },
+  { id: 'sufficient-balance', label: 'Достаточно средств на балансе', requiresPreset: true },
   ...planChangeScenarios.map(scenario => ({ id: `scenario-${scenario.id}`, label: scenario.title })),
 ]
 const tariffServiceStates = [
@@ -173,11 +175,14 @@ const tariffServiceStates = [
 
 function syncPrototypeLocation(section, tab = 'mine') {
   const url = new URL(window.location.href)
-  if (section !== planChangesSection) url.searchParams.delete('changes')
+  if (section === planChangesSection) url.searchParams.set('changes', '')
+  else url.searchParams.delete('changes')
   if (section === tariffSection) url.searchParams.set('tariff', tab === 'services' ? tab : '')
   else url.searchParams.delete('tariff')
   if (section === sitesSection) url.searchParams.set('sites', tab)
   else url.searchParams.delete('sites')
+  if (section === apiAgentsSection) url.searchParams.set('api', tab === 'mine' ? 'connection' : tab)
+  else url.searchParams.delete('api')
   if (url.href !== window.location.href) window.history.replaceState(window.history.state, '', url)
 }
 
@@ -185,10 +190,14 @@ function HostingApp() {
   const requestedTab = query.get('sites')
   const [sitesTab, setSitesTab] = useState(['antivirus', 'network-protection'].includes(requestedTab) ? requestedTab : 'mine')
   const [tariffTab, setTariffTab] = useState(query.get('tariff') === 'services' ? 'services' : 'tariff')
-  const initialSection = query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection : query.has('tariff') ? tariffSection : 'Дашборд'
+  const requestedApiTab = query.get('api')
+  const [apiTab, setApiTab] = useState(apiTabs.some(([id]) => id === requestedApiTab) ? requestedApiTab : 'connection')
+  const [apiKeys, setApiKeys] = useState([])
+  const initialSection = query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection : query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : 'Дашборд'
 
   function selectSection(section, tab = 'mine') {
     if (section === sitesSection) setSitesTab(tab)
+    if (section === apiAgentsSection) setApiTab('connection')
     if (section === tariffSection) setTariffTab(tab === 'services' ? tab : 'tariff')
     syncPrototypeLocation(section, tab)
   }
@@ -213,18 +222,22 @@ function HostingApp() {
   }
 
   function renderSection(section, onSelect, dark, screenState, compact) {
+    if (section === apiAgentsSection) {
+      return <ApiAgents tab={apiTab} keys={apiKeys} setKeys={setApiKeys} onTabChange={tab => {
+        setApiTab(tab)
+        syncPrototypeLocation(apiAgentsSection, tab)
+      }} />
+    }
     if (section === 'Дашборд') return <Dashboard onSelect={onSelect} dark={dark} compact={compact} screenState={screenState} />
     if (section === planChangesSection) {
       const scenario = planChangeScenarios.find(entry => screenState === `scenario-${entry.id}`)
-      return <PlanChangesPreview startsWithSavedCard={screenState === 'saved-card'} scenario={scenario} />
+      return <PlanChangesPreview startsWithSavedCard={screenState === 'saved-card'}
+        startsWithSufficientBalance={screenState === 'sufficient-balance'} scenario={scenario} />
     }
     if (section === tariffSection) {
       const scenario = tariffServiceStates.find(state => state.id === screenState)
       return <TariffSettings compact={compact} tab={tariffTab} scenario={scenario}
-        onTabChange={selectTariffTab} onSecurity={tab => {
-          onSelect(sitesSection, tab)
-          window.scrollTo(0, 0)
-        }} />
+        onTabChange={selectTariffTab} onSecurity={tab => onSelect(sitesSection, tab)} />
     }
     if (section === sitesSection) {
       return <SitesSection tab={sitesTab} onTabChange={selectSitesTab} dark={dark} screenState={screenState} compact={compact} />
@@ -236,6 +249,8 @@ function HostingApp() {
     <HostingShell
       initialSection={initialSection}
       onSectionChange={selectSection}
+      isCurrentSection={(section, tab) => section === sitesSection ? sitesTab === (tab ?? 'mine')
+        : section === tariffSection ? tariffTab === (tab === 'services' ? tab : 'tariff') : true}
       getPageStates={getPageStates}
       renderSection={renderSection}
     />

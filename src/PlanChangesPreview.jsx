@@ -1,15 +1,41 @@
 import { useId, useRef, useState } from 'react'
 import { TabIndicator } from './hosting-motion.jsx'
+import { usePendingChanges } from './pending-changes.jsx'
+import { revealProtectionCheckout } from './SitesProtectionUI.jsx'
 import PlanChanges from './PlanChanges.jsx'
 import PlanChangesScenarios, { ScenarioExample } from './PlanChangesScenarios.jsx'
 import { networkProtectionMonthlyRate } from './network-protection-states.js'
 import { addPlusAction, plusPackage, priceWithPlus, rubles } from './plan-preview-pricing.js'
 import {
-  canSaveCard, getPaymentGroup, paymentActions, paymentMethods, renewalOption,
+  canSaveCard, getPaymentGroup, paymentActions, renewalOption,
   saveCardOption, securePaymentNote,
 } from './plan-payment-options.js'
 
 const adjustmentAmounts = { bonus: 300, balance: 420 }
+const sufficientBalance = 5000
+const balanceMethod = {
+  id: 'balance', icon: 'pay-balance', tone: 'pink', label: 'Списать с баланса',
+  hint: `Доступно ${rubles(sufficientBalance)}`,
+}
+const payFromBalance = { id: 'pay-balance', label: 'Списать с баланса', icon: 'pay-balance', demoPayment: true }
+
+function withBalancePayment(group) {
+  return {
+    ...group,
+    options: [
+      balanceMethod,
+      ...group.options.map(option => option.choices ? { ...option, wide: true } : option),
+    ],
+  }
+}
+
+const unsavedPaymentGroup = getPaymentGroup('bank', false)
+const balancePaymentGroup = {
+  ...withBalancePayment(unsavedPaymentGroup),
+  id: 'sufficient-balance',
+  label: 'Способы оплаты',
+  value: balanceMethod.id,
+}
 
 const example = {
   items: [
@@ -56,26 +82,24 @@ const example = {
   totals: [
     { label: 'К оплате', amount: '2 295 ₽' },
     { label: 'Возврат на баланс', amount: '1 100 ₽' },
-    { label: 'Доплачивать не нужно', amount: '0 ₽' },
   ],
   paymentGroups: [
     {
-      id: 'methods', label: 'Способ оплаты', accessibleName: 'Основные способы оплаты', value: 'bank',
-      options: paymentMethods,
+      ...unsavedPaymentGroup, id: 'methods', accessibleName: 'Основные способы оплаты',
     },
     {
       ...getPaymentGroup('saved-card', true, true), id: 'saved', accessibleName: 'Сохранённые способы оплаты',
     },
+    balancePaymentGroup,
   ],
   saveOptions: [saveCardOption(true, 'save-on'), saveCardOption(false, 'save-off')],
   actions: [
     paymentActions['saved-card'],
     paymentActions.yoomoney,
-    { id: 'pay-balance', label: 'Списать с баланса', icon: 'pay-balance', demoPayment: true },
+    payFromBalance,
     { id: 'apply', label: 'Применить изменения', icon: 'apply' },
     { id: 'disable', label: 'Отключить', icon: 'disable', tone: 'danger' },
     { id: 'ask-partner', label: 'Попросить партнёра оплатить', icon: 'ask-partner' },
-    { id: 'retry', label: 'Повторить', icon: 'retry' },
   ],
   actionDescription: 'Описание под кнопкой, например до конца месяца нужно доплатить 120 ₽, далее 3 196 ₽ в месяц',
   paymentNote: securePaymentNote,
@@ -91,12 +115,22 @@ function usePreviewExample() {
     }))
   }
 
-  return [preview, update]
+  return [preview, update, () => setPreview(example)]
 }
 
-function FullPreview() {
+function FullPreview({ current = false }) {
   const [preview, update] = usePreviewExample()
   const [action, setAction] = useState('')
+  const items = current
+    ? preview.items.map(item => item.id === 'months' ? { ...item, term: undefined } : item)
+    : preview.items
+  const adjustments = current ? preview.adjustments.filter(entry => entry.id !== 'balance') : preview.adjustments
+  const paymentGroups = current
+    ? preview.paymentGroups.filter(group => group.id !== balancePaymentGroup.id)
+    : preview.paymentGroups
+  const actions = current
+    ? preview.actions.filter(entry => entry.id !== 'ask-partner' && entry.id !== 'pay-balance')
+    : preview.actions
 
   function performAction(entry) {
     if (entry.id === 'unlink-payment-method') {
@@ -114,7 +148,8 @@ function FullPreview() {
 
   return (
     <>
-      <PlanChanges {...preview} onChange={update} onAction={performAction} />
+      <PlanChanges {...preview} items={items} adjustments={adjustments} paymentGroups={paymentGroups} actions={actions}
+        onChange={update} onAction={performAction} />
       <div role="status">{action && <p className="plan-demo-feedback">Выбрано действие «{action}».</p>}</div>
     </>
   )
@@ -123,16 +158,25 @@ function FullPreview() {
 const protection = { id: 'protection', title: 'Сетевая защита', description: 'Продление на 2 месяца', amount: networkProtectionMonthlyRate * 2 }
 const protectionWithPlus = { ...protection, previous: protection.amount, amount: priceWithPlus(protection.amount) }
 
-function DynamicPreview({ startsWithSavedCard }) {
-  const [preview, updateExample] = usePreviewExample()
+function DynamicPreview({ startsWithSavedCard, balance, showDynamic }) {
+  const [preview, updateExample, resetExample] = usePreviewExample()
   const [hasPlus, setHasPlus] = useState(false)
   const [renew, setRenew] = useState(true)
   const [save, setSave] = useState(true)
   const [hasSavedCard, setHasSavedCard] = useState(startsWithSavedCard)
   const [hasSavedSbp, setHasSavedSbp] = useState(startsWithSavedCard)
-  const [method, setMethod] = useState(startsWithSavedCard ? 'saved-card' : 'bank')
+  const [method, setMethod] = useState(balance ? balanceMethod.id : startsWithSavedCard ? 'saved-card' : 'bank')
   const [feedback, setFeedback] = useState('')
-  const showSaveOption = canSaveCard(method)
+  const [hasPendingEdits, setHasPendingEdits] = useState(false)
+  const checkout = useRef(null)
+  usePendingChanges(hasPendingEdits, {
+    title: 'Прервать оплату?',
+    description: 'Выбранные параметры оплаты и изменения заказа будут сброшены.',
+    revealCheckout: () => {
+      showDynamic()
+      requestAnimationFrame(() => revealProtectionCheckout(checkout.current))
+    },
+  }, discardChanges)
   const items = [
     { id: 'hosting', title: 'Хостинг Optimo', amount: 1595 },
     hasPlus ? protectionWithPlus : protection,
@@ -141,7 +185,16 @@ function DynamicPreview({ startsWithSavedCard }) {
   if (hasPlus) items.push({ ...plusPackage, removable: true })
 
   const subtotal = items.reduce((sum, item) => sum + item.amount, 0)
-  const deductions = preview.adjustments.reduce((sum, option) => sum + (option.checked ? adjustmentAmounts[option.id] : 0), 0)
+  const bonus = preview.adjustments.find(option => option.id === 'bonus').checked ? adjustmentAmounts.bonus : 0
+  const canPayFromBalance = balance >= subtotal - bonus
+  const adjustments = canPayFromBalance ? preview.adjustments.filter(option => option.id !== 'balance') : preview.adjustments
+  const deductions = adjustments.reduce((sum, option) => sum + (option.checked ? adjustmentAmounts[option.id] : 0), 0)
+  const standardPaymentGroup = getPaymentGroup(method, hasSavedCard, hasSavedSbp)
+  const paymentGroup = canPayFromBalance
+    ? withBalancePayment({ ...standardPaymentGroup, value: method === balanceMethod.id ? method : standardPaymentGroup.value })
+    : standardPaymentGroup
+  const showSaveOption = canSaveCard(paymentGroup.value) || paymentGroup.value === 'sbp'
+  const paymentAction = paymentGroup.value === balanceMethod.id ? payFromBalance : paymentActions[paymentGroup.value]
   const notice = hasPlus
     ? preview.notices.find(entry => entry.id === 'discount')
     : {
@@ -149,8 +202,19 @@ function DynamicPreview({ startsWithSavedCard }) {
       title: `С пакетом Плюс сетевая защита стоит ${rubles(protectionWithPlus.amount)} вместо ${rubles(protection.amount)}`,
     }
 
+  function discardChanges() {
+    resetExample()
+    setHasPlus(false)
+    setRenew(true)
+    setSave(true)
+    setMethod(canPayFromBalance ? balanceMethod.id : hasSavedCard ? 'saved-card' : hasSavedSbp ? 'saved-sbp' : 'bank')
+    setFeedback('')
+    setHasPendingEdits(false)
+  }
+
   function update(group, id, patch) {
     setFeedback('')
+    setHasPendingEdits(true)
     if (group === 'items' && id === plusPackage.id) setHasPlus(!patch.removed)
     else if (group === 'renewalOptions') setRenew(patch.checked)
     else if (group === 'saveOptions') setSave(patch.checked)
@@ -161,6 +225,7 @@ function DynamicPreview({ startsWithSavedCard }) {
   function performAction(action) {
     if (action.id === 'add-plus') {
       setHasPlus(true)
+      setHasPendingEdits(true)
       setFeedback('Пакет Плюс добавлен в демо.')
     } else if (action.id === 'unlink-payment-method') {
       const keepCard = hasSavedCard && action.method !== 'saved-card'
@@ -170,9 +235,15 @@ function DynamicPreview({ startsWithSavedCard }) {
       setMethod(getPaymentGroup(method, keepCard, keepSbp).value)
       setFeedback(action.method === 'saved-card' ? 'Карта отвязана в демо.' : 'СБП отвязан в демо.')
     } else if (action.demoPayment) {
+      setHasPendingEdits(false)
       if (showSaveOption && save) {
-        setHasSavedCard(true)
-        setMethod('saved-card')
+        if (paymentGroup.value === 'sbp') {
+          setHasSavedSbp(true)
+          setMethod('saved-sbp')
+        } else {
+          setHasSavedCard(true)
+          setMethod('saved-card')
+        }
       }
       setFeedback('')
     } else {
@@ -181,8 +252,13 @@ function DynamicPreview({ startsWithSavedCard }) {
   }
 
   return (
-    <>
+    <div ref={checkout} className="plan-preview-checkout" tabIndex={-1}>
       <PlanChanges
+        heading={{}}
+        onDiscard={hasPendingEdits ? () => {
+          discardChanges()
+          checkout.current?.focus({ preventScroll: true })
+        } : undefined}
         items={items.map(item => ({
           ...item,
           amount: rubles(item.amount),
@@ -191,39 +267,42 @@ function DynamicPreview({ startsWithSavedCard }) {
         nextCharge={preview.nextCharge}
         notices={[notice]}
         renewalOptions={[renewalOption(renew)]}
-        adjustments={preview.adjustments}
+        adjustments={adjustments}
         totals={[{ ...preview.totals[0], amount: rubles(subtotal - deductions) }]}
-        paymentGroups={[getPaymentGroup(method, hasSavedCard, hasSavedSbp)]}
+        paymentGroups={[paymentGroup]}
         saveOptions={showSaveOption ? [saveCardOption(save)] : []}
-        actions={[paymentActions[method]]}
+        actions={[paymentAction]}
         paymentNote={preview.paymentNote}
         onChange={update}
         onAction={performAction}
       />
       <div role="status">{feedback && <p className="plan-demo-feedback">{feedback}</p>}</div>
-    </>
+    </div>
   )
 }
 
 const modes = [
   { id: 'dynamic', label: 'Динамический' },
   { id: 'full', label: 'Полный' },
+  { id: 'current', label: 'Текущий' },
 ]
 
-export default function PlanChangesPreview({ startsWithSavedCard = false, scenario }) {
+export default function PlanChangesPreview({ startsWithSavedCard = false, startsWithSufficientBalance = false, scenario }) {
   const id = useId()
   const tabs = useRef(null)
   const [mode, setMode] = useState('dynamic')
 
   function moveFocus(event) {
-    const next = {
-      ArrowLeft: mode === 'dynamic' ? 'full' : 'dynamic',
-      ArrowRight: mode === 'dynamic' ? 'full' : 'dynamic',
-      Home: 'dynamic',
-      End: 'full',
+    const index = modes.findIndex(tab => tab.id === mode)
+    const nextIndex = {
+      ArrowLeft: (index + modes.length - 1) % modes.length,
+      ArrowRight: (index + 1) % modes.length,
+      Home: 0,
+      End: modes.length - 1,
     }[event.key]
-    if (!next) return
+    if (nextIndex === undefined) return
     event.preventDefault()
+    const next = modes[nextIndex].id
     setMode(next)
     tabs.current?.querySelector(`[aria-controls="${id}-${next}"]`)?.focus()
   }
@@ -255,15 +334,15 @@ export default function PlanChangesPreview({ startsWithSavedCard = false, scenar
           tabIndex={0}
           hidden={mode !== tab.id}
         >
-          {tab.id === 'full' && <FullPreview />}
-          {tab.id === 'dynamic' && (scenario ? (
+          {tab.id !== 'dynamic' ? <FullPreview current={tab.id === 'current'} /> : scenario ? (
             <ScenarioExample scenario={scenario} />
           ) : (
             <>
-              <DynamicPreview startsWithSavedCard={startsWithSavedCard} />
+              <DynamicPreview startsWithSavedCard={startsWithSavedCard} showDynamic={() => setMode('dynamic')}
+                balance={startsWithSufficientBalance ? sufficientBalance : adjustmentAmounts.balance} />
               <PlanChangesScenarios />
             </>
-          ))}
+          )}
         </div>
       ))}
     </div>

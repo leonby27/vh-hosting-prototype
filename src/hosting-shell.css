@@ -82,6 +82,15 @@
   transition: opacity var(--hosting-motion-reveal) ease-out;
 }
 
+.hosting-scroll-spacer {
+  overflow-anchor: none;
+  pointer-events: none;
+}
+
+html:has(.hosting-scroll-spacer) {
+  overflow-anchor: none;
+}
+
 .hosting-animated-block[data-open="false"] {
   height: 0;
   overflow: clip;

@@ -1,15 +1,17 @@
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { HostingToastContext } from './hosting-toast.jsx'
 import { AnimatedBlock } from './hosting-motion.jsx'
-import PlanChanges from './PlanChanges.jsx'
+import { usePendingChanges } from './pending-changes.jsx'
+import { removesAllServiceTargets } from './ServiceChanges.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import {
-  addMonths, asset, formatDate, formatPrice, plural, ProtectionAlert, ProtectionCheckout, ProtectionFaq, protectionRenewalTerm,
-  revealProtectionCheckout, SitesDropdown, SitesIcon, SitesTable, useSitesScrollSpace,
+  ActiveProtectionBanner, addMonths, asset, formatDate, formatPrice, plural, ProtectionAlert, ProtectionCheckout,
+  ProtectionCheckoutSlot, ProtectionFaq, revealProtectionCheckout, SitesIcon, SitesTable, useSitesFilterSpace,
 } from './SitesProtectionUI.jsx'
 import { antivirusPlans, antivirusStatusLabels, saveAntivirus } from './antivirus-states.js'
 import domainLinkIcon from './assets/dashboard/arrow-out.svg'
 import walletIcon from './assets/hosting/wallet.svg'
+import sitesIcon from './assets/hosting/sites.svg'
 import './antivirus.css'
 
 const assets = import.meta.glob('./assets/antivirus/*.{svg,png}', {
@@ -42,8 +44,6 @@ const questions = [
   { id: 'threats', title: 'Что делать, если найдены угрозы?', answer: 'Откройте антивирус и проверьте отчёт по сайту. В нём видно, что удалось вылечить автоматически и какие файлы требуют внимания.' },
   { id: 'plans', title: 'Чем отличаются уровни?', answer: '«Лечение» проверяет и лечит файлы. «Защита» добавляет файрвол, защиту уязвимостей CMS и статистику атак. В «Полном доступе» есть редактор файлов, ручное лечение и список исключений.' },
 ]
-const applyAction = { id: 'apply', label: 'Применить изменения', icon: 'apply' }
-const disableAction = { id: 'disable', label: 'Отключить', icon: 'disable', tone: 'danger' }
 const removalWarning = 'Деньги за оставшиеся дни оплаченного месяца не возвращаются.'
 
 function AntivirusIntro({ onDetails }) {
@@ -76,7 +76,7 @@ function AntivirusIntro({ onDetails }) {
   )
 }
 
-function AntivirusPlans({ selected, onSelect, onCancel, compact }) {
+function AntivirusPlans({ selected, onSelect, compact }) {
   const selectedIndex = planEntries.findIndex(([id]) => id === selected)
   const [slide, setSlide] = useState(selectedIndex)
   const viewport = useRef(null)
@@ -111,7 +111,6 @@ function AntivirusPlans({ selected, onSelect, onCancel, compact }) {
     <section className="antivirus-plans hosting-reveal" aria-labelledby="antivirus-plans-title">
       <div className="sites-domain-heading">
         <h2 id="antivirus-plans-title" tabIndex={-1}>Уровни защиты</h2>
-        {onCancel && <button type="button" className="sites-text-button" onClick={onCancel}>Отменить изменения</button>}
       </div>
       <div className="antivirus-plan-viewport" ref={viewport} onScroll={syncSlide}>
         <div className="antivirus-plan-grid" role="radiogroup" aria-labelledby="antivirus-plans-title">
@@ -248,102 +247,61 @@ function LinkedDomains({ site, mobile }) {
   )
 }
 
-const manualPaymentLabel = 'Внести оплату'
-const advancePaymentLabel = 'Оплатить наперёд'
-
-function AntivirusPaymentButton({ renew, onClick }) {
-  const frame = useRef(null)
-  const previousRenew = useRef(renew)
-  const widthAnimation = useRef(null)
-
-  useLayoutEffect(() => {
-    const wasRenewing = previousRenew.current
-    previousRenew.current = renew
-    if (wasRenewing === renew) return
-
-    const element = frame.current
-    const startWidth = widthAnimation.current?.playState === 'running'
-      ? element.getBoundingClientRect().width
-      : element.querySelector(`.antivirus-payment-copy[data-renew="${wasRenewing}"]`).getBoundingClientRect().width
-    const nextWidth = element.firstElementChild.getBoundingClientRect().width
-    widthAnimation.current?.cancel()
-    if (!startWidth || !nextWidth || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    widthAnimation.current = element.animate(
-      [{ inlineSize: `${startWidth}px` }, { inlineSize: `${nextWidth}px` }],
-      { duration: 220, easing: 'ease-out' },
-    )
-  }, [renew])
-
-  useLayoutEffect(() => () => widthAnimation.current?.cancel(), [])
-
-  return (
-    <button type="button" className="sites-active-renew" aria-label={renew ? advancePaymentLabel : manualPaymentLabel} onClick={onClick}>
-      <SitesIcon src={walletIcon} color="light" />
-      <span className="antivirus-payment-label" ref={frame} aria-hidden="true" data-renew={renew}>
-        <span className="antivirus-payment-measure">{renew ? advancePaymentLabel : manualPaymentLabel}</span>
-        <span className="antivirus-payment-copy" data-renew="false">{manualPaymentLabel}</span>
-        <span className="antivirus-payment-copy" data-renew="true">{advancePaymentLabel}</span>
-      </span>
-    </button>
-  )
-}
-
-function AntivirusBanner({ plan, nextPlan, count, threats, checking, missing, compact, paidThrough, renew, showRenewSwitch, onOpen, onAction }) {
+function AntivirusBanner({ plan, nextPlan, count, threats, checking, missing, compact, paidThrough, renew, showRenewSwitch, editing, onCancelEdit, onOpen, onAction }) {
   const level = antivirusPlans[plan]
-  const paymentLabel = renew ? advancePaymentLabel : manualPaymentLabel
   const schedule = nextPlan && `С ${formatDate(nextPlan.startsAt)} — «${antivirusPlans[nextPlan.id].title}»`
   const caption = renew ? `Автопродление ${formatDate(paidThrough)}` : `Оплачено до ${formatDate(paidThrough)} · автопродление выключено`
   const status = threats ? 'Обнаружены угрозы' : checking ? 'Проверяем сайты' : missing ? 'Требуется действие' : 'Угроз не обнаружено'
 
   return (
-    <section className="sites-active-banner antivirus-active hosting-reveal" data-threats={threats || undefined} aria-labelledby="antivirus-active-title">
-      <img className="sites-active-background" src={threats ? art('threat-background', 'png') : compact ? art('active-background-mobile', 'png') : asset('active-background', 'png')} alt="" />
-      <div className="sites-active-copy">
-        <p className="sites-active-caption">Подключён уровень</p>
-        <h2 id="antivirus-active-title" tabIndex={-1}>{level.title}<span className="sites-desktop-copy"> · </span><br className="sites-mobile-copy" />{formatPrice(level.rate)} / мес. за 1 сайт</h2>
-        <p className="sites-active-count" aria-live="polite">
-          {threats && <img src={art('threat-alert')} alt="" />}{status}
-        </p>
-      </div>
-      <img className="sites-active-shield" src={threats ? art('threat-shield', 'png') : asset('active-shield', 'png')} alt="" />
-      <div className="sites-active-actions">
-        <div className="sites-active-buttons">
-          <button type="button" className="sites-active-pay hosting-pressable" onClick={onOpen}>
-            <img src={art(threats ? 'open-antivirus-dark' : 'open-antivirus')} alt="" />Открыть антивирус
+    <ActiveProtectionBanner
+      className="antivirus-active"
+      threats={threats}
+      headingId="antivirus-active-title"
+      eyebrow="Подключён уровень"
+      title={<>{level.title}<span className="sites-desktop-copy"> · </span><br className="sites-mobile-copy" />{formatPrice(level.rate)} / мес. за 1 сайт</>}
+      status={<>{threats && <img src={art('threat-alert')} alt="" />}{status}</>}
+      background={threats ? art('threat-background', 'png') : compact ? art('active-background-mobile', 'png') : asset('active-background', 'png')}
+      illustration={threats ? art('threat-shield', 'png') : asset('active-shield', 'png')}
+      renew={renew}
+      showRenewSwitch={showRenewSwitch}
+      onToggleRenew={() => onAction('renew')}
+      editing={editing}
+      iconOnly={compact || !renew || showRenewSwitch}
+      onSettings={editing ? onCancelEdit : () => onAction('settings')}
+      primaryAction={
+        <button type="button" className="sites-active-pay hosting-pressable" onClick={onOpen}>
+          <img src={art(threats ? 'open-antivirus-dark' : 'open-antivirus')} alt="" />Открыть антивирус
+        </button>
+      }
+      paymentAction={!renew && !compact && (
+        <button type="button" className="sites-active-manual-pay" onClick={() => onAction('extend')}>
+          <SitesIcon src={walletIcon} color="light" />Оплатить
+        </button>
+      )}
+      menuLabel="Управление антивирусом"
+      menuItems={close => <>
+        <button type="button" onClick={() => { close(); onAction('sites') }}>
+          <SitesIcon src={art('edit-sites')} color="icon-secondary" />Изменить список сайтов
+        </button>
+        <button type="button" onClick={() => { close(); onAction('plan') }}>
+          <SitesIcon src={art('edit-plan')} color="icon-secondary" />Изменить тариф
+        </button>
+        {!renew && (
+          <button type="button" onClick={() => { close(); onAction('extend') }}>
+            <SitesIcon src={walletIcon} color="icon-secondary" />Оплатить
           </button>
-          {showRenewSwitch && (
-            <button type="button" className="sites-active-renew" role="switch" aria-checked={renew} onClick={() => onAction('renew')}>
-              <span className="hosting-switch" aria-hidden="true" />Автопродление
-            </button>
-          )}
-          {!compact && (
-            <AntivirusPaymentButton renew={renew} onClick={() => onAction('extend')} />
-          )}
-          <SitesDropdown label="Управление антивирусом">
-            {close => <>
-              <button type="button" onClick={() => { close(); onAction('sites') }}>
-                <SitesIcon src={art('edit-sites')} color="icon-secondary" />Изменить список сайтов
-              </button>
-              <button type="button" onClick={() => { close(); onAction('plan') }}>
-                <SitesIcon src={art('edit-plan')} color="icon-secondary" />Изменить тариф
-              </button>
-              <button type="button" onClick={() => { close(); onAction('extend') }}>
-                <SitesIcon src={walletIcon} color="icon-secondary" />{paymentLabel}
-              </button>
-              <button type="button" onClick={() => { close(); onAction('renew') }}>
-                <SitesIcon src={art('renewal')} color="icon-secondary" />
-                {renew ? 'Выключить' : 'Включить'} автопродление
-              </button>
-              <button type="button" className="antivirus-disable-action" onClick={() => { close(); onAction('disable') }}>
-                <SitesIcon src={art('disable')} color="plan-danger" />Отключить антивирус
-              </button>
-            </>}
-          </SitesDropdown>
-        </div>
-        <p className="sites-active-caption" aria-live="polite">{formatSiteCount(count)} · {formatPrice(level.rate * count)} / мес. · {caption}{schedule && ` · ${schedule}`}</p>
-      </div>
-    </section>
+        )}
+        <button type="button" onClick={() => { close(); onAction('renew') }}>
+          <SitesIcon src={art('renewal')} color="icon-secondary" />
+          {renew ? 'Выключить' : 'Включить'} автопродление
+        </button>
+        <button type="button" className="antivirus-disable-action" onClick={() => { close(); onAction('disable') }}>
+          <SitesIcon src={art('disable')} color="plan-danger" />Отключить антивирус
+        </button>
+      </>}
+      caption={<>{formatSiteCount(count)} · {formatPrice(level.rate * count)} / мес. · {caption}{schedule && ` · ${schedule}`}</>}
+    />
   )
 }
 
@@ -390,12 +348,11 @@ function matchesSearch(site, query) {
   return [site.name, ...site.domains].some(name => name.toLowerCase().includes(query))
 }
 
-export default function Antivirus({ screenState, compact, dark, preset, plan, setPlan, statuses, setStatuses, threats }) {
+export default function Antivirus({ screenState, compact, dark, preset, plan, setPlan, statuses, setStatuses, threats, active }) {
   const { sites } = preset
   const [nextPlan, setNextPlan] = useState(preset.nextPlan)
   const [draftPlan, setDraftPlan] = useState(preset.draftPlan ?? preset.nextPlan?.id ?? preset.plan ?? 'protection')
   const [mode, setMode] = useState(preset.mode ?? null)
-  const [renewalMonths, setRenewalMonths] = useState(1)
   const [selected, setSelected] = useState(() => new Set(preset.selected))
   const [renew, setRenew] = useState(preset.renew)
   const [showRenewSwitch, setShowRenewSwitch] = useState(screenState !== null || !preset.renew)
@@ -409,28 +366,35 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
   const timers = useRef(new Map())
   const showToast = useContext(HostingToastContext)
   const enrolled = Object.keys(statuses)
-  const editingSites = mode === 'sites'
-  const editingPlan = mode === 'plan'
+  const editingSites = mode === 'sites' || mode === 'settings'
+  const editingPlan = mode === 'plan' || mode === 'settings'
   const extending = mode === 'extend'
-  const disabling = mode === 'disable' || (editingSites && selected.size === 0)
   const additions = [...selected].filter(name => !statuses[name])
   const removals = editingSites ? enrolled.filter(name => !selected.has(name)) : []
+  const disabling = removesAllServiceTargets(selected, removals)
   const changedPlan = editingPlan && draftPlan !== (nextPlan?.id ?? plan)
   const hasCheckout = Boolean(sites.length && (!plan ? selected.size : disabling || extending || additions.length || removals.length || changedPlan))
-  const { checkoutSlot, filterSpace, setFilterSpace, preserveCheckoutSpace, scrollSpacer } = useSitesScrollSpace(hasCheckout)
+  const showEmptyCheckout = sites.length > 0 && (!plan || editingSites || editingPlan)
+  usePendingChanges(active && hasCheckout, {
+    title: extending ? 'Прервать продление антивируса?' : plan ? 'Прервать изменение антивируса?' : 'Прервать подключение антивируса?',
+    description: extending ? 'Продление антивируса не будет оплачено.' : 'Выбранный уровень защиты и изменения списка сайтов будут сброшены.',
+    revealCheckout: () => revealProtectionCheckout(document.getElementById(checkoutHeading)),
+  }, () => closeCheckout({ focus: null }))
+  const { filterSpace, setFilterSpace, scrollSpacer } = useSitesFilterSpace()
   const currentPlan = antivirusPlans[plan]
   const target = !plan || editingPlan ? antivirusPlans[draftPlan] : extending && nextPlan ? antivirusPlans[nextPlan.id] : currentPlan
   const count = !plan || editingSites ? selected.size : enrolled.length
   const monthPrice = target.rate * count
-  const currentPrice = plan ? currentPlan.rate * enrolled.length : 0
   const upgrading = changedPlan && target.rate > currentPlan.rate
   const downgrading = changedPlan && target.rate < currentPlan.rate
+  const addedSitesPrice = additions.length * (downgrading ? currentPlan.rate : target.rate)
+  const upgradePrice = upgrading ? (enrolled.length - removals.length) * (target.rate - currentPlan.rate) : 0
   const total = !hasCheckout || disabling ? 0 : !plan || extending
-    ? monthPrice * (extending ? renewalMonths : 1)
-    : getProratedAmount(upgrading ? monthPrice - currentPrice : additions.length * target.rate, paidThrough)
+    ? monthPrice
+    : getProratedAmount(upgradePrice + addedSitesPrice, paidThrough)
   const title = extending ? 'Продление антивируса' : compact && !plan ? 'Подключение' : 'Что изменится'
   const itemTitle = `Антивирус «${target.title}»`
-  const itemDescription = disabling ? 'Отключение для всех сайтов аккаунта' : extending ? 'Продление' : formatSiteCount(count)
+  const itemDescription = disabling ? 'Отключение для всех сайтов аккаунта' : extending ? 'Продление на 1 месяц' : formatSiteCount(count)
   const actionDescription = downgrading
     ? `С ${formatDate(paidThrough)} — ${formatPrice(monthPrice)} в месяц.`
     : plan && !disabling && !extending && total > 0
@@ -449,17 +413,12 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
     saveAntivirus({ sites, statuses: savedStatuses, plan, nextPlan, paidThrough, renew, hasSavedCard })
   }, [persist, sites, statuses, plan, nextPlan, paidThrough, renew, hasSavedCard])
 
-  useEffect(() => {
-    if (mode === 'disable' && !preset.dialog) revealProtectionCheckout(document.getElementById(checkoutHeading))
-  }, [mode, preset.dialog])
-
-  function closeCheckout({ preserveSpace = true, focus = tableHeading } = {}) {
-    preserveCheckoutSpace(preserveSpace)
+  function closeCheckout({ focus = tableHeading } = {}) {
     setMode(null)
     setSelected(new Set())
     setDraftPlan(nextPlan?.id ?? plan ?? 'protection')
     setPayment(null)
-    document.getElementById(focus)?.focus({ preventScroll: true })
+    if (focus) document.getElementById(focus)?.focus({ preventScroll: true })
   }
 
   function chooseMode(next) {
@@ -473,24 +432,25 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
       }
       return
     }
-    if (mode === next && ['extend', 'disable'].includes(next)) {
+    if (next === 'disable') {
+      setDialog('disable')
+      return
+    }
+    if (mode === next && next === 'extend') {
       revealProtectionCheckout(document.getElementById(checkoutHeading))
       return
     }
 
-    preserveCheckoutSpace(false)
     setFilterSpace(0)
     setPayment(null)
-    setSelected(new Set(next === 'sites' ? enrolled : []))
+    setSelected(new Set(next === 'sites' || next === 'settings' ? enrolled : []))
     setDraftPlan(nextPlan?.id ?? plan)
-    if (next === 'extend') setRenewalMonths(1)
     setMode(next)
     if (next === 'sites') document.getElementById(tableHeading)?.focus()
     if (next === 'plan') requestAnimationFrame(() => document.getElementById('antivirus-plans-title')?.focus())
   }
 
   function selectSites(next) {
-    preserveCheckoutSpace(!plan && next.size === 0)
     setSelected(next)
     setPayment(null)
   }
@@ -516,7 +476,7 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
     setStatuses(current => Object.fromEntries(Object.entries(current).filter(([name]) => !names.includes(name))))
   }
 
-  function applyChanges({ autoRenew, saveCard, months = 1 } = {}) {
+  function applyChanges({ autoRenew, saveCard } = {}) {
     setPersist(true)
     if (saveCard) setHasSavedCard(true)
     if (!plan) {
@@ -527,25 +487,25 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
       setSuspicious(false)
       connectSites(additions)
     } else if (extending) {
-      setPaidThrough(current => addMonths(new Date(Math.max(current.getTime(), Date.now())), months))
-    } else if (editingPlan) {
-      if (downgrading) setNextPlan({ id: draftPlan, startsAt: nextPlan?.startsAt ?? paidThrough.getTime() })
-      else {
-        setPlan(draftPlan)
-        setNextPlan(null)
-      }
+      setPaidThrough(current => addMonths(new Date(Math.max(current.getTime(), Date.now()))))
     } else {
+      if (changedPlan) {
+        if (downgrading) setNextPlan({ id: draftPlan, startsAt: nextPlan?.startsAt ?? paidThrough.getTime() })
+        else {
+          setPlan(draftPlan)
+          setNextPlan(null)
+        }
+      }
       removeSites(removals)
       connectSites(additions)
     }
-    closeCheckout({ preserveSpace: false, focus: extending || editingPlan ? 'antivirus-active-title' : tableHeading })
+    closeCheckout({ focus: extending || editingPlan ? 'antivirus-active-title' : tableHeading })
   }
 
   function startPayment(action, options) {
     if (!hasCheckout || !total || payment) return false
-    const transactionOptions = { ...options, months: extending ? renewalMonths : 1 }
-    if (action.document) setPayment({ action, total, options: transactionOptions, step: 'confirm' })
-    else applyChanges(transactionOptions)
+    if (action.document) setPayment({ action, total, options, step: 'confirm' })
+    else applyChanges(options)
     return true
   }
 
@@ -558,27 +518,27 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
   }
 
   function requestApply() {
-    if (disabling) setDialog('disable')
-    else if (removals.length && total === 0) setDialog('remove')
-    else {
-      applyChanges()
-      showToast({ message: downgrading ? 'Уровень изменится в следующем периоде.' : 'Изменения применены.', success: true })
-    }
+    applyChanges()
+    showToast({ message: removals.length ? 'Список сайтов изменён.' : downgrading ? 'Уровень изменится в следующем периоде.' : 'Изменения применены.', success: true })
+  }
+
+  function disableAntivirus() {
+    setPersist(true)
+    removeSites(enrolled)
+    setPlan(null)
+    setNextPlan(null)
+    setPaidThrough(null)
+    setRenew(false)
+    closeCheckout()
+    setDraftPlan('protection')
+    showToast({ message: 'Антивирус отключён.', success: true })
   }
 
   function closeDialog(confirmed) {
     setDialog(null)
     if (!confirmed) return
     if (dialog === 'disable') {
-      setPersist(true)
-      removeSites(enrolled)
-      setPlan(null)
-      setNextPlan(null)
-      setPaidThrough(null)
-      setRenew(false)
-      closeCheckout({ preserveSpace: false })
-      setDraftPlan('protection')
-      showToast({ message: 'Антивирус отключён.', success: true })
+      disableAntivirus()
     } else if (dialog === 'renew') {
       setPersist(true)
       setRenew(false)
@@ -586,9 +546,6 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
     } else if (dialog === 'missing') {
       setPersist(true)
       connectSites([missingSite])
-    } else if (dialog === 'remove') {
-      applyChanges()
-      showToast({ message: 'Список сайтов изменён.', success: true })
     }
   }
 
@@ -596,8 +553,7 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
     id: 'antivirus',
     title: disabling ? 'Антивирус' : itemTitle,
     description: itemDescription,
-    amount: disabling ? formatPrice(0) : `${formatPrice(monthPrice)} / мес.`,
-    term: extending ? protectionRenewalTerm(renewalMonths) : undefined,
+    amount: disabling ? undefined : `${formatPrice(monthPrice)} / мес.`,
     removable: true,
   }
   const removalNotice = removals.length && !disabling ? [{
@@ -610,7 +566,6 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
   const missing = Object.values(statuses).includes('missing')
   const confirmation = {
     disable: ['Отключить антивирус?', `Защита снимется со всех сайтов сразу. ${removalWarning}`, 'Отключить'],
-    remove: ['Отключить антивирус для выбранных сайтов?', `Защита снимется с сайтов: ${removals.join(', ')}. ${removalWarning}`, 'Отключить'],
     renew: ['Выключить автопродление?', paidThrough && `Антивирус будет работать до ${formatDate(paidThrough)}. Следующий период можно оплатить вручную.`, 'Выключить'],
     missing: ['Файл связи не найден', `Антивирус не нашёл файл связи сайта «${missingSite}». В демо можно повторить проверку.`, 'Имитировать проверку'],
     details: ['Как работает антивирус?', questions[0].answer],
@@ -618,94 +573,84 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
 
   return (
     <>
-      {!sites.length && <ProtectionAlert title="На аккаунте пока нет сайтов" description="Добавьте сайт, чтобы подключить антивирус." />}
       {suspicious && !plan && (
         <ProtectionAlert title="Фиксируем подозрительную активность" description="Подключите антивирус, чтобы проверить файлы сайтов."
           action={{ label: 'Выбрать уровень защиты', onClick: () => revealProtectionCheckout(document.getElementById('antivirus-plans-title')) }}
           onDismiss={() => setSuspicious(false)} />
       )}
       {plan ? (
-        <AntivirusBanner {...{ plan, nextPlan, threats, checking, missing, compact, paidThrough, renew, showRenewSwitch }} count={enrolled.length} onOpen={() => setDialog('report')} onAction={chooseMode} />
+        <AntivirusBanner {...{ plan, nextPlan, threats, checking, missing, compact, paidThrough, renew, showRenewSwitch }}
+          count={enrolled.length} editing={editingSites || editingPlan}
+          onCancelEdit={() => closeCheckout({ focus: null })}
+          onOpen={() => setDialog('report')} onAction={chooseMode} />
       ) : <AntivirusIntro onDetails={() => setDialog('details')} />}
       {sites.length > 0 && (!plan || editingPlan) && (
-        <AntivirusPlans selected={draftPlan} compact={compact} onCancel={editingPlan ? () => closeCheckout({ focus: 'antivirus-active-title' }) : undefined} onSelect={id => {
+        <AntivirusPlans selected={draftPlan} compact={compact} onSelect={id => {
           setDraftPlan(id)
           setPayment(null)
         }} />
       )}
-      {sites.length > 0 && (
-        <SitesTable
-          compact={compact}
-          dark={dark}
-          labels={tableLabels}
-          headingId={tableHeading}
-          domains={sites}
-          statuses={statuses}
-          statusLabels={antivirusStatusLabels}
-          selected={selected}
-          hasProtection={Boolean(plan)}
-          selecting={!plan || editingSites}
-          filterSpace={filterSpace}
-          onFilterSpaceChange={setFilterSpace}
-          onSelection={selectSites}
-          onReset={() => closeCheckout()}
-          matchesSearch={matchesSearch}
-          isProtected={Boolean}
-          renderDetails={(site, mobile) => <LinkedDomains site={site} mobile={mobile} />}
-          renderNote={(site, status) => status === 'missing' && (
-            <div className="sites-domain-note">
-              <button type="button" className="sites-text-button" aria-label={`Как сделать для ${site.name}`} onClick={() => {
-                setMissingSite(site.name)
-                setDialog('missing')
-              }}>Как сделать</button>
-            </div>
-          )}
-        />
-      )}
-      {hasCheckout && (
-        <div className="sites-checkout-slot" ref={checkoutSlot}>
-          {total > 0 ? (
-            <ProtectionCheckout
-              key={mode ?? 'connect'}
-              title={title}
-              headingId={checkoutHeading}
-              items={[item]}
-              notices={removalNotice}
-              total={total}
-              totalLabel={plan && !extending ? 'К доплате' : 'К оплате'}
-              actionDescription={actionDescription}
-              paymentDescription={extending ? `Продление на ${renewalMonths} мес.` : itemDescription}
-              payment={payment}
-              paymentContext={JSON.stringify([mode, draftPlan, [...selected], total, renewalMonths])}
-              hasSavedCard={hasSavedCard}
-              reveal={extending}
-              allowAutoRenew={!plan}
-              onTermChange={months => {
-                setRenewalMonths(months)
-                setPayment(null)
-              }}
-              onStart={startPayment}
-              onConfirm={confirmPayment}
-              onCancel={() => setPayment(null)}
-              onClose={() => closeCheckout()}
-              onUnlinkCard={() => { setHasSavedCard(false); setPersist(true) }}
-            />
-          ) : (
-            <div className="sites-checkout hosting-reveal">
-              <h2 id={checkoutHeading} tabIndex={-1}>{title}</h2>
-              <PlanChanges
-                items={[item]}
-                notices={disabling ? [{ id: 'disable-antivirus', tone: 'warning', icon: 'alert', description: 'После отключения антивирус перестанет проверять сайты.' }] : []}
-                totals={[{ label: 'Доплачивать не нужно', amount: formatPrice(0) }]}
-                actions={[disabling ? disableAction : applyAction]}
-                actionDescription={actionDescription}
-                onChange={() => closeCheckout()}
-                onAction={requestApply}
-              />
-            </div>
-          )}
-        </div>
-      )}
+      <SitesTable
+        compact={compact}
+        dark={dark}
+        labels={tableLabels}
+        headingId={tableHeading}
+        domains={sites}
+        empty={{ title: 'На аккаунте пока нет сайтов', description: 'Добавьте сайт, чтобы подключить антивирус.', icon: sitesIcon, canAddSite: true }}
+        statuses={statuses}
+        statusLabels={antivirusStatusLabels}
+        selected={selected}
+        hasProtection={Boolean(plan)}
+        selecting={!plan || editingSites}
+        filterSpace={filterSpace}
+        onFilterSpaceChange={setFilterSpace}
+        onSelection={selectSites}
+        matchesSearch={matchesSearch}
+        isProtected={Boolean}
+        renderDetails={(site, mobile) => <LinkedDomains site={site} mobile={mobile} />}
+        renderNote={(site, status) => status === 'missing' && (
+          <div className="sites-domain-note">
+            <button type="button" className="sites-text-button" aria-label={`Как сделать для ${site.name}`} onClick={() => {
+              setMissingSite(site.name)
+              setDialog('missing')
+            }}>Как сделать</button>
+          </div>
+        )}
+      />
+      <ProtectionCheckoutSlot open={hasCheckout || showEmptyCheckout}>
+        {(showEmptyCheckout || hasCheckout) && (
+          <ProtectionCheckout
+            key={mode ?? 'connect'}
+            title={hasCheckout || plan ? title : 'Оплата'}
+            empty={hasCheckout ? undefined : plan ? {
+              title: 'Внесите изменения',
+              description: 'Здесь появятся изменения списка сайтов или уровня защиты.',
+            } : {
+              title: 'Выберите сайты',
+              description: 'Здесь появятся выбранные сайты и стоимость подключения антивируса.',
+            }}
+            headingId={checkoutHeading}
+            items={[item]}
+            notices={disabling ? [{ id: 'disable-antivirus', tone: 'warning', icon: 'alert', description: `После отключения антивирус перестанет проверять сайты. ${removalWarning}` }] : removalNotice}
+            serviceChanges={hasCheckout && total === 0 ? { disabling, onApply: requestApply, onDisable: disableAntivirus } : undefined}
+            total={total}
+            totalLabel={plan && !extending ? 'К доплате' : 'К оплате'}
+            actionDescription={actionDescription}
+            paymentDescription={itemDescription}
+            payment={payment}
+            paymentContext={JSON.stringify([mode, draftPlan, [...selected], total])}
+            hasSavedCard={hasSavedCard}
+            reveal={extending}
+            allowAutoRenew={!plan}
+            onStart={startPayment}
+            onConfirm={confirmPayment}
+            onCancel={() => setPayment(null)}
+            onClose={() => closeCheckout()}
+            canDiscard={hasCheckout || editingSites || editingPlan}
+            onUnlinkCard={() => { setHasSavedCard(false); setPersist(true) }}
+          />
+        )}
+      </ProtectionCheckoutSlot>
       <ProtectionFaq questions={questions} />
       {scrollSpacer}
       {confirmation && <WarningDialog title={confirmation[0]} description={confirmation[1]} confirmLabel={confirmation[2]} onClose={closeDialog} />}

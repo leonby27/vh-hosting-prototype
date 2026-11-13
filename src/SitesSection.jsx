@@ -1,17 +1,20 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import { TabIndicator } from './hosting-motion.jsx'
+import { PendingChangesContext, usePendingChanges } from './pending-changes.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
-import PlanChanges from './PlanChanges.jsx'
+import { removesAllServiceTargets } from './ServiceChanges.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import Antivirus from './Antivirus.jsx'
 import { getAntivirusPreset } from './antivirus-states.js'
 import { getNetworkProtectionPreset, networkProtectionMonthlyRate as monthlyRate, saveNetworkProtection } from './network-protection-states.js'
 import domainsIcon from './assets/hosting/domains.svg'
+import chevronIcon from './assets/hosting/mobile-more-chevron.svg'
+import walletIcon from './assets/hosting/wallet.svg'
 import disableIcon from './assets/plan-changes/disable.svg'
 import renewalIcon from './assets/plan-changes/retry.svg'
 import {
-  addMonths, asset, formatDate, formatDomainCount, formatPrice, ProtectionAlert, ProtectionCheckout, protectionRenewalTerm,
-  ProtectionFaq, revealProtectionCheckout, SitesDropdown, SitesIcon, SitesTable, useSitesScrollSpace,
+  ActiveProtectionBanner, addMonths, asset, formatDate, formatDomainCount, formatPrice, ProtectionAlert, ProtectionCheckout,
+  ProtectionCheckoutSlot, ProtectionFaq, revealProtectionCheckout, SitesIcon, SitesTable, useSitesFilterSpace,
 } from './SitesProtectionUI.jsx'
 import './sites-section.css'
 
@@ -45,14 +48,6 @@ const statusLabels = {
 }
 const demoDnsAddress = '192.0.2.17'
 const demoOriginalAddress = '192.0.2.10'
-const applyDomainChanges = { id: 'apply', label: 'Применить изменения', icon: 'apply' }
-const disableProtectionAction = { id: 'disable', label: 'Отключить', icon: 'disable', tone: 'danger' }
-const disableProtectionNotices = [{
-  id: 'protection-warning',
-  tone: 'warning',
-  icon: 'alert',
-  description: 'После отключения трафик сайтов перестанет проходить через фильтры DDoS-Guard.',
-}]
 
 const questions = [
   { id: 'how', title: 'Как работает защита?', answer: 'Во время атаки тысячи запросов от ботов могут перегрузить сервер, и сайт перестанет открываться. С защитой запросы к выбранным доменам проходят через фильтры DDoS-Guard, которые отсекают ботов и пропускают посетителей.' },
@@ -61,8 +56,6 @@ const questions = [
 ]
 
 const availabilityNotices = {
-  'no-sites': ['На аккаунте пока нет сайтов', 'Добавьте сайт и привяжите к нему домен, чтобы подключить защиту.'],
-  'no-domains': ['К сайтам пока не привязаны домены', 'Привяжите домен, чтобы подключить сетевую защиту.'],
   server: ['На сервере вашего аккаунта защита от DDoS пока недоступна', 'Напишите нам для переноса аккаунта на другой сервер.'],
   region: ['На сервере вашего аккаунта в Казахстане защита от DDoS пока недоступна', 'Напишите нам для переноса аккаунта на сервер с поддержкой защиты.'],
   plan: ['Сетевая защита недоступна на вашем тарифе', 'Чтобы подключить защиту, выберите тариф с поддержкой услуги.'],
@@ -73,6 +66,7 @@ const availabilityNotices = {
 
 function SiteTabs({ selected, onSelect, statuses, compact }) {
   const list = useRef(null)
+  const { navigate } = useContext(PendingChangesContext)
 
   useEffect(() => {
     if (compact) return
@@ -99,8 +93,11 @@ function SiteTabs({ selected, onSelect, statuses, compact }) {
     if (nextIndex === undefined) return
     event.preventDefault()
     const id = availableTabs[nextIndex].id
-    onSelect(id)
-    list.current?.querySelector(`#sites-tab-${id}`)?.focus({ preventScroll: compact })
+    if (id === selected) return
+    navigate(() => {
+      onSelect(id)
+      list.current?.querySelector(`#sites-tab-${id}`)?.focus({ preventScroll: compact })
+    })
   }
 
   return (
@@ -117,7 +114,7 @@ function SiteTabs({ selected, onSelect, statuses, compact }) {
           aria-label={statuses[tab.id] ? `${tab.label} — ${tabStatusLabels[statuses[tab.id]]}` : undefined}
           disabled={tab.disabled}
           tabIndex={selected === tab.id ? 0 : -1}
-          onClick={() => onSelect(tab.id)}
+          onClick={() => { if (tab.id !== selected) navigate(() => onSelect(tab.id)) }}
         >
           {tab.label}
           {statuses[tab.id] && <span className="sites-tab-status" data-status={statuses[tab.id]} aria-hidden="true" />}
@@ -157,7 +154,7 @@ function ProtectionIntro({ compact }) {
   )
 }
 
-function ProtectionBanner({ compact, protectedCount, total, renew, showRenewSwitch, paidThrough, canEdit, onPay, onToggleRenew, onEdit, onRequestDisable }) {
+function ProtectionBanner({ compact, protectedCount, total, renew, showRenewSwitch, paidThrough, editing, onPay, onToggleRenew, onEdit, onCancelEdit, onRequestDisable }) {
   const [renewDialogOpen, setRenewDialogOpen] = useState(false)
 
   function requestRenewalChange() {
@@ -166,45 +163,46 @@ function ProtectionBanner({ compact, protectedCount, total, renew, showRenewSwit
   }
 
   return (
-    <section className="sites-active-banner hosting-reveal" aria-labelledby="sites-active-title">
-      <img className="sites-active-background" src={asset(compact ? 'active-background-mobile' : 'active-background', 'png')} alt="" />
-      <div className="sites-active-copy">
-        <p className="sites-active-caption">{formatPrice(monthlyRate)} / мес. за аккаунт</p>
-        <h2 id="sites-active-title" tabIndex={-1}>Защита <br className="sites-mobile-copy" />от DDoS включена</h2>
-        <p className="sites-active-count" aria-live="polite">Под защитой {formatDomainCount(protectedCount)} из {total}</p>
-      </div>
-      <img className="sites-active-shield" src={asset('active-gateway', 'png')} alt="" />
-      <div className="sites-active-actions">
-        <div className="sites-active-buttons">
-          <button type="button" className="sites-active-pay hosting-pressable" onClick={onPay}>
-            {renew ? 'Оплатить наперёд' : 'Внести оплату'}
-          </button>
-          {showRenewSwitch && (
-            <button type="button" className="sites-active-renew" role="switch" aria-checked={renew} onClick={requestRenewalChange}>
-              <span className="hosting-switch" aria-hidden="true" />Автопродление
+    <ActiveProtectionBanner
+      headingId="sites-active-title"
+      eyebrow={`${formatPrice(monthlyRate)} / мес. за аккаунт`}
+      title={<>Защита <br className="sites-mobile-copy" />от DDoS включена</>}
+      status={`Под защитой ${formatDomainCount(protectedCount)} из ${total}`}
+      background={asset(compact ? 'active-background-mobile' : 'active-background', 'png')}
+      illustration={asset('active-gateway', 'png')}
+      renew={renew}
+      showRenewSwitch={showRenewSwitch}
+      onToggleRenew={requestRenewalChange}
+      editing={editing}
+      onSettings={editing ? onCancelEdit : onEdit}
+      paymentAction={
+        <div className="sites-active-payment-slot" data-open={!renew} inert={renew}>
+          <div>
+            <button type="button" className="sites-active-manual-pay" onClick={onPay}>
+              <SitesIcon src={walletIcon} color="light" />Оплатить
             </button>
-          )}
-          <SitesDropdown label="Управление защитой">
-            {closeMenu => <>
-              {canEdit && (
-                <button type="button" onClick={() => { closeMenu(); onEdit() }}>
-                  <SitesIcon src={domainsIcon} color="icon-secondary" />
-                  Изменить список доменов
-                </button>
-              )}
-              <button type="button" onClick={() => { closeMenu(); requestRenewalChange() }}>
-                <SitesIcon src={renewalIcon} color="icon-secondary" />
-                {renew ? 'Выключить' : 'Включить'} автопродление
-              </button>
-              <button type="button" onClick={() => { closeMenu(); onRequestDisable() }}>
-                <SitesIcon src={disableIcon} color="icon-secondary" />
-                Отключить сетевую защиту
-              </button>
-            </>}
-          </SitesDropdown>
+          </div>
         </div>
-        <p className="sites-active-caption" aria-live="polite">{renew ? `Автопродление ${formatDate(paidThrough)}` : `Оплачено до ${formatDate(paidThrough)} · автопродление выключено`}</p>
-      </div>
+      }
+      menuLabel="Управление защитой"
+      menuItems={closeMenu => <>
+        {!editing && (
+          <button type="button" onClick={() => { closeMenu(); onEdit() }}>
+            <SitesIcon src={domainsIcon} color="icon-secondary" />
+            Изменить список доменов
+          </button>
+        )}
+        <button type="button" onClick={() => { closeMenu(); requestRenewalChange() }}>
+          <SitesIcon src={renewalIcon} color="icon-secondary" />
+          {renew ? 'Выключить' : 'Включить'} автопродление
+        </button>
+        <button type="button" onClick={() => { closeMenu(); onRequestDisable() }}>
+          <SitesIcon src={disableIcon} color="icon-secondary" />
+          Отключить сетевую защиту
+        </button>
+      </>}
+      caption={renew ? `Автопродление ${formatDate(paidThrough)}` : `Оплачено до ${formatDate(paidThrough)} · автопродление выключено`}
+    >
       {renewDialogOpen && (
         <WarningDialog
           title="Выключить автопродление?"
@@ -216,7 +214,7 @@ function ProtectionBanner({ compact, protectedCount, total, renew, showRenewSwit
           }}
         />
       )}
-    </section>
+    </ActiveProtectionBanner>
   )
 }
 
@@ -232,24 +230,34 @@ function DomainNote({ domain, status, onInstructions, onCopyAddress, onRetry }) 
 
   const waitingForDns = status === 'dns'
   if (!waitingForDns && status !== 'action') return null
+  const instruction = waitingForDns ? 'Пропишите A-запись:' : 'Разрешите Let’s Encrypt в CAA-записи'
 
   return (
     <div className="sites-domain-note">
-      {waitingForDns ? (
-        <>
-          <span>Пропишите A-запись:</span>
+      <div className="sites-domain-note-desktop">
+        <span>{instruction}</span>
+        {waitingForDns && (
           <span className="sites-domain-address">
             {demoDnsAddress}
             <button type="button" aria-label={`Скопировать IP для ${domain.name}`} onClick={onCopyAddress}><SitesIcon name="copy-dns" color="network-warning" /></button>
           </span>
-        </>
-      ) : <span>Разрешите Let’s Encrypt в CAA-записи</span>}
-      <button type="button" className="sites-text-button" aria-label={`Как сделать для ${domain.name}`} onClick={() => onInstructions(domain.name)}>Как сделать</button>
+        )}
+        <button type="button" className="sites-text-button" aria-label={`Как сделать для ${domain.name}`} onClick={() => onInstructions(domain.name)}>Как сделать</button>
+      </div>
+      <button type="button" className="sites-domain-instruction" aria-haspopup="dialog" onClick={() => onInstructions(domain.name)}>
+        <span>{instruction}{waitingForDns && ` ${demoDnsAddress}`}</span>
+        <SitesIcon src={chevronIcon} color="network-warning" />
+      </button>
+      {waitingForDns && (
+        <button type="button" className="sites-domain-copy" aria-label={`Скопировать IP для ${domain.name}`} onClick={onCopyAddress}>
+          <SitesIcon name="copy-dns" color="icon-secondary" />
+        </button>
+      )}
     </div>
   )
 }
 
-function DomainInstructions({ name, status, onVerify, onClose }) {
+function DomainInstructions({ name, status, onVerify, onClose, onCopyAddress }) {
   const dialog = useRef(null)
   const waitingForDns = status === 'dns'
 
@@ -261,7 +269,10 @@ function DomainInstructions({ name, status, onVerify, onClose }) {
     <dialog ref={dialog} className="hosting-dialog sites-dialog" aria-labelledby="sites-instructions-title" onClose={onClose}>
       <h3 className="hosting-dialog-title" id="sites-instructions-title">{waitingForDns ? 'Проверка DNS' : 'Проверка CAA'}</h3>
       <p>{waitingForDns
-        ? <>В демо для <strong>{name}</strong> нужна A-запись со значением <strong>{demoDnsAddress}</strong>.</>
+        ? <>В демо для <strong>{name}</strong> нужна A-запись со значением <strong className="sites-domain-address">
+          {demoDnsAddress}
+          <button type="button" aria-label="Скопировать IP" onClick={onCopyAddress}><SitesIcon name="copy-dns" color="network-warning" /></button>
+        </strong>.</>
         : <>Чтобы выпустить сертификат для <strong>{name}</strong>, разрешите Let’s Encrypt в CAA-записи домена.</>}</p>
       <div className="sites-payment-buttons">
         <button type="button" className="sites-payment-primary" onClick={() => { dialog.current.close(); onVerify(name) }}>Имитировать проверку</button>
@@ -271,15 +282,13 @@ function DomainInstructions({ name, status, onVerify, onClose }) {
   )
 }
 
-function NetworkProtection({ dark, screenState, compact, preset, statuses, setStatuses, showAttack, setShowAttack }) {
+function NetworkProtection({ dark, screenState, compact, preset, statuses, setStatuses, showAttack, setShowAttack, active }) {
   const [selected, setSelected] = useState(() => new Set(preset.editingDomains
     ? Object.keys(preset.statuses).filter(name => name !== preset.removedDomain)
     : preset.domains.filter(domain => domain.name !== 'myreviews.ru')
       .slice(0, preset.selected).map(domain => domain.name)))
   const [editingDomains, setEditingDomains] = useState(preset.editingDomains)
   const [extending, setExtending] = useState(false)
-  const [renewalMonths, setRenewalMonths] = useState(1)
-  const [disabling, setDisabling] = useState(false)
   const [dialog, setDialog] = useState(preset.dialog ?? null)
   const [instructions, setInstructions] = useState(null)
   const [payment, setPayment] = useState(null)
@@ -295,29 +304,46 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
   const timers = useRef(new Map())
   const hasProtection = paidThrough !== null
   const { availability } = preset
+  const emptyDomains = {
+    title: availability === 'no-sites' ? 'На аккаунте пока нет сайтов' : 'К сайтам пока не привязаны домены',
+    description: availability === 'no-sites'
+      ? 'Добавьте сайт и привяжите к нему домен, чтобы подключить сетевую защиту.'
+      : 'Привяжите домен к сайту, чтобы подключить сетевую защиту.',
+    icon: domainsIcon,
+    canAddSite: availability === 'no-sites',
+  }
+  const availabilityNotice = availabilityNotices[availability]
   const requiresTransfer = availability === 'server' || availability === 'region'
   const enrolled = Object.keys(statuses)
   const connectionStatuses = Object.values(statuses)
   const additions = [...selected].filter(name => !statuses[name])
   const removals = editingDomains ? enrolled.filter(name => !selected.has(name)) : []
+  const removingAllDomains = removesAllServiceTargets(selected, removals)
   const hasPaidCheckout = !availability && (extending || (!hasProtection && additions.length > 0))
-  const checkoutTotal = monthlyRate * (extending ? renewalMonths : 1)
-  const hasCheckout = !availability && (disabling || hasPaidCheckout || additions.length > 0 || removals.length > 0)
-  const { checkoutSlot, filterSpace, setFilterSpace, preserveCheckoutSpace, scrollSpacer } = useSitesScrollSpace(hasCheckout)
+  const hasCheckout = !availability && (hasPaidCheckout || additions.length > 0 || removals.length > 0)
+  const showEmptyCheckout = !availability && preset.domains.length > 0 && (!hasProtection || editingDomains)
+  usePendingChanges(active && hasCheckout, {
+    title: extending ? 'Прервать продление сетевой защиты?' : hasProtection ? 'Прервать изменение сетевой защиты?' : 'Прервать подключение сетевой защиты?',
+    description: extending ? 'Продление сетевой защиты не будет оплачено.' : 'Выбранные изменения для доменов будут сброшены.',
+    revealCheckout: () => revealProtectionCheckout(document.getElementById('sites-checkout-title')),
+  }, () => {
+    setExtending(false)
+    setEditingDomains(false)
+    setSelected(new Set())
+    setPayment(null)
+  })
+  const { filterSpace, setFilterSpace, scrollSpacer } = useSitesFilterSpace()
   const domainChanges = [
     ...additions.map(name => ({ id: name, title: name, description: 'Подключение защиты от DDoS' })),
     ...removals.map(name => ({ id: name, title: name, description: 'Отключение защиты от DDoS' })),
   ]
   const protectedCount = enrolled.filter(name => statuses[name] === 'protected').length
   const disconnectingService = dialog === 'disconnect-service'
-  const disconnectingDomains = dialog === 'disconnect-domains'
-  const externalDns = dialog && (disconnectingService || disconnectingDomains)
-    ? preset.domains.filter(domain => domain.dns !== 'DNS Timeweb' && (disconnectingService ? enrolled : removals).includes(domain.name))
-    : []
-
-  useEffect(() => {
-    if (disabling) revealProtectionCheckout(document.getElementById('sites-checkout-title'))
-  }, [disabling])
+  const externalDns = preset.domains.filter(domain => domain.dns !== 'DNS Timeweb' &&
+    (disconnectingService ? enrolled : removals).includes(domain.name))
+  const dnsNotice = externalDns.length
+    ? `Для доменов со сторонним DNS (${externalDns.map(domain => domain.name).join(', ')}) верните A-запись на ${demoOriginalAddress}.`
+    : ''
 
   useEffect(() => {
     const pending = timers.current
@@ -382,17 +408,14 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
     }
   }
 
-  function updateSelection(next, { preserveSpace = false, editing = editingDomains } = {}) {
-    const hasNextCheckout = extending || [...next].some(name => !statuses[name]) ||
-      (editing && enrolled.some(name => !next.has(name)))
-    preserveCheckoutSpace(preserveSpace && !hasNextCheckout)
+  function updateSelection(next) {
     setSelected(next)
     setPayment(null)
   }
 
   function startPayment(action, { autoRenew, saveCard }) {
     if (!hasPaidCheckout || payment) return false
-    const transaction = { action, names: extending ? enrolled : additions, total: checkoutTotal, months: extending ? renewalMonths : 1, autoRenew, saveCard }
+    const transaction = { action, names: extending ? enrolled : additions, total: monthlyRate, autoRenew, saveCard }
     if (action.document) setPayment({ ...transaction, step: 'confirm' })
     else completePayment(transaction)
     return true
@@ -417,9 +440,9 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
     setSaveState(true)
     if (transaction.saveCard) setHasSavedCard(true)
     if (extending) {
-      setPaidThrough(current => addMonths(new Date(Math.max(current.getTime(), Date.now())), transaction.months))
+      setPaidThrough(current => addMonths(new Date(Math.max(current.getTime(), Date.now()))))
       if (transaction.action.document) {
-        showToast({ message: `Оплата прошла. Срок защиты в демо продлён на ${transaction.months} мес.`, success: true })
+        showToast({ message: 'Оплата прошла. Срок защиты в демо продлён на 1 месяц.', success: true })
       }
       closeExtension()
       return
@@ -439,7 +462,7 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
   }
 
   function resetSelection({ preserveSpace = true } = {}) {
-    updateSelection(new Set(), { preserveSpace, editing: false })
+    updateSelection(new Set())
     setEditingDomains(false)
     document.getElementById('sites-domains-title')?.focus({ preventScroll: preserveSpace })
   }
@@ -452,28 +475,11 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
     showToast({ message: 'Список доменов изменён.', success: true })
   }
 
-  function openDisableCheckout() {
-    if (disabling) {
-      revealProtectionCheckout(document.getElementById('sites-checkout-title'))
-      return
-    }
-    setExtending(false)
-    setEditingDomains(false)
-    updateSelection(new Set())
-    setDisabling(true)
-  }
-
-  function cancelDisableCheckout() {
-    setDisabling(false)
-    resetSelection()
-  }
-
   function disableProtection() {
     setSaveState(true)
     setPaidThrough(null)
     setRenew(false)
     setExtending(false)
-    setDisabling(false)
     setFilterSpace(0)
     removeDomains(enrolled)
     resetSelection({ preserveSpace: false })
@@ -484,16 +490,15 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
     setDialog(null)
     if (!confirmed) return
     if (disconnectingService) disableProtection()
-    if (disconnectingDomains) confirmDomainChanges()
     if (dialog === 'transfer') showToast({ message: 'Демо-обращение на перенос создано.', success: true })
   }
 
   return (
     <>
-      {availability && (
+      {availabilityNotice && (
         <ProtectionAlert
-          title={availabilityNotices[availability][0]}
-          description={availabilityNotices[availability][1]}
+          title={availabilityNotice[0]}
+          description={availabilityNotice[1]}
           tone={availability === 'blocked' ? 'error' : 'warning'}
           action={requiresTransfer
             ? { label: 'Написать в поддержку', onClick: () => setDialog('transfer') }
@@ -529,26 +534,25 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
           renew={renew}
           showRenewSwitch={showRenewSwitch}
           paidThrough={paidThrough}
-          canEdit={!editingDomains}
-          onRequestDisable={openDisableCheckout}
+          editing={editingDomains}
+          onCancelEdit={() => resetSelection()}
+          onRequestDisable={() => setDialog('disconnect-service')}
           onToggleRenew={() => {
             setRenew(value => !value)
             setShowRenewSwitch(true)
             setSaveState(true)
+            if (!renew && extending) closeExtension()
           }}
           onPay={() => {
             if (extending) {
               revealProtectionCheckout(document.getElementById('sites-checkout-title'))
               return
             }
-            setDisabling(false)
             setEditingDomains(false)
             updateSelection(new Set())
-            setRenewalMonths(1)
             setExtending(true)
           }}
           onEdit={() => {
-            setDisabling(false)
             setExtending(false)
             setFilterSpace(0)
             updateSelection(new Set(enrolled))
@@ -557,10 +561,11 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
           }}
         />
       ) : <ProtectionIntro compact={compact} />}
-      {!availability && (
+      {(!availability || availability === 'no-sites' || availability === 'no-domains') && (
         <SitesTable
           compact={compact}
           domains={preset.domains}
+          empty={emptyDomains}
           statuses={statuses}
           statusLabels={statusLabels}
           selected={selected}
@@ -569,83 +574,76 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
           filterSpace={filterSpace}
           onFilterSpaceChange={setFilterSpace}
           dark={dark}
-          onSelection={next => updateSelection(next, { preserveSpace: true })}
-          onReset={() => resetSelection()}
+          onSelection={updateSelection}
           renderNote={(domain, status) => (
             <DomainNote domain={domain} status={status} onInstructions={setInstructions} onCopyAddress={copyDnsAddress} onRetry={retryConnection} />
           )}
         />
       )}
-      {hasCheckout && (
-        <div className="sites-checkout-slot" ref={checkoutSlot}>
-          {hasPaidCheckout ? (
-            <ProtectionCheckout
-              key={extending ? 'extend' : 'connect'}
-              title={extending ? 'Продление защиты' : compact ? 'Подключение' : 'Что изменится'}
-              items={[{
-                id: 'network-protection',
-                title: 'Защита от DDoS',
-                accessibleName: extending ? 'продление защиты' : 'подключение защиты',
-                description: extending ? 'Продление' : formatDomainCount(additions.length),
-                amount: `${formatPrice(monthlyRate)} / мес.`,
-                term: extending ? protectionRenewalTerm(renewalMonths) : undefined,
-                removable: true,
-              }]}
-              total={checkoutTotal}
-              paymentDescription={extending ? `Продление на ${renewalMonths} мес.` : formatDomainCount(additions.length)}
-              payment={payment}
-              paymentContext={JSON.stringify(extending ? [enrolled, renewalMonths] : additions)}
-              hasSavedCard={hasSavedCard}
-              reveal={extending}
-              allowAutoRenew={!hasProtection}
-              onTermChange={months => {
-                setRenewalMonths(months)
-                setPayment(null)
-              }}
-              onStart={startPayment}
-              onConfirm={confirmPayment}
-              onCancel={() => setPayment(null)}
-              onClose={extending ? closeExtension : resetSelection}
-              onUnlinkCard={() => setHasSavedCard(false)}
-            />
-          ) : (
-            <div className="sites-checkout hosting-reveal">
-              <h2 id="sites-checkout-title" tabIndex={-1}>Что изменится</h2>
-              <PlanChanges
-                items={disabling ? [{
-                  id: 'network-protection',
-                  title: 'Сетевая защита',
-                  description: 'Отключение для всех доменов аккаунта',
-                  accessibleName: 'отключение сетевой защиты',
-                  amount: formatPrice(0),
-                  removable: true,
-                }] : domainChanges}
-                notices={disabling ? disableProtectionNotices : undefined}
-                totals={[{ label: 'Доплачивать не нужно', amount: formatPrice(0) }]}
-                actions={[disabling ? disableProtectionAction : applyDomainChanges]}
-                onChange={disabling ? cancelDisableCheckout : undefined}
-                onAction={() => {
-                  if (disabling) setDialog('disconnect-service')
-                  else if (removals.length) setDialog('disconnect-domains')
-                  else confirmDomainChanges()
-                }}
-              />
-            </div>
-          )}
-        </div>
-      )}
+      <ProtectionCheckoutSlot open={hasCheckout || showEmptyCheckout}>
+        {(showEmptyCheckout || hasCheckout) && (
+          <ProtectionCheckout
+            key={extending ? 'extend' : 'connect'}
+            title={extending ? 'Продление защиты' : hasProtection ? 'Что изменится' : !hasCheckout ? 'Оплата' : compact ? 'Подключение' : 'Что изменится'}
+            empty={hasCheckout ? undefined : hasProtection ? {
+              title: 'Внесите изменения',
+              description: 'Здесь появятся изменения списка доменов под защитой.',
+            } : {
+              title: 'Выберите домены',
+              description: 'Здесь появятся выбранные домены и стоимость подключения сетевой защиты.',
+            }}
+            items={hasPaidCheckout ? [{
+              id: 'network-protection',
+              title: 'Защита от DDoS',
+              accessibleName: extending ? 'продление защиты' : 'подключение защиты',
+              description: extending ? 'Продление на 1 месяц' : formatDomainCount(additions.length),
+              amount: `${formatPrice(monthlyRate)} / мес.`,
+              removable: true,
+            }] : removingAllDomains ? [{
+              id: 'network-protection',
+              title: 'Сетевая защита',
+              description: 'Отключение для всех доменов аккаунта',
+            }] : domainChanges}
+            notices={removals.length ? [{
+              id: 'remove-protection-domains', tone: 'warning', icon: 'alert',
+              description: [
+                removingAllDomains ? 'Защита будет снята сразу со всех доменов аккаунта.' : 'Защита для выбранных доменов будет снята сразу.',
+                'Деньги за оставшиеся дни оплаченного месяца не возвращаются.',
+                dnsNotice,
+              ].filter(Boolean).join(' '),
+            }] : []}
+            serviceChanges={hasCheckout && !hasPaidCheckout
+              ? { disabling: removingAllDomains, onApply: confirmDomainChanges, onDisable: disableProtection }
+              : undefined}
+            total={monthlyRate}
+            paymentDescription={extending ? 'Продление на 1 месяц' : formatDomainCount(additions.length)}
+            payment={payment}
+            paymentContext={JSON.stringify(extending ? enrolled : additions)}
+            hasSavedCard={hasSavedCard}
+            reveal={extending}
+            allowAutoRenew={!hasProtection}
+            onStart={startPayment}
+            onConfirm={confirmPayment}
+            onCancel={() => setPayment(null)}
+            onClose={extending ? closeExtension : resetSelection}
+            canDiscard={hasCheckout || editingDomains}
+            onUnlinkCard={() => setHasSavedCard(false)}
+          />
+        )}
+      </ProtectionCheckoutSlot>
       <ProtectionFaq questions={questions} />
       {scrollSpacer}
       {instructions && <DomainInstructions
         name={instructions}
         status={statuses[instructions]}
         onClose={() => setInstructions(null)}
+        onCopyAddress={copyDnsAddress}
         onVerify={name => simulateActivation([name], { [name]: 'protected' })}
       />}
-      {(disconnectingService || disconnectingDomains) && (
+      {disconnectingService && (
         <WarningDialog
-          title={disconnectingService ? 'Отключить сетевую защиту?' : 'Отключить защиту для выбранных доменов?'}
-          description={`Защита будет снята сразу ${disconnectingService ? 'со всех доменов аккаунта' : 'с выбранных доменов'}. Деньги за оставшиеся дни оплаченного месяца не возвращаются.${externalDns.length ? ` Для доменов со сторонним DNS (${externalDns.map(domain => domain.name).join(', ')}) верните A-запись на ${demoOriginalAddress}.` : ''}`}
+          title="Отключить сетевую защиту?"
+          description={['Защита будет снята сразу со всех доменов аккаунта. Деньги за оставшиеся дни оплаченного месяца не возвращаются.', dnsNotice].filter(Boolean).join(' ')}
           confirmLabel="Отключить"
           onClose={closeDialog}
         />
@@ -693,11 +691,11 @@ export default function SitesSection({ tab, onTabChange, dark, screenState, comp
       </header>
       <div id="sites-panel-mine" className="hosting-sheet" role="tabpanel" aria-labelledby="sites-tab-mine" hidden={tab !== 'mine'} />
       <div id="sites-panel-antivirus" className="sites-protection sites-antivirus" role="tabpanel" aria-labelledby="sites-tab-antivirus" hidden={tab !== 'antivirus'}>
-        <Antivirus dark={dark} screenState={antivirusScreenState} compact={compact} preset={antivirusPreset}
+        <Antivirus dark={dark} screenState={antivirusScreenState} compact={compact} preset={antivirusPreset} active={tab === 'antivirus'}
           plan={plan} setPlan={setPlan} statuses={antivirusStatuses} setStatuses={setAntivirusStatuses} threats={antivirusThreats} />
       </div>
       <div id="sites-panel-network-protection" className="sites-protection" role="tabpanel" aria-labelledby="sites-tab-network-protection" hidden={tab !== 'network-protection'}>
-        <NetworkProtection dark={dark} screenState={networkScreenState} compact={compact} preset={networkPreset}
+        <NetworkProtection dark={dark} screenState={networkScreenState} compact={compact} preset={networkPreset} active={tab === 'network-protection'}
           statuses={networkStatuses} setStatuses={setNetworkStatuses} showAttack={showAttack} setShowAttack={setShowAttack} />
       </div>
     </div>

@@ -2,6 +2,8 @@ import { Fragment, useContext, useId, useLayoutEffect, useRef, useState } from '
 import { DropdownPanel, TabIndicator, useAnimatedHeight } from './hosting-motion.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
 import WarningDialog from './WarningDialog.jsx'
+import listIcon from './assets/hosting/logs.svg'
+import closeIcon from './assets/checkout/close.svg'
 import './plan-changes.css'
 
 const assets = import.meta.glob('./assets/plan-changes/*.{svg,png}', {
@@ -157,7 +159,7 @@ export function PaymentOptionLabel({ option, hint = option.hint, icon }) {
   return (
     <>
       <span className="plan-payment-icon" data-tone={option.tone}>
-        {icon ?? <Art name={option.icon} />}
+        {icon ?? <Art name={option.icon} className={option.icon === 'pay-balance' ? 'plan-payment-balance-art' : undefined} />}
       </span>
       <span className="plan-payment-label">
         <strong>{option.label}</strong>
@@ -221,6 +223,7 @@ function OtherPaymentMethods({ option, value, selected, onChange, onAction }) {
     <div
       ref={disclosure}
       className="plan-payment-disclosure"
+      data-wide={option.wide || undefined}
       onBlur={event => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
       }}
@@ -234,7 +237,7 @@ function OtherPaymentMethods({ option, value, selected, onChange, onAction }) {
       <button
         ref={trigger}
         type="button"
-        className="plan-payment-option plan-payment-option--wide plan-payment-trigger"
+        className={`plan-payment-option plan-payment-trigger${option.wide ? ' plan-payment-option--wide' : ''}`}
         data-selected={Boolean(current)}
         aria-expanded={open}
         aria-controls={id}
@@ -379,8 +382,23 @@ function InvoiceAction({ label, amount = '', disabled }) {
   )
 }
 
+export function PlanChangesEmpty({ title = 'Добавьте услуги', description = 'Здесь появятся выбранные услуги и сумма к оплате.', icon = listIcon, children }) {
+  return (
+    <div className="plan-changes-empty">
+      <span className="plan-changes-empty-icon" aria-hidden="true"
+        style={{ '--plan-empty-icon': `url("${icon}")` }} />
+      <strong>{title}</strong>
+      <p>{description}</p>
+      {children}
+    </div>
+  )
+}
+
 export default function PlanChanges({
   label = 'Что изменится',
+  heading,
+  onDiscard,
+  empty,
   items = [],
   nextCharge,
   notices = [],
@@ -456,9 +474,24 @@ export default function PlanChanges({
 
   return (
     <section className="plan-changes" aria-label={label} style={artwork}>
-      <div className={summary && payment ? 'plan-changes-card plan-changes-card--split' : 'plan-changes-card'}>
+      {heading && (
+        <div className="plan-changes-heading">
+          <h2 id={heading.id} ref={heading.ref} tabIndex={-1}>{label}</h2>
+          {onDiscard && (
+            <button type="button" className="plan-changes-cancel" onClick={() => {
+              resetPaymentFeedback()
+              onDiscard()
+            }}>
+              <span aria-hidden="true" style={{ '--plan-cancel-icon': `url("${closeIcon}")` }} />
+              Отменить
+            </button>
+          )}
+        </div>
+      )}
+      <div className={!empty && summary && payment ? 'plan-changes-card plan-changes-card--split' : 'plan-changes-card'}>
         <div className="plan-changes-card-content" ref={content}>
-          {summary && (
+          {empty && <PlanChangesEmpty {...empty} />}
+          {!empty && summary && (
             <div className="plan-changes-summary">
               {items.length > 0 && (
                 <ul className="plan-items">
@@ -482,7 +515,7 @@ export default function PlanChanges({
               )}
             </div>
           )}
-          {payment && (
+          {!empty && payment && (
             <div className="plan-changes-payment">
               {adjustments.length > 0 && (
                 <div className="plan-check-group">

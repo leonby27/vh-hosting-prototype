@@ -22,13 +22,22 @@ export const savedSbp = {
 export const newCard = { ...bankCard, id: 'new-card', listLabel: 'Другая карта' }
 const extraMethods = ['sbp', 'yoomoney', 'sber', 'foreign', 'invoice']
   .map(id => paymentMethods.find(method => method.id === id))
+const otherMethods = { id: 'other', icon: 'more', tone: 'neutral', label: 'Другие способы', hint: 'Выберите тип оплаты' }
+const standardMethods = paymentMethods.slice(0, 3)
+const unsavedPaymentMethods = [
+  ...standardMethods,
+  {
+    ...otherMethods,
+    choices: paymentMethods.filter(method => !standardMethods.includes(method)),
+  },
+]
 
 function getSavedPaymentMethods(savedMethods) {
   return [
     savedMethods[0],
     newCard,
     {
-      id: 'other', icon: 'more', tone: 'neutral', label: 'Другие способы', hint: 'Выберите тип оплаты', wide: true,
+      ...otherMethods, wide: true,
       choices: [...savedMethods, newCard, ...extraMethods],
     },
   ]
@@ -50,7 +59,7 @@ export const paymentActions = {
 
 export function getPaymentGroup(method, hasSavedCard, hasSavedSbp = false, allowedMethods) {
   const savedMethods = [hasSavedCard && savedCard, hasSavedSbp && savedSbp].filter(Boolean)
-  const allOptions = savedMethods.length ? getSavedPaymentMethods(savedMethods) : paymentMethods
+  const allOptions = savedMethods.length ? getSavedPaymentMethods(savedMethods) : unsavedPaymentMethods
   const options = allowedMethods
     ? allOptions.flatMap(option => {
       if (!option.choices) return allowedMethods.includes(option.id) ? [option] : []
@@ -58,7 +67,9 @@ export function getPaymentGroup(method, hasSavedCard, hasSavedSbp = false, allow
       return choices.length ? [{ ...option, choices }] : []
     })
     : allOptions
-  const available = options.some(option => option.id === method || option.choices?.some(choice => choice.id === method))
+  const available = options.some(option => option.choices
+    ? option.choices.some(choice => choice.id === method)
+    : option.id === method)
   return {
     id: 'payment',
     label: 'Способ оплаты',

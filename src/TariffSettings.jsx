@@ -1,5 +1,6 @@
 import { useContext, useEffect, useId, useRef, useState } from 'react'
 import { AnimatedBlock, DropdownPanel, TabIndicator } from './hosting-motion.jsx'
+import { usePendingChanges } from './pending-changes.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
 import PlanChanges from './PlanChanges.jsx'
 import TariffServices, { ServiceSettings, additionalIp, availableServices, packagePrice, packages } from './TariffServices.jsx'
@@ -209,6 +210,11 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
   const serviceTotal = serviceChanges.reduce((sum, service) => sum + (services[service.id] ? serviceCost(service) : 0), 0)
   const total = resourceTotal + packageCost + serviceTotal
   const hasChanges = changes.length > 0 || packageChanged || serviceChanges.length > 0
+  const navigate = usePendingChanges(hasChanges && !cancelApplyScroll.current, {
+    title: tab === 'services' ? 'Прервать оформление услуг?' : 'Прервать изменение тарифа?',
+    description: tab === 'services' ? 'Выбранные пакеты и изменения услуг будут сброшены.' : 'Выбранные изменения тарифа будут сброшены.',
+    revealCheckout: () => scrollToReview(review.current, true),
+  }, resetChanges)
   const plusOfferTotal = changes.reduce((sum, resource) => sum + packagePrice(changeCost(resource), plusPackage.id), plusPackage.amount)
   const paymentGroup = getPaymentGroup(method, hasSavedCard, false, tariffPaymentMethods)
   const showSaveOption = total > 0 && canSaveCard(paymentGroup.value)
@@ -236,9 +242,14 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
     return () => { cancelled = true }
   }, [tab, packageId, services, hasChanges])
 
-  function selectTab(next, focus = false) {
-    onTabChange(next)
-    if (focus) document.getElementById(`${id}-${next}`).focus()
+  function selectTab(next, focus = false, keepChanges = false) {
+    if (next === tab) return
+    function switchTab() {
+      onTabChange(next)
+      if (focus) document.getElementById(`${id}-${next}`)?.focus()
+    }
+    if (keepChanges) switchTab()
+    else navigate(switchTab)
   }
 
   function changeQuantity(resource, delta) {
@@ -331,7 +342,7 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
 
   function handleAction(action) {
     if (action.id === 'add-plus') {
-      if (compact) selectTab('services', true)
+      if (compact) selectTab('services', true, true)
       else setPackageId(plusPackage.id)
     } else if (action.id === 'unlink-payment-method') {
       setHasSavedCard(false)
@@ -393,11 +404,12 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
     return (
       <AnimatedBlock open={hasChanges}>
         <section className="tariff-section">
-          <div className="tariff-changes-heading">
-            <h2 ref={review} tabIndex={-1}>Что изменится</h2>
-            {tab === 'services' && <button type="button" onClick={resetChanges}>Сбросить изменения</button>}
-          </div>
           <PlanChanges
+            heading={{ ref: review }}
+            onDiscard={hasChanges ? () => {
+              resetChanges()
+              document.getElementById(`${id}-${tab}`)?.focus({ preventScroll: true })
+            } : undefined}
             animateHeight={false}
             items={[
               ...changes.map(resource => {

@@ -1,9 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatedBlock, DropdownPanel } from './hosting-motion.jsx'
-import PlanChanges from './PlanChanges.jsx'
+import PlanChanges, { PlanChangesEmpty } from './PlanChanges.jsx'
+import { serviceChangesPayment } from './ServiceChanges.jsx'
 import { canSaveCard, getPaymentGroup, paymentActions, renewalOption, saveCardOption, securePaymentNote } from './plan-payment-options.js'
 import unchecked from './assets/plan-changes/unchecked.svg'
 import darkUnchecked from './assets/plan-changes/unchecked-dark.svg'
+import settingsIcon from './assets/tariff-settings/settings.svg'
+import closeIcon from './assets/checkout/close.svg'
 
 const pageSize = 20
 const artwork = import.meta.glob('./assets/network-protection/*.{svg,png}', {
@@ -25,10 +28,6 @@ export function addMonths(date, months = 1) {
   return end
 }
 
-export function protectionRenewalTerm(value) {
-  return { value, min: 1, max: 36 }
-}
-
 export function asset(name, extension = 'svg') {
   return artwork[`./assets/network-protection/${name}.${extension}`]
 }
@@ -38,6 +37,56 @@ export function SitesIcon({ name, src = asset(name), color }) {
     <span className="sites-icon" aria-hidden="true" style={{ '--sites-icon-mask': `url("${src}")`, '--sites-icon-color': `var(--hosting-${color})` }}>
       <img src={src} alt="" />
     </span>
+  )
+}
+
+function ProtectionSettingsButton({ editing, iconOnly = false, onClick }) {
+  const label = editing ? 'Отменить' : 'Настроить'
+  return (
+    <button type="button" className="sites-active-settings" data-icon-only={iconOnly || undefined}
+      aria-label={label} onClick={onClick}>
+      <SitesIcon src={editing ? closeIcon : settingsIcon} color="light" />
+      {iconOnly ? <span className="sites-active-tooltip" aria-hidden="true">{label}</span> : (
+        <span className="sites-active-settings-label">
+          <span>{label}</span>
+          <span aria-hidden="true">{editing ? 'Настроить' : 'Отменить'}</span>
+        </span>
+      )}
+    </button>
+  )
+}
+
+export function ActiveProtectionBanner({
+  className, threats, headingId, eyebrow, title, status, background, illustration,
+  renew, showRenewSwitch, onToggleRenew, editing, iconOnly, onSettings,
+  primaryAction, paymentAction, menuLabel, menuItems, caption, children,
+}) {
+  return (
+    <section className={['sites-active-banner', 'hosting-reveal', className].filter(Boolean).join(' ')}
+      data-threats={threats || undefined} aria-labelledby={headingId}>
+      <img className="sites-active-background" src={background} alt="" />
+      <div className="sites-active-copy">
+        <p className="sites-active-caption">{eyebrow}</p>
+        <h2 id={headingId} tabIndex={-1}>{title}</h2>
+        <p className="sites-active-count" aria-live="polite">{status}</p>
+      </div>
+      <img className="sites-active-shield" src={illustration} alt="" />
+      <div className="sites-active-actions">
+        <div className="sites-active-buttons">
+          {primaryAction}
+          {showRenewSwitch && (
+            <button type="button" className="sites-active-renew" role="switch" aria-checked={renew} onClick={onToggleRenew}>
+              <span className="hosting-switch" aria-hidden="true" />Автопродление
+            </button>
+          )}
+          {paymentAction}
+          <ProtectionSettingsButton editing={editing} iconOnly={iconOnly} onClick={onSettings} />
+          <SitesDropdown label={menuLabel}>{menuItems}</SitesDropdown>
+        </div>
+        <p className="sites-active-caption" aria-live="polite">{caption}</p>
+      </div>
+      {children}
+    </section>
   )
 }
 
@@ -71,9 +120,9 @@ const domainLabels = {
 
 export function SitesTable({
   domains, statuses, statusLabels, selected, hasProtection, selecting, filterSpace, onFilterSpaceChange,
-  onSelection, onReset, dark, compact, labels = domainLabels,
+  onSelection, dark, compact, labels = domainLabels,
   headingId = 'sites-domains-title', matchesSearch = (domain, query) => domain.name.toLowerCase().includes(query),
-  isProtected = status => status === 'protected', renderDetails, renderNote,
+  isProtected = status => status === 'protected', renderDetails, renderNote, empty,
 }) {
   const [search, setSearch] = useState('')
   const [protectedOnly, setProtectedOnly] = useState(false)
@@ -90,7 +139,7 @@ export function SitesTable({
 
   useLayoutEffect(() => {
     const previousHeight = heightBeforeResultsChange.current
-    if (!previousHeight) return
+    if (!previousHeight || !resultsContent.current) return
     heightBeforeResultsChange.current = 0
     const height = resultsContent.current.getBoundingClientRect().height
     onFilterSpaceChange(Math.max(0, previousHeight - height))
@@ -132,13 +181,24 @@ export function SitesTable({
     onSelection(next)
   }
 
+  if (!domains.length && empty) {
+    return (
+      <section className="sites-domains hosting-reveal" aria-labelledby={headingId}>
+        <h2 id={headingId} tabIndex={-1}>{labels.title}</h2>
+        <div className="plan-changes-card">
+          <PlanChangesEmpty {...empty}>
+            {empty.canAddSite && <button type="button" className="sites-empty-add">Добавить сайт</button>}
+          </PlanChangesEmpty>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="sites-domains hosting-reveal" aria-labelledby={headingId} data-many={domains.length > pageSize}>
       <div className="sites-domain-heading">
         <h2 id={headingId} tabIndex={-1}>{labels.title}{showCount && <>. <span aria-live="polite">{selected.size} из {domains.length}</span></>}</h2>
-        {selecting && (selected.size > 0 || hasProtection) ? (
-          <button type="button" className="sites-text-button" onClick={onReset}>Отменить изменения</button>
-        ) : hasProtection && (
+        {!selecting && hasProtection && (
           <label className="sites-domain-filter">
             <DomainCheckbox dark={dark} checked={protectedOnly} onChange={event => changeProtectionFilter(event.target.checked)} />
             {compact ? 'Только подключённые' : labels.filter}
@@ -245,9 +305,19 @@ export function revealProtectionCheckout(heading) {
   })
 }
 
+export function ProtectionCheckoutSlot({ open, children }) {
+  return (
+    <div className="sites-checkout-frame">
+      <AnimatedBlock open={open}>
+        <div className="sites-checkout-slot">{children}</div>
+      </AnimatedBlock>
+    </div>
+  )
+}
+
 export function ProtectionCheckout({
-  title, items, notices, total, totalLabel = 'К оплате', actionDescription, reveal, paymentDescription, headingId = 'sites-checkout-title',
-  payment, paymentContext, hasSavedCard, allowAutoRenew, onTermChange, onStart, onConfirm, onCancel, onClose, onUnlinkCard,
+  title, empty, items, notices, total, totalLabel = 'К оплате', actionDescription, reveal, paymentDescription, headingId = 'sites-checkout-title',
+  payment, paymentContext, hasSavedCard, allowAutoRenew, onStart, onConfirm, onCancel, onClose, canDiscard, onUnlinkCard, serviceChanges,
 }) {
   const [method, setMethod] = useState(hasSavedCard ? 'saved-card' : 'bank')
   const [renew, setRenew] = useState(true)
@@ -261,8 +331,7 @@ export function ProtectionCheckout({
 
   function update(group, id, patch) {
     if (group === 'items') {
-      if (patch.term) onTermChange(patch.term.value)
-      else if (patch.removed) onClose()
+      if (patch.removed) onClose()
       return
     }
 
@@ -282,25 +351,32 @@ export function ProtectionCheckout({
     return onStart(action, { autoRenew: allowAutoRenew && renew, saveCard: showSaveOption && save })
   }
 
+  const paymentProps = serviceChanges ? serviceChangesPayment(serviceChanges) : {
+    renewalOptions: allowAutoRenew ? [renewalOption(renew)] : [],
+    totals: [{ label: totalLabel, amount: formatPrice(total) }],
+    paymentGroups: [getPaymentGroup(method, hasSavedCard)],
+    saveOptions: showSaveOption ? [saveCardOption(save)] : [],
+    actions: payment ? [] : [paymentActions[method]],
+    paymentNote: securePaymentNote,
+    onAction: performAction,
+  }
+
   return (
-    <div className="sites-checkout hosting-reveal">
-      <h2 id={headingId} ref={heading} tabIndex={-1}>{title}</h2>
+    <div className="sites-checkout">
       <PlanChanges
         label={title}
+        heading={{ id: headingId, ref: heading }}
+        onDiscard={canDiscard ? onClose : undefined}
+        empty={empty}
+        animateHeight={false}
         items={items}
         notices={notices}
-        renewalOptions={allowAutoRenew ? [renewalOption(renew)] : []}
-        totals={[{ label: totalLabel, amount: formatPrice(total) }]}
+        {...paymentProps}
         actionDescription={actionDescription}
-        paymentGroups={[getPaymentGroup(method, hasSavedCard)]}
-        saveOptions={showSaveOption ? [saveCardOption(save)] : []}
-        actions={payment ? [] : [paymentActions[method]]}
-        paymentNote={securePaymentNote}
         paymentContext={paymentContext}
         onChange={update}
-        onAction={performAction}
       />
-      {payment && (
+      {!empty && payment && (
         <PaymentConfirmation
           payment={payment}
           description={paymentDescription}
@@ -347,7 +423,7 @@ export function ProtectionNotice({ description, children }) {
 export function ProtectionAlert({ title, description, tone = 'warning', action, onDismiss }) {
   return (
     <section className="sites-page-alert hosting-reveal" data-tone={tone} aria-label={title}>
-      <img src={asset(`page-alert-${tone}`)} width="24" height="24" alt="" />
+      <img className="sites-page-alert-icon" src={asset(`page-alert-${tone}`)} width="28" height="28" alt="" />
       <div className="sites-page-alert-copy">
         <h2>{title}</h2>
         <p>{description}</p>
@@ -366,21 +442,16 @@ export function ProtectionAlert({ title, description, tone = 'warning', action, 
   )
 }
 
-export function useSitesScrollSpace(hasCheckout) {
-  const [checkoutSpace, setCheckoutSpace] = useState(0)
+export function useSitesFilterSpace() {
   const [filterSpace, setFilterSpace] = useState(0)
-  const checkoutSlot = useRef(null)
   const spacerRef = useRef(null)
-  const reservedCheckoutSpace = hasCheckout ? 0 : checkoutSpace
-  const reservedSpace = reservedCheckoutSpace + filterSpace
 
   useEffect(() => {
-    if (!reservedSpace) return
+    if (!filterSpace) return
 
     function releaseSpace() {
       const spacer = spacerRef.current
       if (spacer && (window.scrollY <= 0 || spacer.getBoundingClientRect().top >= window.innerHeight)) {
-        setCheckoutSpace(0)
         setFilterSpace(0)
       }
     }
@@ -392,34 +463,22 @@ export function useSitesScrollSpace(hasCheckout) {
       window.removeEventListener('scroll', releaseSpace)
       window.removeEventListener('resize', releaseSpace)
     }
-  }, [reservedSpace])
-
-  function preserveCheckoutSpace(preserveSpace) {
-    if (!preserveSpace) {
-      setCheckoutSpace(0)
-    } else if (hasCheckout) {
-      const bounds = checkoutSlot.current?.getBoundingClientRect()
-      if (bounds && window.scrollY > 0 && bounds.top < window.innerHeight) {
-        setCheckoutSpace(bounds.height)
-      }
-    }
-  }
+  }, [filterSpace])
 
   return {
-    checkoutSlot, filterSpace, setFilterSpace, preserveCheckoutSpace,
-    scrollSpacer: reservedSpace > 0 && (
+    filterSpace, setFilterSpace,
+    scrollSpacer: filterSpace > 0 && (
       <div
         className="sites-scroll-spacer"
-        data-checkout={reservedCheckoutSpace > 0 || undefined}
         ref={spacerRef}
-        style={{ blockSize: reservedSpace }}
+        style={{ blockSize: filterSpace }}
         aria-hidden="true"
       />
     ),
   }
 }
 
-export function SitesDropdown({ label, children }) {
+function SitesDropdown({ label, children }) {
   const id = useId()
   const menu = useRef(null)
   const trigger = useRef(null)
@@ -460,6 +519,7 @@ export function SitesDropdown({ label, children }) {
         onClick={() => setOpen(current => !current)}
       >
         <img src={asset('banner-more')} alt="" />
+        <span className="sites-active-tooltip" aria-hidden="true">Меню действий</span>
       </button>
       <DropdownPanel id={id} className="sites-active-menu-panel" open={open}>
         {children(closeMenu)}

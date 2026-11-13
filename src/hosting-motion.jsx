@@ -1,5 +1,47 @@
 import { useLayoutEffect, useRef } from 'react'
 
+let scrollSpacer
+let activeShrinks = 0
+let scrollPosition = 0
+let scrollObservers = 0
+
+function rememberScrollPosition() {
+  scrollPosition = window.scrollY
+}
+
+function trimScrollSpace() {
+  if (activeShrinks || !scrollSpacer) return
+  const root = document.scrollingElement
+  const naturalEnd = root.scrollHeight - scrollSpacer.offsetHeight - root.clientHeight
+  const needed = Math.max(0, Math.ceil(window.scrollY - Math.max(0, naturalEnd)))
+  if (needed) {
+    scrollSpacer.style.height = `${needed}px`
+  } else {
+    scrollSpacer.remove()
+    scrollSpacer = null
+    window.removeEventListener('scroll', trimScrollSpace)
+    window.removeEventListener('resize', trimScrollSpace)
+  }
+}
+
+function reserveScrollSpace(frame, amount) {
+  if (!scrollSpacer) {
+    scrollSpacer = document.createElement('div')
+    scrollSpacer.className = 'hosting-scroll-spacer'
+    scrollSpacer.setAttribute('aria-hidden', 'true')
+    const container = frame.closest('.hosting-shell') ?? document.body
+    container.append(scrollSpacer)
+    window.addEventListener('scroll', trimScrollSpace, { passive: true })
+    window.addEventListener('resize', trimScrollSpace)
+  }
+  activeShrinks += 1
+  scrollSpacer.style.height = `${scrollSpacer.offsetHeight + Math.ceil(amount)}px`
+  return () => {
+    activeShrinks -= 1
+    trimScrollSpace()
+  }
+}
+
 export function DropdownPanel({ as: Element = 'div', open, className = '', ...props }) {
   return <Element {...props} className={`hosting-menu-motion ${className}`.trim()} data-open={open} inert={!open} />
 }
@@ -50,25 +92,35 @@ export function useAnimatedHeight(open, enabled = true) {
   useLayoutEffect(() => {
     openRef.current = open
     measureRef.current?.()
-  }, [open])
+  })
 
   useLayoutEffect(() => {
     if (!enabled) return
+    if (scrollObservers++ === 0) {
+      rememberScrollPosition()
+      window.addEventListener('scroll', rememberScrollPosition, { passive: true })
+    }
 
     const content = contentRef.current
     const frame = content.parentElement
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     let height = openRef.current !== false ? content.getBoundingClientRect().height : 0
     let animation = null
+    let releaseSpace
+    let releaseFrame
     let wasFollowingNestedResize = false
 
     function stopAnimation() {
       animation?.cancel()
       animation = null
       delete frame.dataset.resizing
+      cancelAnimationFrame(releaseFrame)
+      releaseSpace?.()
+      releaseSpace = undefined
     }
 
     function measure() {
+      const previousScroll = scrollPosition
       if (!content.getClientRects().length) {
         height = null
         stopAnimation()
@@ -94,18 +146,29 @@ export function useAnimatedHeight(open, enabled = true) {
 
       const startHeight = animation ? frame.getBoundingClientRect().height : height
       height = nextHeight
+      const shrinking = startHeight - nextHeight
+      // Keep the viewport within the scroll range while content below it contracts.
+      const release = shrinking >= 0.5 && previousScroll > 0 && frame.getBoundingClientRect().top < window.innerHeight
+        ? reserveScrollSpace(frame, shrinking)
+        : undefined
       stopAnimation()
-      if (openRef.current === undefined && (!startHeight || !nextHeight)) return
-      if (Math.abs(nextHeight - startHeight) < 0.5 || reducedMotion.matches) return
+      releaseSpace = release
+      if ((openRef.current === undefined && (!startHeight || !nextHeight)) ||
+        Math.abs(nextHeight - startHeight) < 0.5 || reducedMotion.matches) {
+        if (releaseSpace) releaseFrame = requestAnimationFrame(stopAnimation)
+        if (release && window.scrollY < previousScroll) window.scrollTo({ top: previousScroll, behavior: 'instant' })
+        return
+      }
 
       frame.dataset.resizing = ''
       animation = frame.animate(
         [{ height: `${startHeight}px` }, { height: `${nextHeight}px` }],
         { duration: 220, easing: 'ease-out' },
       )
+      if (release && window.scrollY < previousScroll) window.scrollTo({ top: previousScroll, behavior: 'instant' })
       animation.onfinish = () => {
         animation = null
-        delete frame.dataset.resizing
+        stopAnimation()
       }
     }
 
@@ -119,6 +182,7 @@ export function useAnimatedHeight(open, enabled = true) {
     observer.observe(content)
     reducedMotion.addEventListener('change', updateMotionPreference)
     return () => {
+      if (--scrollObservers === 0) window.removeEventListener('scroll', rememberScrollPosition)
       measureRef.current = null
       observer.disconnect()
       reducedMotion.removeEventListener('change', updateMotionPreference)
