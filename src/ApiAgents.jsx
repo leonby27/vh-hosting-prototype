@@ -21,8 +21,7 @@ import crontabIcon from './assets/api-agents/clock-fill.svg'
 import backupsIcon from './assets/api-agents/archive-fill.svg'
 import accountIcon from './assets/api-agents/user-circle-fill.svg'
 import otherClientsIcon from './assets/plan-changes/more.svg'
-import apiMcpOrb from './assets/hosting/api-mcp-orb-reference-60.webp'
-import apiMcpOrbStill from './assets/hosting/api-mcp-orb-reference.png'
+import apiMcpPrism from './assets/hosting/api-mcp-prism.png'
 import searchIcon from './assets/network-protection/search.svg'
 import caretIcon from './assets/hosting/caret.svg'
 import { apiAddress, apiDocsUrl, capabilities, clients, demoApiKeys, journal, permissions, presets, secretPlaceholder } from './api-agents-data.js'
@@ -239,10 +238,7 @@ function Connection({ hasKeys, onCreate, onKeys }) {
         </div>
         <button type="button" className="api-button api-primary" onClick={hasKeys ? onKeys : () => onCreate()}>{hasKeys ? 'Управлять ключами' : 'Выпустить ключ'}</button>
       </div>
-      <picture className="api-key-promo-art">
-        <source media="(prefers-reduced-motion: reduce)" srcSet={apiMcpOrbStill} />
-        <img src={apiMcpOrb} width="184" height="184" alt="" />
-      </picture>
+      <img className="api-key-promo-art" src={apiMcpPrism} width="350" height="233" alt="" />
     </section>
     <section className="api-stack api-section hosting-reveal" aria-labelledby={`${connectionId}-title`}>
       <h2 id={`${connectionId}-title`}>Как подключить</h2>
@@ -393,7 +389,17 @@ function KeyForm({ original, initialClient, onSave, onCancel, compact }) {
       access: selectedAccess ? '' : 'Выберите хотя бы один раздел для доступа.',
     }
     if (Object.values(validation).some(Boolean)) {
+      const form = event.currentTarget
       setErrors(validation)
+      requestAnimationFrame(() => {
+        const input = form.querySelector('input[aria-invalid="true"]')
+        if (!input?.isConnected) return
+        input.focus({ preventScroll: true })
+        input.closest('.api-field').scrollIntoView({
+          block: 'start',
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        })
+      })
       return
     }
     onSave({ ...draft, name, note: draft.note.trim(), customAccess })

@@ -1,14 +1,13 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import { TabIndicator } from './hosting-motion.jsx'
+import { AnimatedBlock, TabIndicator } from './hosting-motion.jsx'
 import { PendingChangesContext, usePendingChanges } from './pending-changes.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
 import { removesAllServiceTargets } from './ServiceChanges.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import Antivirus from './Antivirus.jsx'
 import { antivirusStates, getAntivirusPreset } from './antivirus-states.js'
-import { getNetworkProtectionPreset, networkProtectionMonthlyRate as monthlyRate, networkProtectionStates, saveNetworkProtection } from './network-protection-states.js'
+import { getNetworkProtectionPreset, networkProtectionMonthlyRate as monthlyRate, networkProtectionStates, networkProtectionStatusLabels, saveNetworkProtection } from './network-protection-states.js'
 import domainsIcon from './assets/hosting/domains.svg'
-import chevronIcon from './assets/hosting/mobile-more-chevron.svg'
 import walletIcon from './assets/hosting/wallet.svg'
 import disableIcon from './assets/plan-changes/disable.svg'
 import renewalIcon from './assets/plan-changes/retry.svg'
@@ -39,15 +38,30 @@ const features = [
   { icon: 'hidden-ip', title: 'Скрывает IP', description: 'Атаку не направить\nв обход фильтра' },
 ]
 
-const statusLabels = {
-  available: 'Не подключён',
-  protected: 'Под защитой',
-  connecting: 'Подключаем',
-  dns: 'Ждём DNS',
-  action: 'Требуется действие',
-}
 const demoDnsAddress = '192.0.2.17'
 const demoOriginalAddress = '192.0.2.10'
+const sslPanelUrl = 'https://hosting.timeweb.ru/ssl'
+const supportUrl = 'https://timeweb.com/ru/contacts/'
+const fallbackSslStatuses = new Set(['ssl-upload', 'ssl-timeweb', 'ssl-expired'])
+const isNetworkDomainProtected = status => status === 'protected' || fallbackSslStatuses.has(status)
+
+const domainNotes = {
+  dns: { text: 'Укажите A-запись:', showAddress: true },
+  'dns-aaaa': { text: 'Укажите A-запись', showAddress: true, suffix: 'и удалите AAAA' },
+  action: { text: 'Разрешите Let’s Encrypt в CAA-записи' },
+  cdn: { text: 'Укажите в CDN IP сервера:', showAddress: true },
+  'ssl-upload': { text: 'Ваш SSL не подключён, работает бесплатный', label: 'Загрузить сертификат', href: `${sslPanelUrl}#install` },
+  'ssl-timeweb': { text: 'Ваш SSL не подключён, работает бесплатный', label: 'Написать в поддержку', href: supportUrl },
+  'ssl-expired': { text: 'Ваш SSL истёк, работает бесплатный', label: 'Продлить / Купить', href: sslPanelUrl },
+  failed: { text: 'Не удалось подключить защиту', label: 'Написать в поддержку', href: supportUrl },
+}
+
+const domainInstructions = {
+  dns: 'Откройте DNS-настройки у провайдера домена и укажите защищённый IP в A-записи.',
+  'dns-aaaa': 'Откройте DNS-настройки у провайдера домена, укажите защищённый IP в A-записи и удалите AAAA-запись.',
+  action: 'Чтобы выпустить бесплатный сертификат, добавьте значение issue “letsencrypt.org” в CAA-записи домена.',
+  cdn: 'Откройте настройки стороннего CDN и укажите защищённый IP в качестве адреса исходного сервера.',
+}
 
 const questions = [
   { id: 'how', title: 'Как работает защита?', answer: 'Во время атаки тысячи запросов от ботов могут перегрузить сервер, и сайт перестанет открываться. С защитой запросы к выбранным доменам проходят через фильтры DDoS-Guard, которые отсекают ботов и пропускают посетителей.' },
@@ -156,6 +170,10 @@ function ProtectionIntro({ compact }) {
 
 function ProtectionBanner({ compact, protectedCount, total, renew, showRenewSwitch, paidThrough, editing, onPay, onToggleRenew, onEdit, onCancelEdit, onRequestDisable }) {
   const [renewDialogOpen, setRenewDialogOpen] = useState(false)
+  const paidThroughDate = formatDate(paidThrough)
+  const renewalCaption = renew
+    ? `Автопродление ${paidThroughDate}`
+    : `Оплачено до ${paidThroughDate} · автопродление выключено`
 
   function requestRenewalChange() {
     if (renew) setRenewDialogOpen(true)
@@ -201,7 +219,7 @@ function ProtectionBanner({ compact, protectedCount, total, renew, showRenewSwit
           Отключить сетевую защиту
         </button>
       </>}
-      caption={renew ? `Автопродление ${formatDate(paidThrough)}` : `Оплачено до ${formatDate(paidThrough)} · автопродление выключено`}
+      caption={`${renewalCaption} · Защищённый IP ${demoDnsAddress}`}
     >
       {renewDialogOpen && (
         <WarningDialog
@@ -218,40 +236,33 @@ function ProtectionBanner({ compact, protectedCount, total, renew, showRenewSwit
   )
 }
 
-function DomainNote({ domain, status, onInstructions, onCopyAddress, onRetry }) {
-  if (status === 'failed') {
-    return (
-      <div className="sites-domain-note">
-        <span>Не удалось подключить защиту</span>
-        <button type="button" className="sites-text-button" onClick={() => onRetry(domain.name)}>Повторить</button>
-      </div>
-    )
-  }
+function ProtectedAddress({ copyLabel, onCopy }) {
+  return (
+    <span className="sites-domain-address">
+      {demoDnsAddress}
+      <button type="button" aria-label={copyLabel} onClick={onCopy}>
+        <SitesIcon name="copy-dns" color="network-warning" />
+      </button>
+    </span>
+  )
+}
 
-  const waitingForDns = status === 'dns'
-  if (!waitingForDns && status !== 'action') return null
-  const instruction = waitingForDns ? 'Пропишите A-запись:' : 'Разрешите Let’s Encrypt в CAA-записи'
-
+function DomainNote({ domain, status, onInstructions, onCopyAddress }) {
+  const note = domainNotes[status]
+  if (!note) return null
   return (
     <div className="sites-domain-note">
-      <div className="sites-domain-note-desktop">
-        <span>{instruction}</span>
-        {waitingForDns && (
-          <span className="sites-domain-address">
-            {demoDnsAddress}
-            <button type="button" aria-label={`Скопировать IP для ${domain.name}`} onClick={onCopyAddress}><SitesIcon name="copy-dns" color="network-warning" /></button>
-          </span>
-        )}
-        <button type="button" className="sites-text-button" aria-label={`Как сделать для ${domain.name}`} onClick={() => onInstructions(domain.name)}>Как сделать</button>
-      </div>
-      <button type="button" className="sites-domain-instruction" aria-haspopup="dialog" onClick={() => onInstructions(domain.name)}>
-        <span>{instruction}{waitingForDns && ` ${demoDnsAddress}`}</span>
-        <SitesIcon src={chevronIcon} color="network-warning" />
-      </button>
-      {waitingForDns && (
-        <button type="button" className="sites-domain-copy" aria-label={`Скопировать IP для ${domain.name}`} onClick={onCopyAddress}>
-          <SitesIcon name="copy-dns" color="icon-secondary" />
-        </button>
+      <span>
+        {note.text}
+        {note.showAddress && <> <ProtectedAddress copyLabel={`Скопировать IP для ${domain.name}`} onCopy={onCopyAddress} /></>}
+        {note.suffix && ` ${note.suffix}`}
+      </span>
+      {note.href ? (
+        <a className="sites-text-button" href={note.href} target="_blank" rel="noopener"
+          aria-label={`${note.label} для ${domain.name}`}>{note.label}</a>
+      ) : (
+        <button type="button" className="sites-text-button" aria-haspopup="dialog" aria-label={`Как сделать для ${domain.name}`}
+          onClick={() => onInstructions({ name: domain.name, status })}>Как сделать</button>
       )}
     </div>
   )
@@ -259,7 +270,6 @@ function DomainNote({ domain, status, onInstructions, onCopyAddress, onRetry }) 
 
 function DomainInstructions({ name, status, onVerify, onClose, onCopyAddress }) {
   const dialog = useRef(null)
-  const waitingForDns = status === 'dns'
 
   useEffect(() => {
     dialog.current.showModal()
@@ -267,13 +277,12 @@ function DomainInstructions({ name, status, onVerify, onClose, onCopyAddress }) 
 
   return (
     <dialog ref={dialog} className="hosting-dialog sites-dialog" aria-labelledby="sites-instructions-title" onClose={onClose}>
-      <h3 className="hosting-dialog-title" id="sites-instructions-title">{waitingForDns ? 'Проверка DNS' : 'Проверка CAA'}</h3>
-      <p>{waitingForDns
-        ? <>В демо для <strong>{name}</strong> нужна A-запись со значением <strong className="sites-domain-address">
-          {demoDnsAddress}
-          <button type="button" aria-label="Скопировать IP" onClick={onCopyAddress}><SitesIcon name="copy-dns" color="network-warning" /></button>
-        </strong>.</>
-        : <>Чтобы выпустить сертификат для <strong>{name}</strong>, разрешите Let’s Encrypt в CAA-записи домена.</>}</p>
+      <h3 className="hosting-dialog-title" id="sites-instructions-title">Что делать, если домену требуется действие?</h3>
+      <p><strong>{name}</strong></p>
+      <p>{domainInstructions[status]}</p>
+      {domainNotes[status].showAddress && (
+        <p>Защищённый IP <ProtectedAddress copyLabel="Скопировать IP" onCopy={onCopyAddress} /></p>
+      )}
       <div className="sites-payment-buttons">
         <button type="button" className="sites-payment-primary" onClick={() => { dialog.current.close(); onVerify(name) }}>Имитировать проверку</button>
         <button type="button" className="sites-payment-cancel" onClick={() => dialog.current.close()}>Закрыть</button>
@@ -316,6 +325,8 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
   const requiresTransfer = availability === 'server' || availability === 'region'
   const enrolled = Object.keys(statuses)
   const connectionStatuses = Object.values(statuses)
+  const failedDomains = enrolled.filter(name => statuses[name] === 'failed')
+  const connectingDomains = connectionStatuses.includes('connecting')
   const additions = [...selected].filter(name => !statuses[name])
   const removals = editingDomains ? enrolled.filter(name => !selected.has(name)) : []
   const removingAllDomains = removesAllServiceTargets(selected, removals)
@@ -337,7 +348,7 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
     ...additions.map(name => ({ id: name, title: name, description: 'Подключение защиты от DDoS' })),
     ...removals.map(name => ({ id: name, title: name, description: 'Отключение защиты от DDoS' })),
   ]
-  const protectedCount = enrolled.filter(name => statuses[name] === 'protected').length
+  const protectedCount = connectionStatuses.filter(isNetworkDomainProtected).length
   const disconnectingService = dialog === 'disconnect-service'
   const externalDns = preset.domains.filter(domain => domain.dns !== 'DNS Timeweb' &&
     (disconnectingService ? enrolled : removals).includes(domain.name))
@@ -381,8 +392,8 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
     simulateActivation(names, next)
   }
 
-  function retryConnection(name) {
-    connectDomains([name])
+  function retryConnection() {
+    connectDomains(failedDomains)
     showToast({ message: 'Повторяем подключение защиты.' })
   }
 
@@ -514,18 +525,25 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
           onDismiss={() => setShowAttack(false)}
         />
       )}
-      {connectionStatuses.includes('failed') ? (
-        <ProtectionAlert
-          title="Не удалось подключить защиту"
-          description="Нажмите «Повторить» в строке домена, где возник сбой."
-          tone="error"
-        />
-      ) : connectionStatuses.includes('connecting') && (
-        <ProtectionAlert
-          title="Подключаем сетевую защиту"
-          description="Статусы доменов обновятся в списке после подключения."
-        />
-      )}
+      <div className="sites-connection-alert">
+        <AnimatedBlock open={failedDomains.length > 0 || connectingDomains}>
+          <div className="sites-connection-alert-content">
+            {failedDomains.length > 0 ? (
+              <ProtectionAlert
+                title="Не удалось подключить защиту"
+                description="В списке доменов отмечено, где возникла ошибка."
+                tone="error"
+                action={{ label: 'Повторить', onClick: retryConnection }}
+              />
+            ) : (
+              <ProtectionAlert
+                title="Подключаем сетевую защиту"
+                description="Статусы доменов обновятся в списке после подключения."
+              />
+            )}
+          </div>
+        </AnimatedBlock>
+      </div>
       {hasProtection ? (
         <ProtectionBanner
           compact={compact}
@@ -567,7 +585,8 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
           domains={preset.domains}
           empty={emptyDomains}
           statuses={statuses}
-          statusLabels={statusLabels}
+          statusLabels={networkProtectionStatusLabels}
+          isProtected={isNetworkDomainProtected}
           selected={selected}
           hasProtection={hasProtection}
           selecting={!hasProtection || editingDomains}
@@ -576,7 +595,7 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
           dark={dark}
           onSelection={updateSelection}
           renderNote={(domain, status) => (
-            <DomainNote domain={domain} status={status} onInstructions={setInstructions} onCopyAddress={copyDnsAddress} onRetry={retryConnection} />
+            <DomainNote domain={domain} status={status} onInstructions={setInstructions} onCopyAddress={copyDnsAddress} />
           )}
         />
       )}
@@ -634,8 +653,8 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
       <ProtectionFaq questions={questions} />
       {scrollSpacer}
       {instructions && <DomainInstructions
-        name={instructions}
-        status={statuses[instructions]}
+        name={instructions.name}
+        status={instructions.status}
         onClose={() => setInstructions(null)}
         onCopyAddress={copyDnsAddress}
         onVerify={name => simulateActivation([name], { [name]: 'protected' })}
@@ -679,7 +698,7 @@ export default function SitesSection({ tab, onTabChange, dark, screenState, comp
   const [networkStatuses, setNetworkStatuses] = useState(networkPreset.statuses)
   const [showAttack, setShowAttack] = useState(Boolean(networkPreset.attack))
   const antivirusThreats = Object.values(antivirusStatuses).includes('threat')
-  const networkConnected = Object.values(networkStatuses).includes('protected')
+  const networkConnected = Object.values(networkStatuses).some(isNetworkDomainProtected)
   const tabStatuses = {
     antivirus: plan && (antivirusThreats ? 'threat' : 'connected'),
     'network-protection': networkConnected && (showAttack ? 'attack' : 'connected'),

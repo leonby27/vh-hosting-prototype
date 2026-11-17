@@ -82,12 +82,12 @@
   --hosting-primary-back: var(--hosting-dark-banner-button);
   --hosting-primary-hover: var(--hosting-dark-banner-button-hover);
   --hosting-focus: var(--hosting-dark-banner-focus);
-  --api-promo-glass-edge: rgb(164 178 222 / 12%);
-  --api-promo-glass-highlight: rgb(226 233 255 / 78%);
-  --api-promo-glass-reflection: rgb(149 151 255 / 76%);
-  --api-promo-glass-bloom: rgb(95 62 255 / 36%);
+  --api-promo-glass-edge: rgb(164 194 222 / 12%);
+  --api-promo-glass-highlight: rgb(226 241 255 / 78%);
+  --api-promo-glass-reflection: rgb(132 195 255 / 76%);
+  --api-promo-glass-bloom: color-mix(in srgb, var(--hosting-dark-banner-button) 45%, transparent);
   --api-promo-shade-direction: to top;
-  --api-promo-shade: #05060e;
+  --api-promo-shade: #05090e;
   position: relative;
   isolation: isolate;
   display: grid;
@@ -100,10 +100,10 @@
       var(--api-promo-shade) 4%, color-mix(in srgb, var(--api-promo-shade) 88%, transparent) 31%,
       color-mix(in srgb, var(--api-promo-shade) 32%, transparent) 56%, transparent 72%),
     radial-gradient(ellipse 62% 64% at 72% 115%, var(--api-promo-glass-bloom), transparent 92%),
-    linear-gradient(180deg, transparent 54%, rgb(131 156 223 / 10%)),
+    linear-gradient(180deg, transparent 54%, rgb(131 175 223 / 10%)),
     var(--hosting-dark-banner-back);
   box-shadow:
-    inset 0 -5px 16px rgb(134 158 242 / 10%),
+    inset 0 -5px 16px rgb(134 184 242 / 10%),
     var(--hosting-shadow);
 }
 
@@ -144,14 +144,14 @@
       transparent 0deg,
       rgb(105 164 255 / 31%) calc(17deg * var(--api-promo-ray-spread, 1)),
       rgb(108 150 255 / 6%) calc(34deg * var(--api-promo-ray-spread, 1)),
-      rgb(119 154 255 / 24%) calc(48deg * var(--api-promo-ray-spread, 1)),
-      rgb(126 138 254 / 5%) calc(62deg * var(--api-promo-ray-spread, 1)),
-      rgb(151 136 255 / 17%) calc(75deg * var(--api-promo-ray-spread, 1)),
+      rgb(119 171 255 / 24%) calc(48deg * var(--api-promo-ray-spread, 1)),
+      rgb(126 178 254 / 5%) calc(62deg * var(--api-promo-ray-spread, 1)),
+      rgb(136 193 255 / 17%) calc(75deg * var(--api-promo-ray-spread, 1)),
       transparent calc(95deg * var(--api-promo-ray-spread, 1))),
     radial-gradient(ellipse var(--api-promo-light-area, 87% 62%) at var(--api-promo-light-origin, 72% 100%),
-      rgb(42 76 216 / 43%),
-      rgb(80 61 220 / 29%) calc(48% + var(--api-promo-gradient-shift, 0%)),
-      rgb(120 77 239 / 15%) calc(72% + var(--api-promo-gradient-shift, 0%)),
+      rgb(32 105 195 / 43%),
+      rgb(50 126 214 / 29%) calc(48% + var(--api-promo-gradient-shift, 0%)),
+      rgb(86 161 222 / 15%) calc(72% + var(--api-promo-gradient-shift, 0%)),
       transparent 100%);
   opacity: .33;
 }
@@ -191,12 +191,8 @@
 .api-key-promo-content { max-inline-size: 420px; gap: 20px; }
 .api-key-promo-art {
   display: none;
-  pointer-events: none;
-}
-.api-key-promo-art img {
-  display: block;
-  inline-size: 100%;
   block-size: auto;
+  pointer-events: none;
 }
 .api-key-promo h2 { color: var(--hosting-dark-banner-title); font-size: 26px; line-height: 32px; }
 .api-key-promo p { margin-block-start: 8px; }
@@ -429,9 +425,10 @@
     display: block;
     position: absolute;
     inset-block-start: 50%;
-    inset-inline-end: clamp(24px, 4cqi, 40px);
-    inline-size: 200px;
+    inset-inline-end: 0;
+    inline-size: min(34%, 312px);
     translate: 0 -50%;
+    scale: -1 1;
   }
   .api-key-promo h2 { font-size: 32px; line-height: 38px; }
 }
@@ -625,7 +622,10 @@
 .api-key-menu > button:hover .api-kebab { opacity: .65; }
 .api-page .api-issued-warning { color: var(--hosting-network-warning); }
 
-.api-field { min-inline-size: 0; }
+.api-field { min-inline-size: 0; scroll-margin-block-start: 16px; }
+.hosting-shell[data-compact="true"] .api-field {
+  scroll-margin-block-start: calc(var(--hosting-header-height) + 16px);
+}
 .api-field-label {
   display: block;
   padding-block-end: 8px;

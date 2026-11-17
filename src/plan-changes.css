@@ -841,13 +841,35 @@
   line-height: 18px;
 }
 
-.plan-changes .plan-actions > button:hover,
+.plan-payment-consent {
+  margin-block-end: 2px;
+}
+
+.plan-payment-consent label {
+  cursor: pointer;
+}
+
+.plan-payment-consent a {
+  color: var(--hosting-link-text);
+  text-decoration: none;
+}
+
+.plan-payment-consent a:is(:hover, :focus-visible) {
+  color: var(--hosting-link-hover);
+}
+
+.plan-changes .plan-actions > button:enabled:hover,
 .plan-invoice-download:hover {
   background: var(--hosting-primary-hover);
 }
 
 .plan-changes .plan-actions > button[aria-disabled="true"] {
   cursor: wait;
+}
+
+.plan-changes .plan-actions > button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .plan-action-spinner {
@@ -877,7 +899,7 @@
   background: var(--hosting-plan-danger-hover);
 }
 
-.hosting-shell[data-theme="dark"] .plan-changes .plan-actions > button:hover,
+.hosting-shell[data-theme="dark"] .plan-changes .plan-actions > button:enabled:hover,
 .hosting-shell[data-theme="dark"] .plan-invoice-download:hover {
   background: color-mix(in srgb, var(--hosting-primary-hover) 88%, black);
 }
@@ -959,9 +981,7 @@
 }
 
 .plan-payment-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  text-align: center;
 }
 
 .plan-demo-feedback {

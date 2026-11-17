@@ -79,6 +79,14 @@
   gap: var(--sites-protection-gap);
 }
 
+.sites-connection-alert {
+  margin-block-start: calc(-1 * var(--sites-protection-gap));
+}
+
+.sites-connection-alert-content {
+  padding-block-start: var(--sites-protection-gap);
+}
+
 .sites-domains { --hosting-reveal-delay: 15ms; }
 .sites-checkout { --hosting-reveal-delay: 30ms; }
 .sites-faq { --hosting-reveal-delay: 45ms; }
@@ -515,11 +523,12 @@
   flex-wrap: wrap;
 }
 
-.sites-page button.sites-text-button {
+.sites-page .sites-text-button {
   color: var(--hosting-link-text);
+  text-decoration: none;
 }
 
-.sites-page button.sites-text-button:hover {
+.sites-page .sites-text-button:hover {
   color: var(--hosting-link-hover);
 }
 
@@ -608,24 +617,10 @@
 
 .sites-domain-table tbody :is(th, td) {
   height: 56px;
+  vertical-align: middle;
   border-block-end: 1px solid var(--hosting-line);
   background-color: var(--sites-domain-row-background, var(--hosting-surface));
   font-weight: 500;
-}
-
-.sites-domain-table tr:is([data-status="dns"], [data-status="action"], [data-status="failed"]) > * {
-  height: 74px;
-}
-
-@container sites (width > 560px) {
-  .sites-domain-row:is([data-status="dns"], [data-status="action"]) > * {
-    vertical-align: top;
-    padding-block-start: 16px;
-  }
-
-  .sites-domain-row:is([data-status="dns"], [data-status="action"]) > .sites-domain-name {
-    padding-block-start: 20px;
-  }
 }
 
 .sites-domain-row[data-selectable] {
@@ -730,9 +725,14 @@
   color: var(--hosting-link-text);
 }
 
-.sites-domain-row:is([data-status="dns"], [data-status="action"]) .sites-domain-status .sites-domain-badge {
+:where(#sites-panel-network-protection) .sites-domain-row:has(.sites-domain-note) .sites-domain-status .sites-domain-badge {
   background: var(--hosting-plan-warning-back);
   color: var(--hosting-network-warning);
+}
+
+.sites-domain-row[data-status="failed"] .sites-domain-status .sites-domain-badge {
+  background: var(--hosting-alert-error-back);
+  color: var(--hosting-plan-error-text);
 }
 
 .sites-domain-note {
@@ -749,19 +749,18 @@
   font-weight: 400;
 }
 
+@container sites (width > 560px) {
+  :where(#sites-panel-network-protection) .sites-domain-row:has(.sites-domain-note) > * {
+    height: 74px;
+  }
+
+  :where(#sites-panel-network-protection) .sites-domain-note {
+    max-width: calc(100% - 12px);
+  }
+}
+
 .sites-domain-note button {
   flex: none;
-}
-
-.sites-domain-note-desktop {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: inherit;
-}
-
-.sites-page button:is(.sites-domain-instruction, .sites-domain-copy) {
-  display: none;
 }
 
 .sites-domain-note .sites-text-button {
@@ -772,6 +771,15 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.sites-domain-address button {
+  display: grid;
+  min-inline-size: 20px;
+  min-block-size: 20px;
+  place-items: center;
 }
 
 .sites-domain-address .sites-icon {
@@ -1145,7 +1153,6 @@
   }
 
   .sites-domain-table[data-selecting="true"] .sites-domain-row {
-    --sites-domain-check-space: 28px;
     grid-template-columns: 20px minmax(0, 1fr) var(--sites-mobile-status-width);
   }
 
@@ -1189,55 +1196,16 @@
     font-size: 13px;
   }
 
-  .sites-domain-row:is([data-status="failed"], :has(.sites-domain-instruction)) > .sites-domain-name {
-    grid-column: span 2;
+  :where(#sites-panel-network-protection) .sites-domain-row:has(.sites-domain-note) {
+    --sites-mobile-status-width: fit-content(42cqi);
   }
 
-  .sites-domain-row:is([data-status="failed"], :has(.sites-domain-instruction)) > .sites-domain-status {
-    display: none;
+  :where(#sites-panel-network-protection) .sites-domain-status {
+    justify-self: end;
   }
 
   .sites-domain-note {
-    max-width: calc(100cqi - 32px - var(--sites-domain-check-space, 0px));
-  }
-
-  .sites-domain-note-desktop {
-    display: none;
-  }
-
-  .sites-domain-note:has(.sites-domain-instruction) {
-    flex-wrap: nowrap;
-    align-items: stretch;
-    max-inline-size: 100%;
-  }
-
-  .sites-page button:is(.sites-domain-instruction, .sites-domain-copy) {
-    display: flex;
-    align-items: center;
-    min-block-size: 26px;
-    border-radius: 6px;
-  }
-
-  .sites-page button.sites-domain-instruction {
-    flex: 0 1 auto;
-    min-inline-size: 0;
-    gap: 4px;
-    padding: 4px 6px 4px 8px;
-    background: var(--hosting-plan-warning-back);
-    color: var(--hosting-network-warning);
-    text-align: start;
-    overflow-wrap: anywhere;
-  }
-
-  .sites-page button.sites-domain-copy {
-    justify-content: center;
-    inline-size: 26px;
-    background: var(--hosting-card-surface);
-  }
-
-  .sites-domain-note :is(.sites-domain-instruction, .sites-domain-copy) .sites-icon {
-    inline-size: 14px;
-    block-size: 14px;
+    max-width: 100%;
   }
 
   .sites-active-banner {

@@ -86,7 +86,7 @@ function themeTokens(modeId, dark = false) {
     '--hosting-header': palette.get('Base/Header'),
     '--hosting-background': palette.get('Base/Background'),
     '--hosting-preview-backdrop': palette.get('Base/Under Background'),
-    '--hosting-empty-state-background': palette.get('Base/Under Background'),
+    '--hosting-empty-state-background': palette.get('Base/On Background'),
     '--hosting-surface': palette.get('Base/On Background'),
     '--hosting-text': palette.get('Text/Secondary Dark'),
     '--hosting-muted': palette.get('Icons/Secondary'),

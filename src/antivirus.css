@@ -350,20 +350,7 @@
 
 @container sites (width > 560px) {
   .sites-antivirus .sites-domain-row:has(.antivirus-domain-disclosure) > * {
-    padding-block: 15px 14px;
-    vertical-align: top;
-  }
-
-  .sites-antivirus .sites-domain-row:has(.antivirus-domain-disclosure) > .sites-domain-check {
-    padding-block-start: 18px;
-  }
-
-  .sites-antivirus .sites-domain-row:has(.antivirus-domain-disclosure) > .sites-domain-name {
-    padding-block-start: 20px;
-  }
-
-  .sites-antivirus .sites-domain-row:has(.antivirus-domain-disclosure) > .sites-domain-status {
-    padding-block-start: 16px;
+    padding-block: 15px;
   }
 
   .sites-antivirus .sites-domain-row:not([data-selected]):has(.antivirus-domain-disclosure[data-expanded="true"]) {

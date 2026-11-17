@@ -1,11 +1,25 @@
 export const networkProtectionMonthlyRate = 300
 
+export const networkProtectionStatusLabels = {
+  available: 'Не подключён',
+  protected: 'Под защитой',
+  connecting: 'Подключаем',
+  dns: 'Ждём DNS',
+  'dns-aaaa': 'Ждём DNS',
+  action: 'Требуется действие',
+  cdn: 'Требуется действие',
+  'ssl-upload': 'Требуется действие',
+  'ssl-timeweb': 'Требуется действие',
+  'ssl-expired': 'Требуется действие',
+  failed: 'Ошибка',
+}
+
 export const networkProtectionStates = [
   { id: 'protection-empty-selection', label: 'Домены не выбраны' },
   { id: 'protection-selection', label: 'Выбраны 4 домена' },
   { id: 'protection-connected', label: 'Защита подключена · с автопродлением' },
   { id: 'protection-no-renewal', label: 'Защита подключена · без автопродления' },
-  { id: 'protection-domain-statuses', label: 'Все статусы доменов' },
+  { id: 'protection-domain-statuses', label: 'Все статусы доменов', requiresPreset: true },
   { id: 'protection-many-domains', label: 'Длинный список · 50 доменов', requiresPreset: true },
   { id: 'no-saved-cards', label: 'Оплата без сохранённой карты' },
   { id: 'protection-no-sites', label: 'На аккаунте нет сайтов', requiresPreset: true },
@@ -31,14 +45,22 @@ const domains = [
   { name: 'longnameexample.ru', dns: 'DNS Timeweb' },
 ]
 
+const statusExamples = [
+  { name: 'ipv6.example', dns: 'Reg.RU', status: 'dns-aaaa' },
+  { name: 'cdn.example', dns: 'DNS Timeweb', status: 'cdn' },
+  { name: 'ssl-external.example', dns: 'DNS Timeweb', status: 'ssl-upload' },
+  { name: 'ssl-timeweb.example', dns: 'DNS Timeweb', status: 'ssl-timeweb' },
+  { name: 'ssl-expired.example', dns: 'DNS Timeweb', status: 'ssl-expired' },
+  { name: 'connection-error.example', dns: 'DNS Timeweb', status: 'failed' },
+]
+const statusDomains = [...domains, ...statusExamples]
+
 const manyDomains = [...domains, ...Array.from({ length: 45 }, (_, index) => ({
   name: `site-${String(index + 6).padStart(2, '0')}.example`,
   dns: domains[index % domains.length].dns,
 }))]
 
 const storageKey = 'vh-network-protection'
-const enrolledStatuses = new Set(['protected', 'connecting', 'dns', 'action', 'failed'])
-
 const activeStatuses = {
   'timeweb.ru': 'protected',
   'coconote.ru': 'action',
@@ -68,10 +90,12 @@ const presets = {
   'protection-connected': { statuses: activeStatuses, renew: true },
   'protection-no-renewal': { statuses: activeStatuses },
   'protection-domain-statuses': {
+    domains: statusDomains,
     statuses: {
       ...activeStatuses,
       'basketball-spb.ru': 'connecting',
       'myreviews.ru': 'dns',
+      ...Object.fromEntries(statusExamples.map(({ name, status }) => [name, status])),
     },
     renew: true,
   },
@@ -99,9 +123,9 @@ function readSavedProtection() {
     const saved = JSON.parse(sessionStorage.getItem(storageKey))
     if (!saved?.statuses || typeof saved.renew !== 'boolean' || !Number.isFinite(saved.paidThrough)) return null
 
-    const domainList = saved.many ? manyDomains : domains
+    const domainList = saved.statusExamples ? statusDomains : saved.many ? manyDomains : domains
     const statuses = Object.fromEntries(domainList.map(({ name }) => [name, saved.statuses[name]])
-      .filter(([, status]) => enrolledStatuses.has(status)))
+      .filter(([, status]) => status !== 'available' && Object.hasOwn(networkProtectionStatusLabels, status)))
     return {
       domains: domainList,
       statuses,
@@ -119,6 +143,7 @@ export function saveNetworkProtection({ domains, statuses, renew, hasSavedCard, 
     if (!paidThrough) sessionStorage.removeItem(storageKey)
     else sessionStorage.setItem(storageKey, JSON.stringify({
       many: domains === manyDomains,
+      statusExamples: domains === statusDomains,
       statuses,
       renew,
       hasSavedCard,

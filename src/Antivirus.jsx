@@ -397,9 +397,7 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
   const itemDescription = disabling ? 'Отключение для всех сайтов аккаунта' : extending ? 'Продление на 1 месяц' : formatSiteCount(count)
   const actionDescription = downgrading
     ? `С ${formatDate(paidThrough)} — ${formatPrice(monthPrice)} в месяц.`
-    : plan && !disabling && !extending && total > 0
-      ? `Доплата за текущий период. Далее ${formatPrice(monthPrice)} в месяц.`
-      : undefined
+    : undefined
 
   useEffect(() => {
     const checks = timers.current

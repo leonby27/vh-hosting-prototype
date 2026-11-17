@@ -21,7 +21,6 @@ const themedArtwork = {
   plus: 'icon-primary',
   more: 'icon-primary',
   remove: 'icon-info',
-  lock: 'icon-info',
   'payment-list-divider': 'line',
 }
 
@@ -322,7 +321,11 @@ function PaymentGroup({ group, onChange, onAction }) {
   )
 }
 
-function InvoiceAction({ label, amount = '', disabled }) {
+function isPaymentAction(action) {
+  return action.demoPayment || action.document || action.id === 'invoice'
+}
+
+function InvoiceAction({ label, amount = '', disabled, busy }) {
   const [open, setOpen] = useState(false)
   const trigger = useRef(null)
   const heading = useRef(null)
@@ -343,8 +346,9 @@ function InvoiceAction({ label, amount = '', disabled }) {
         ref={trigger}
         type="button"
         className="hosting-pressable"
-        aria-disabled={disabled || undefined}
-        onClick={() => { if (!disabled) setOpen(true) }}
+        disabled={disabled}
+        aria-disabled={busy || undefined}
+        onClick={() => { if (!busy) setOpen(true) }}
       >{label}</button>
     )
   }
@@ -419,7 +423,9 @@ export default function PlanChanges({
   const showToast = useContext(HostingToastContext)
   const content = useAnimatedHeight(undefined, animateHeight)
   const paymentErrorId = useId()
+  const consentId = useId()
   const paymentTimer = useRef(null)
+  const [agreedToTerms, setAgreedToTerms] = useState(true)
   const [pendingAction, setPendingAction] = useState(null)
   const [failedAction, setFailedAction] = useState(null)
   const summary = Boolean(items.length || nextCharge || notices.length || renewalOptions.length)
@@ -546,14 +552,36 @@ export default function PlanChanges({
               )}
               {(actions.length > 0 || actionDescription) && (
                 <div className="plan-actions">
+                  {actions.some(isPaymentAction) && (
+                    <div className="plan-check-line plan-payment-consent">
+                      <input
+                        id={consentId}
+                        type="checkbox"
+                        aria-labelledby={`${consentId}-label`}
+                        checked={agreedToTerms}
+                        disabled={Boolean(pendingAction)}
+                        onChange={event => setAgreedToTerms(event.target.checked)}
+                      />
+                      <span className="plan-check-text">
+                        <span id={`${consentId}-label`}>
+                          <label htmlFor={consentId}>Согласен с</label>{' '}
+                          <a href="https://timeweb.com/ru/services/hosting/rules/" target="_blank" rel="noopener">правилами</a>
+                          {' и '}
+                          <a href="https://timeweb.com/ru/support/documents/" target="_blank" rel="noopener">условиями</a>
+                        </span>
+                      </span>
+                    </div>
+                  )}
                   {actions.map(action => {
+                    const disabled = !agreedToTerms && isPaymentAction(action)
                     if (action.id === 'invoice') {
                       return (
                         <InvoiceAction
                           key={JSON.stringify([action.id, paymentContext, totals[0]?.amount])}
                           label={action.label}
                           amount={totals[0]?.amount}
-                          disabled={Boolean(pendingAction)}
+                          disabled={disabled}
+                          busy={Boolean(pendingAction)}
                         />
                       )
                     }
@@ -565,6 +593,7 @@ export default function PlanChanges({
                           type="button"
                           className="hosting-pressable"
                           data-tone={action.tone}
+                          disabled={disabled}
                           aria-busy={busy || undefined}
                           aria-disabled={Boolean(pendingAction) || undefined}
                           aria-describedby={failed ? paymentErrorId : undefined}
@@ -586,7 +615,6 @@ export default function PlanChanges({
               )}
               {paymentNote && (
                 <p className="plan-payment-note">
-                  <Art name="lock" />
                   <span className="plan-note-desktop">{paymentNote.desktop}</span>
                   <span className="plan-note-mobile">{paymentNote.mobile ?? paymentNote.desktop}</span>
                 </p>
