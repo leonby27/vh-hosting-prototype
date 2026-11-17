@@ -4,6 +4,10 @@
 
 Данные выгружены через Figma MCP 12 ноября 2026 года.
 
+[Открыть прототип панели хостинга на GitHub Pages](https://leonby27.github.io/vh-hosting-prototype/).
+
+В репозитории `leonby27/vh-hosting-prototype` исходный код хранится в ветке `source`, а опубликованная сборка GitHub Pages — в ветке `main`.
+
 ## Запуск и сборка
 
 Проект использует React и Vite. Требуется Node.js 20.19+ или 22.12+ из поддерживаемой ветки Node.js.
