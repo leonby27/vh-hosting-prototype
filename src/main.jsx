@@ -13,6 +13,7 @@ import PlanChangesPreview from './PlanChangesPreview.jsx'
 import { planChangeScenarios } from './PlanChangesScenarios.jsx'
 import SitesSection from './SitesSection.jsx'
 import ApiAgents, { apiAgentsSection, apiTabs } from './ApiAgents.jsx'
+import { apiKeysPreset } from './api-agents-data.js'
 import { antivirusStates } from './antivirus-states.js'
 import { networkProtectionStates } from './network-protection-states.js'
 
@@ -173,7 +174,24 @@ const tariffServiceStates = [
   { id: 'services-connected', label: 'Подключены дополнительные услуги', serviceIds: ['backups', 'builder'] },
 ]
 
-function syncPrototypeLocation(section, tab = 'mine') {
+function getPrototypeStates(section, tab) {
+  if (section === 'Дашборд') return topUpStates
+  if (section === planChangesSection) return planChangesStates
+  if (section === tariffSection && (!tab || tab === 'services')) return tariffServiceStates
+  if (section === apiAgentsSection && (!tab || tab === 'keys')) return [apiKeysPreset]
+  if (section === sitesSection) {
+    if (!tab) return [...antivirusStates, ...networkProtectionStates]
+    if (tab === 'antivirus') return antivirusStates
+    if (tab === 'network-protection') return networkProtectionStates
+  }
+  return []
+}
+
+function replacePrototypeUrl(url) {
+  if (url.href !== window.location.href) window.history.replaceState(window.history.state, '', url)
+}
+
+function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
   const url = new URL(window.location.href)
   if (section === planChangesSection) url.searchParams.set('changes', '')
   else url.searchParams.delete('changes')
@@ -183,7 +201,15 @@ function syncPrototypeLocation(section, tab = 'mine') {
   else url.searchParams.delete('sites')
   if (section === apiAgentsSection) url.searchParams.set('api', tab === 'mine' ? 'connection' : tab)
   else url.searchParams.delete('api')
-  if (url.href !== window.location.href) window.history.replaceState(window.history.state, '', url)
+  if (!keepState) url.searchParams.delete('state')
+  replacePrototypeUrl(url)
+}
+
+function syncPrototypeState(id, section) {
+  const url = new URL(window.location.href)
+  if (getPrototypeStates(section).length) url.searchParams.set('state', id)
+  else url.searchParams.delete('state')
+  replacePrototypeUrl(url)
 }
 
 function HostingApp() {
@@ -194,12 +220,15 @@ function HostingApp() {
   const [apiTab, setApiTab] = useState(apiTabs.some(([id]) => id === requestedApiTab) ? requestedApiTab : 'connection')
   const [apiKeys, setApiKeys] = useState([])
   const initialSection = query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection : query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : 'Дашборд'
+  const requestedState = query.get('state')
+  const initialScreenState = requestedState === 'initial' || getPrototypeStates(initialSection).some(state => state.id === requestedState)
+    ? requestedState : null
 
-  function selectSection(section, tab = 'mine') {
+  function selectSection(section, tab = 'mine', keepState) {
     if (section === sitesSection) setSitesTab(tab)
     if (section === apiAgentsSection) setApiTab('connection')
     if (section === tariffSection) setTariffTab(tab === 'services' ? tab : 'tariff')
-    syncPrototypeLocation(section, tab)
+    syncPrototypeLocation(section, tab, keepState)
   }
 
   function selectTariffTab(tab) {
@@ -213,17 +242,13 @@ function HostingApp() {
   }
 
   function getPageStates(section) {
-    if (section === 'Дашборд') return topUpStates
-    if (section === planChangesSection) return planChangesStates
-    if (section === tariffSection && tariffTab === 'services') return tariffServiceStates
-    if (section === sitesSection && sitesTab === 'antivirus') return antivirusStates
-    if (section === sitesSection && sitesTab === 'network-protection') return networkProtectionStates
-    return []
+    const tabs = { [tariffSection]: tariffTab, [sitesSection]: sitesTab, [apiAgentsSection]: apiTab }
+    return getPrototypeStates(section, tabs[section])
   }
 
   function renderSection(section, onSelect, dark, screenState, compact) {
     if (section === apiAgentsSection) {
-      return <ApiAgents tab={apiTab} keys={apiKeys} setKeys={setApiKeys} onTabChange={tab => {
+      return <ApiAgents tab={apiTab} keys={apiKeys} setKeys={setApiKeys} compact={compact} showDemoKeys={screenState === apiKeysPreset.id} onTabChange={tab => {
         setApiTab(tab)
         syncPrototypeLocation(apiAgentsSection, tab)
       }} />
@@ -248,7 +273,9 @@ function HostingApp() {
   return (
     <HostingShell
       initialSection={initialSection}
+      initialScreenState={initialScreenState}
       onSectionChange={selectSection}
+      onScreenStateChange={syncPrototypeState}
       isCurrentSection={(section, tab) => section === sitesSection ? sitesTab === (tab ?? 'mine')
         : section === tariffSection ? tariffTab === (tab === 'services' ? tab : 'tariff') : true}
       getPageStates={getPageStates}

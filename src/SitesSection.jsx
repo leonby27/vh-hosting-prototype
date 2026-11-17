@@ -5,8 +5,8 @@ import { HostingToastContext } from './hosting-toast.jsx'
 import { removesAllServiceTargets } from './ServiceChanges.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import Antivirus from './Antivirus.jsx'
-import { getAntivirusPreset } from './antivirus-states.js'
-import { getNetworkProtectionPreset, networkProtectionMonthlyRate as monthlyRate, saveNetworkProtection } from './network-protection-states.js'
+import { antivirusStates, getAntivirusPreset } from './antivirus-states.js'
+import { getNetworkProtectionPreset, networkProtectionMonthlyRate as monthlyRate, networkProtectionStates, saveNetworkProtection } from './network-protection-states.js'
 import domainsIcon from './assets/hosting/domains.svg'
 import chevronIcon from './assets/hosting/mobile-more-chevron.svg'
 import walletIcon from './assets/hosting/wallet.svg'
@@ -668,8 +668,10 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
 }
 
 export default function SitesSection({ tab, onTabChange, dark, screenState, compact }) {
-  const antivirusScreenState = tab === 'antivirus' ? screenState : null
-  const networkScreenState = tab === 'network-protection' ? screenState : null
+  const antivirusScreenState = antivirusStates.some(({ id }) => id === screenState) || (screenState === 'initial' && tab === 'antivirus')
+    ? screenState : null
+  const networkScreenState = networkProtectionStates.some(({ id }) => id === screenState) || (screenState === 'initial' && tab === 'network-protection')
+    ? screenState : null
   const [antivirusPreset] = useState(() => getAntivirusPreset(antivirusScreenState))
   const [networkPreset] = useState(() => getNetworkProtectionPreset(networkScreenState))
   const [plan, setPlan] = useState(antivirusPreset.plan)

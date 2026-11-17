@@ -47,6 +47,11 @@
   box-shadow: 0 5px 20px rgb(27 54 74 / 3%);
 }
 
+.plan-changes-card:has(> .plan-changes-empty, > .plan-changes-card-content > .plan-changes-empty) {
+  background: var(--hosting-empty-state-background);
+  box-shadow: none;
+}
+
 .plan-changes-card[data-resizing]:not(:has(.plan-payment-panel[data-open="true"])) {
   overflow: clip;
 }
@@ -276,8 +281,8 @@
   line-height: 18px;
 }
 
-.plan-text-button:hover {
-  text-decoration: underline;
+.plan-changes button.plan-text-button:hover {
+  color: var(--hosting-link-hover);
 }
 
 .plan-changes button.plan-icon-button {
@@ -376,7 +381,7 @@
 .plan-segments .hosting-tab-indicator {
   inset-block: 3px;
   border-radius: 6px;
-  background: var(--hosting-surface);
+  background: var(--hosting-on-surface);
   box-shadow: 0 1px 4px rgb(27 54 74 / 8%);
 }
 

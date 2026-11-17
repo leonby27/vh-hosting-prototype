@@ -236,7 +236,10 @@ export function ServiceSettings({ service, ptr, renew, onSave, onClose }) {
         {isIp ? (
           <>
             <dl><dt>Адрес</dt><dd>{service.description}</dd><dt>Домен на этом адресе</dt><dd>davydov.ru</dd></dl>
-            <label>PTR-запись<input name="ptr" defaultValue={ptr} autoFocus /></label>
+            <div className="tariff-service-settings-field">
+              <span id={`${id}-ptr-label`}>PTR-запись</span>
+              <input name="ptr" aria-labelledby={`${id}-ptr-label`} defaultValue={ptr} autoFocus />
+            </div>
             <p>При отключении услуги домен вернётся на общий IP сервера.</p>
           </>
         ) : (

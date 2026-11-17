@@ -519,8 +519,8 @@
   color: var(--hosting-link-text);
 }
 
-.sites-text-button:hover {
-  text-decoration: underline;
+.sites-page button.sites-text-button:hover {
+  color: var(--hosting-link-hover);
 }
 
 .sites-domain-search {
@@ -708,6 +708,10 @@
   background-color: var(--sites-domain-badge-background, var(--hosting-card-surface));
   color: var(--hosting-text);
   font-weight: 400;
+}
+
+.sites-domain-table tbody tr:has(> .sites-table-empty) {
+  --sites-domain-row-background: var(--hosting-empty-state-background);
 }
 
 .sites-domain-table tbody .sites-table-empty {
@@ -1039,8 +1043,8 @@
   text-align: start;
 }
 
-.sites-faq button:is(:hover, [aria-expanded="true"]) {
-  text-decoration: underline;
+.sites-page .sites-faq button:is(:hover, [aria-expanded="true"]) {
+  color: var(--hosting-link-hover);
 }
 
 .sites-faq-answer {

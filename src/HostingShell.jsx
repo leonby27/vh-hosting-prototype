@@ -86,14 +86,18 @@ function themeTokens(modeId, dark = false) {
     '--hosting-header': palette.get('Base/Header'),
     '--hosting-background': palette.get('Base/Background'),
     '--hosting-preview-backdrop': palette.get('Base/Under Background'),
+    '--hosting-empty-state-background': palette.get('Base/Under Background'),
     '--hosting-surface': palette.get('Base/On Background'),
     '--hosting-text': palette.get('Text/Secondary Dark'),
     '--hosting-muted': palette.get('Icons/Secondary'),
     '--hosting-title': palette.get('Text/Primary'),
+    '--hosting-text-primary-light': palette.get('Text/Primary Light'),
     '--hosting-link': palette.get('Base/Accent'),
     '--hosting-accent-light': palette.get('Base/Accent Light'),
     '--hosting-link-text': palette.get(dark ? 'Base/Accent Bright Hover' : 'Text/Accent'),
+    '--hosting-link-hover': palette.get(dark ? 'Base/Accent Bright' : 'Text/Accent Hover'),
     '--hosting-line': palette.get('Base/Line/Default Line'),
+    '--hosting-line-warning': palette.get('Base/Line/Warning'),
     '--hosting-list-back': palette.get('List/Back'),
     '--hosting-list-hover': palette.get('List/Item Hover'),
     '--hosting-chip': palette.get(dark ? 'Base/Surface 3' : 'Base/Surface 2'),
@@ -107,6 +111,7 @@ function themeTokens(modeId, dark = false) {
     '--hosting-top-up-year-border': palette.get('Mono/Green'),
   '--hosting-surface-3': palette.get('Base/Surface 3'),
     '--hosting-card-surface': palette.get('Base/Surface'),
+    '--hosting-surface-60': palette.get('Base/Surface 60%'),
     '--hosting-on-surface': palette.get('Base/On Surface'),
     '--hosting-segment-surface': palette.get(dark ? 'Base/Surface' : 'Base/Under Background'),
     '--hosting-secondary': palette.get(dark ? 'Text/Secondary Dark' : 'Text/Secondary'),
@@ -126,6 +131,7 @@ function themeTokens(modeId, dark = false) {
     '--hosting-alert-error-back': palette.get('Alerts/Red Back'),
     '--hosting-warning-light': palette.get('Base/Warning Light'),
     '--hosting-warning-text': palette.get('Text/Warning'),
+    '--hosting-text-orange': palette.get('Text/Orange'),
     '--hosting-warning-text-emphasis': palette.get(dark ? 'Text/Warning Hover' : 'Text/Warning'),
     '--hosting-plan-warning': palette.get('Text/Orange Hover'),
     '--hosting-plan-credit': palette.get(dark ? 'Text/Green Hover' : 'Text/Green'),
@@ -153,6 +159,14 @@ function themeTokens(modeId, dark = false) {
 
 const lightTokens = themeTokens(collection.defaultModeId)
 const darkTokens = themeTokens(collection.modes.find(mode => mode.name === 'Dark').modeId, true)
+const darkBannerTokens = {
+  '--hosting-dark-banner-back': darkTokens['--hosting-background'],
+  '--hosting-dark-banner-title': darkTokens['--hosting-title'],
+  '--hosting-dark-banner-text': darkTokens['--hosting-text'],
+  '--hosting-dark-banner-button': darkTokens['--hosting-primary-back'],
+  '--hosting-dark-banner-button-hover': darkTokens['--hosting-primary-hover'],
+  '--hosting-dark-banner-focus': darkTokens['--hosting-focus'],
+}
 const themeStorageKey = 'vh-hosting-theme'
 const viewStorageKey = 'vh-hosting-preview-view'
 const compactViewport = '(max-width: 700px)'
@@ -261,10 +275,10 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
     onSelect(label, tab)
   }
 
-  function followLink(event, label, tab) {
+  function followLink(event, label, tab, navigate = onSelect) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
-    select(label, tab)
+    navigate(label, tab)
   }
 
   function toggleDropdown(name) {
@@ -317,10 +331,7 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
         >
           <li className="hosting-prototype-heading">Страницы</li>
           <li>
-            <button type="button" className="hosting-menu-item" onClick={() => {
-              header.current?.querySelector('.hosting-prototype-menu > .hosting-menu-trigger')?.focus()
-              select('Дашборд')
-            }}><Icon name="dashboard" />Дашборд</button>
+            <a className="hosting-menu-item" href="./" onClick={event => followLink(event, 'Дашборд')}><Icon name="dashboard" />Дашборд</a>
           </li>
           <li><a className="hosting-menu-item" href="?sites=antivirus" onClick={event => followLink(event, 'Сайты', 'antivirus')}><Icon name="domains" />Антивирус</a></li>
           <li><a className="hosting-menu-item" href="?sites=network-protection" onClick={event => followLink(event, 'Сайты', 'network-protection')}><Icon name="vps" />Сетевая защита</a></li>
@@ -342,7 +353,7 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
       <div className="hosting-product-header">
         <div className="hosting-frame hosting-header-inner">
           <div className="hosting-brand">
-            <a href="./" aria-label="Timeweb Hosting" onClick={event => followLink(event, 'Дашборд')}>
+            <a href="./" aria-label="Timeweb Hosting" onClick={event => followLink(event, 'Дашборд', undefined, select)}>
               {compact ? <img src={mobileLogo} width="96" height="20" alt="Timeweb" />
                 : <img src={dark ? darkLogo : logo} width="186" height="26" alt="timeweb hosting" />}
             </a>
@@ -486,12 +497,15 @@ function MobileMore({ open, onSelect }) {
   )
 }
 
-export default function HostingShell({ children, renderSection, initialSection = 'Дашборд', onSectionChange, getPageStates, isCurrentSection }) {
+export default function HostingShell({
+  children, renderSection, initialSection = 'Дашборд', initialScreenState = null,
+  onSectionChange, onScreenStateChange, getPageStates, isCurrentSection,
+}) {
   const [toast, setToast] = useState(null)
   const [selected, setSelected] = useState(initialSection)
   const [menuOpen, setMenuOpen] = useState(false)
   const [dark, setDark] = useState(readDarkTheme)
-  const [screenState, setScreenState] = useState({ id: null, version: 0 })
+  const [screenState, setScreenState] = useState({ id: initialScreenState, version: 0 })
   const [previewView, setPreviewView] = useState(readPreviewView)
   const [narrowViewport, setNarrowViewport] = useState(() => window.matchMedia(compactViewport).matches)
   const menuToggleRef = useRef(null)
@@ -536,7 +550,7 @@ export default function HostingShell({ children, renderSection, initialSection =
       if (label !== selected) setScreenState(current => ({ ...current, id: null }))
       setSelected(label)
       setMenuOpen(false)
-      onSectionChange?.(label, tab)
+      onSectionChange?.(label, tab, label === selected)
       window.scrollTo(0, 0)
     })
   }
@@ -557,7 +571,8 @@ export default function HostingShell({ children, renderSection, initialSection =
   const content = renderSection ? renderSection(selected, selectSection, dark, screenState.id, compact) : children
 
   return (
-    <div className="hosting-shell" data-theme={dark ? 'dark' : 'light'} data-view={previewView} data-compact={compact} style={dark ? darkTokens : lightTokens}>
+    <div className="hosting-shell" data-theme={dark ? 'dark' : 'light'} data-view={previewView} data-compact={compact}
+      style={{ ...(dark ? darkTokens : lightTokens), ...darkBannerTokens }}>
       <HostingHeader
         compact={compact}
         menuOpen={moreOpen}
@@ -572,6 +587,7 @@ export default function HostingShell({ children, renderSection, initialSection =
         onChooseState={id => {
           setMenuOpen(false)
           setScreenState(current => ({ id, version: current.version + 1 }))
+          onScreenStateChange?.(id, selected)
           window.scrollTo(0, 0)
         }}
         previewView={previewView}

@@ -54,7 +54,7 @@ export function TabIndicator({ selected }) {
     const track = indicator.parentElement
 
     function positionIndicator() {
-      const active = track.querySelector('button[aria-selected="true"], button[aria-pressed="true"]')
+      const active = track.querySelector('button[aria-selected="true"], button[aria-pressed="true"], label:has(> input[type="radio"]:checked)')
       if (!active) {
         indicator.removeAttribute('style')
         return
@@ -67,7 +67,7 @@ export function TabIndicator({ selected }) {
     positionIndicator()
     const observer = new ResizeObserver(positionIndicator)
     observer.observe(track)
-    track.querySelectorAll('button').forEach(button => observer.observe(button))
+    track.querySelectorAll('button, label').forEach(option => observer.observe(option))
     return () => observer.disconnect()
   }, [selected])
 

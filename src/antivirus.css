@@ -256,8 +256,8 @@
   line-height: 18px;
 }
 
-.antivirus-domains-collapse:hover {
-  text-decoration: underline;
+.sites-page .antivirus-domains-collapse:hover {
+  color: var(--hosting-link-hover);
 }
 
 .sites-page .antivirus-domains-list {

@@ -73,6 +73,34 @@
   transition: transform var(--hosting-motion-menu) ease, width var(--hosting-motion-menu) ease;
 }
 
+.hosting-segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--hosting-segment-surface);
+}
+
+.hosting-shell .hosting-segmented :is(button, label > span) {
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: var(--hosting-text);
+  font-size: 15px;
+  line-height: 18px;
+  font-weight: 500;
+}
+
+.hosting-segmented .hosting-tab-indicator {
+  inset-block: 4px;
+  border-radius: 6px;
+  background: var(--hosting-on-surface);
+  box-shadow: 0 4px 6px rgb(5 12 38 / 12%);
+}
+
+.hosting-shell .hosting-segmented :is(button[aria-pressed="true"], button[aria-selected="true"], input:checked + span) {
+  color: var(--hosting-title);
+}
+
 .hosting-tab-indicator:not([style]) {
   display: none;
 }

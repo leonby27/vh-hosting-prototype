@@ -1,4 +1,6 @@
-import { useContext, useState } from 'react'
+import { useContext, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import closeIcon from './assets/checkout/close.svg'
 import BalanceTopUp from './BalanceTopUp.jsx'
 import { formatTopUpAmount, topUpStates } from './balance-top-up-states.js'
 import { HostingToastContext } from './hosting-toast.jsx'
@@ -172,7 +174,7 @@ function Monitoring({ onSelect, dark, compact }) {
           </h3>
           <p>Сегодня: 60 сек из 80 сек</p>
         </div>
-        <div className="dashboard-units hosting-indicator-track" role="group" aria-label="Единицы нагрузки">
+        <div className="hosting-segmented hosting-indicator-track" role="group" aria-label="Единицы нагрузки">
           <TabIndicator selected={unit} />
           {['%', 'CP'].map(value => (
             <button key={value} type="button" aria-pressed={unit === value} onClick={() => selectUnit(value)}>{value}</button>
@@ -261,6 +263,120 @@ function FtpStatus({ compact }) {
   )
 }
 
+function TimmyPrompt() {
+  const [message, setMessage] = useState('')
+  const [questions, setQuestions] = useState([])
+  const [open, setOpen] = useState(false)
+  const [chatHost, setChatHost] = useState(null)
+  const input = useRef(null)
+  const chatInput = useRef(null)
+  const transcript = useRef(null)
+  const composing = useRef(false)
+  const showToast = useContext(HostingToastContext)
+  const canSend = Boolean(message.trim())
+
+  useLayoutEffect(() => {
+    setChatHost(input.current.closest('.hosting-shell'))
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!open || !chatHost) return
+    const field = chatInput.current
+    field.focus({ preventScroll: true })
+    field.setSelectionRange(field.value.length, field.value.length)
+  }, [open, chatHost])
+
+  useLayoutEffect(() => {
+    if (open && transcript.current) transcript.current.scrollTop = transcript.current.scrollHeight
+  }, [open, questions])
+
+  function sendMessage(event) {
+    event.preventDefault()
+    const text = message.trim()
+    if (!text || composing.current) return
+    setQuestions(current => [...current, text])
+    setMessage('')
+    setOpen(true)
+    chatInput.current?.focus({ preventScroll: true })
+  }
+
+  function closeChat() {
+    setOpen(false)
+    input.current?.focus({ preventScroll: true })
+  }
+
+  function voiceHint() {
+    showToast({ message: 'В демо можно отправить текстовый вопрос.' })
+  }
+
+  return (
+    <>
+      <section className="dashboard-timmy hosting-reveal" aria-label="Timmy">
+        <form className="dashboard-timmy-form" onSubmit={sendMessage} onClick={event => {
+          if (!event.target.closest('button')) input.current.focus()
+        }}>
+          <input ref={input} type="text" value={message} onChange={event => setMessage(event.target.value)}
+            onCompositionStart={() => { composing.current = true }}
+            onCompositionEnd={() => { composing.current = false }}
+            aria-label="Чем вам помочь" placeholder="Чем вам помочь" />
+          <button type="button" className="dashboard-timmy-voice" aria-label="Голосовое сообщение" onClick={voiceHint}>
+            <TintedArtwork name="timmy-microphone" tone="title" />
+          </button>
+          <button type="submit" className="dashboard-timmy-send" aria-label="Отправить сообщение" disabled={!canSend}>
+            <Artwork name="timmy-arrow-up" />
+          </button>
+        </form>
+      </section>
+      {chatHost && createPortal(
+        <section className="timmy-chat" role="region" aria-labelledby="timmy-chat-title" data-open={open} inert={!open}
+          onKeyDown={event => {
+            if (event.key !== 'Escape') return
+            event.stopPropagation()
+            closeChat()
+          }}>
+          <header className="timmy-chat-header">
+            <h2 id="timmy-chat-title">Timmy</h2>
+            <button type="button" className="timmy-chat-icon-button" aria-label="Закрыть чат" onClick={closeChat}>
+              <img className="timmy-chat-close-icon" src={closeIcon} width="19" height="19" alt="" />
+            </button>
+          </header>
+          <div className="timmy-chat-transcript" ref={transcript} role="log" aria-label="Переписка">
+            {questions.map((question, index) => (
+              <div className="timmy-chat-exchange" key={index}>
+                <p className="timmy-chat-bubble timmy-chat-question">{question}</p>
+                <div className="timmy-chat-bubble">
+                  <strong>Как добавить сайт</strong>
+                  <ol>
+                    <li>Откройте раздел «Сайты» в панели хостинга.</li>
+                    <li>Нажмите «Добавить сайт» и укажите его название.</li>
+                    <li>Привяжите домен к сайту, чтобы он открывался по нужному адресу.</li>
+                  </ol>
+                </div>
+                <span className="timmy-chat-byline">Timmy · Помощник</span>
+              </div>
+            ))}
+          </div>
+          <form className="timmy-chat-composer" onSubmit={sendMessage}>
+            <textarea ref={chatInput} rows={1} aria-label="Сообщение для Timmy" placeholder="Задать вопрос…"
+              value={message} onChange={event => setMessage(event.target.value)} onKeyDown={event => {
+                if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) sendMessage(event)
+              }} />
+            <div className="timmy-chat-tools">
+              <button type="button" className="timmy-chat-icon-button" aria-label="Голосовое сообщение" onClick={voiceHint}>
+                <Artwork name="timmy-microphone" />
+              </button>
+              <button type="submit" className="timmy-chat-send" aria-label="Отправить сообщение" disabled={!canSend}>
+                <Artwork name="timmy-arrow-up" />
+              </button>
+            </div>
+          </form>
+        </section>,
+        chatHost,
+      )}
+    </>
+  )
+}
+
 export default function Dashboard({ onSelect, dark, compact, screenState }) {
   const preset = topUpStates.find(state => state.id === screenState)
   const [topUpOpen, setTopUpOpen] = useState(Boolean(preset))
@@ -279,6 +395,7 @@ export default function Dashboard({ onSelect, dark, compact, screenState }) {
 
   return (
     <div className="dashboard">
+      <TimmyPrompt />
       <Billing onTariffSettings={() => onSelect('Настройки тарифа')} onTopUp={() => setTopUpOpen(true)} balance={balance} compact={compact} />
       <section className="dashboard-services" aria-labelledby="dashboard-services-title">
         <h2 id="dashboard-services-title">Мои сервисы</h2>

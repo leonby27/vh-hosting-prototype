@@ -3,20 +3,30 @@ export const apiDocsUrl = 'https://timeweb.com/ru/docs/publichnyj-api-timeweb/me
 export const mcpAddress = `${apiAddress}/mcp`
 export const secretPlaceholder = 'twh_ВАШ_КЛЮЧ'
 
+export const apiKeysPreset = { id: 'api-keys-filled', label: 'Выпущено 5 ключей', requiresPreset: true }
+
+export const demoApiKeys = [
+  { name: 'Claude Desktop', suffix: '3fQa', age: 6, duration: '90', preset: 'Только чтение' },
+  { name: 'Terraform', suffix: 'vYb8', age: 24, duration: '365', preset: 'Домены и DNS', note: 'Управление DNS рабочих сайтов' },
+  { name: 'Отчёты по аккаунту', suffix: 'Lm0c', age: 48, duration: 'none', preset: 'Только чтение' },
+  { name: 'Развёртывание сайта', suffix: 'Q7dk', age: 64, duration: '90', preset: 'Сайты и базы' },
+  { name: 'Почтовая интеграция', suffix: 'n2Rp', age: 95, duration: '90', preset: 'Почта' },
+]
+
 export const permissions = [
-  { id: 'sites', label: 'Сайты', read: 'Сайты и привязанные домены', write: 'Управление сайтами и привязками' },
-  { id: 'domains', label: 'Домены', read: 'Домены и поддомены', write: 'Создание и удаление поддоменов' },
-  { id: 'dns', label: 'DNS', read: 'Записи DNS', write: 'Управление записями DNS' },
-  { id: 'ssl', label: 'SSL-сертификаты', read: 'Сертификаты', write: 'Выпуск и продление' },
-  { id: 'databases', label: 'Базы данных', read: 'Список баз', write: 'Управление базами и доступом' },
-  { id: 'mail', label: 'Почта', read: 'Почтовые ящики', write: 'Управление почтовыми ящиками' },
-  { id: 'crontab', label: 'Crontab', read: 'Задания', write: 'Управление заданиями и уведомлениями' },
-  { id: 'backups', label: 'Резервные копии', read: 'Список копий', write: 'Создание, удаление и восстановление' },
-  { id: 'account', label: 'Аккаунт', read: 'Баланс, тариф и услуги' },
+  { id: 'sites', label: 'Сайты', read: 'Просмотр сайтов и их доменов', write: 'Управление сайтами и привязками' },
+  { id: 'domains', label: 'Домены', read: 'Просмотр доменов и поддоменов', write: 'Создание и удаление поддоменов' },
+  { id: 'dns', label: 'DNS', read: 'Просмотр записей DNS', write: 'Управление записями DNS' },
+  { id: 'ssl', label: 'SSL-сертификаты', read: 'Просмотр SSL-сертификатов', write: 'Выпуск и продление сертификатов' },
+  { id: 'databases', label: 'Базы данных', read: 'Просмотр списка баз данных', write: 'Управление базами и доступом' },
+  { id: 'mail', label: 'Почта', read: 'Просмотр почтовых ящиков', write: 'Управление почтовыми ящиками' },
+  { id: 'crontab', label: 'Crontab', read: 'Просмотр заданий Crontab', write: 'Управление заданиями и уведомлениями' },
+  { id: 'backups', label: 'Резервные копии', read: 'Просмотр резервных копий', write: 'Создание, удаление и восстановление' },
+  { id: 'account', label: 'Аккаунт', read: 'Просмотр баланса, тарифа и услуг' },
 ]
 
 export const upcomingFiles = {
-  id: 'files', label: 'Файлы', read: 'Просмотр папок и скачивание файлов',
+  id: 'files', label: 'Файлы', read: 'Просмотр папок, скачивание файлов',
   write: 'Загрузка, изменение и удаление файлов', upcoming: true,
 }
 
@@ -34,22 +44,28 @@ const json = value => JSON.stringify(value, null, 2)
 const httpServer = { url: mcpAddress, headers: { Authorization: `Bearer ${secretPlaceholder}` } }
 
 export const clients = [
-  ['Claude Code', 'Выполните команду в терминале. Проверить подключение можно командой /mcp.',
-    `claude mcp add --transport http timeweb ${mcpAddress} --header "Authorization: Bearer ${secretPlaceholder}"`],
-  ['Claude Desktop', 'Добавьте сервер в claude_desktop_config.json и перезапустите Claude Desktop. Для mcp-remote нужен Node.js.',
+  ['Claude Code', ['Выполните подготовленную команду в терминале.', 'Проверьте подключение командой /mcp.'],
+    [
+      'claude mcp add',
+      '  --transport http timeweb',
+      `  ${mcpAddress}`,
+      `  --header "Authorization: Bearer ${secretPlaceholder}"`,
+    ].join(' \\' + '\n')],
+  ['Claude Desktop', ['Добавьте сервер из примера в claude_desktop_config.json. Для mcp-remote нужен Node.js.', 'Перезапустите Claude Desktop.'],
     json({ mcpServers: { timeweb: {
       command: 'npx', args: ['-y', 'mcp-remote', mcpAddress, '--header', 'Authorization:${TW_AUTH}'],
       env: { TW_AUTH: `Bearer ${secretPlaceholder}` },
     } } })],
-  ['Cursor', 'Добавьте сервер в ~/.cursor/mcp.json или в .cursor/mcp.json внутри проекта.',
+  ['Cursor', ['Добавьте сервер из примера в ~/.cursor/mcp.json или в .cursor/mcp.json внутри проекта.'],
     json({ mcpServers: { timeweb: httpServer } })],
-  ['VS Code', 'Добавьте сервер в .vscode/mcp.json в проекте и нажмите Start над его именем.',
+  ['VS Code', ['Добавьте сервер из примера в .vscode/mcp.json в проекте.', 'Нажмите Start над именем сервера.'],
     json({ servers: { timeweb: { type: 'http', ...httpServer } } })],
-  ['Windsurf', 'Добавьте сервер в ~/.codeium/windsurf/mcp_config.json и обновите список серверов MCP.',
+  ['Windsurf', ['Добавьте сервер из примера в ~/.codeium/windsurf/mcp_config.json.', 'Обновите список серверов MCP.'],
     json({ mcpServers: { timeweb: { serverUrl: mcpAddress, headers: httpServer.headers } } })],
-  ['Codex', 'Добавьте сервер в ~/.codex/config.toml и задайте переменную окружения TIMEWEB_API_KEY.',
-    `[mcp_servers.timeweb]\nurl = "${mcpAddress}"\nbearer_token_env_var = "TIMEWEB_API_KEY"`],
-  ['Другие', 'Укажите адрес HTTP-сервера и заголовок авторизации в настройках клиента.',
+  ['Codex', ['Добавьте сервер из примера в ~/.codex/config.toml.'],
+    `[mcp_servers.timeweb]\nurl = "${mcpAddress}"\nbearer_token_env_var = "TIMEWEB_API_KEY"`,
+    'Укажите ключ в переменной окружения TIMEWEB_API_KEY.'],
+  ['Другие', ['Укажите адрес HTTP-сервера и заголовок авторизации из примера в настройках клиента.'],
     `${mcpAddress}\nAuthorization: Bearer ${secretPlaceholder}`],
 ]
 
