@@ -70,10 +70,10 @@ function Copy({ value, label, primary = false }) {
     }
   }
 
-  const className = primary ? 'api-button api-primary api-copy-key' : 'api-step-link'
+  const className = primary ? 'api-button api-primary api-copy-key' : 'api-code-copy'
   return <button type="button" className={className} onClick={copy} aria-label={label} title={label}>
-    {primary && <span className="api-copy-key-icon" aria-hidden="true" />}
-    {primary ? label : 'Скопируйте'}
+    <span className="api-copy-key-icon" aria-hidden="true" />
+    {primary && label}
   </button>
 }
 
@@ -110,6 +110,7 @@ function CodeSample({ label, value, wrap = false }) {
         {index < lines.length - 1 && '\n'}
       </Fragment>)}</code>
     </pre>
+    <Copy value={value} label={`Скопировать: ${label}`} />
   </div>
 }
 
@@ -139,7 +140,7 @@ function ApiInstructions({ onCreate }) {
   }
   steps.push(
     <div className="api-step-with-action">
-      <p><Copy value={apiAddress} label="Скопируйте адрес API" /> адрес API и укажите его в скрипте, интеграции или настройках Terraform.</p>
+      <p>Скопируйте адрес API и укажите его в скрипте, интеграции или настройках Terraform.</p>
       <CodeSample label="Адрес API" value={apiAddress} wrap />
     </div>,
     <>Выберите нужный метод и настройте авторизацию по <a className="api-step-link" href={apiDocsUrl}
@@ -164,7 +165,7 @@ function ClientInstructions({ client, secret, onCreate }) {
     </div>)
   }
   steps.push(<div className="api-step-with-action">
-    <p><Copy value={value} label={`Скопируйте ${copyTarget}`} /> {copyTarget}.</p>
+    <p>Скопируйте {copyTarget}.</p>
     <CodeSample label={label} value={value} wrap={client === 0} />
   </div>)
   if (needsSecret) {

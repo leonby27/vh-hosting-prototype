@@ -264,13 +264,35 @@
   overflow-wrap: anywhere;
 }
 
-.api-code { min-inline-size: 0; }
+.api-code { position: relative; min-inline-size: 0; }
 .api-code pre {
   margin: 0;
+  padding-inline-end: 52px;
   overflow: auto;
   border: 1px solid var(--hosting-line);
   font: 13px / 20px ui-monospace, SFMono-Regular, Consolas, monospace;
   white-space: normal;
+}
+.api-page .api-code-copy {
+  position: absolute;
+  inset-block-start: 5px;
+  inset-inline-end: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 8px;
+  background: var(--hosting-card-surface);
+  color: var(--hosting-secondary);
+}
+.api-page .api-code-copy:hover {
+  background: var(--hosting-neutral-hover);
+  color: var(--hosting-title);
+}
+.api-page .api-code-copy:focus-visible {
+  outline: 2px solid var(--hosting-focus);
+  outline-offset: 2px;
 }
 .api-code-line {
   display: grid;
@@ -508,16 +530,19 @@
 .api-permission-card .hosting-segmented { margin-inline-start: auto; }
 .api-permission-heading { display: flex; align-items: center; gap: var(--api-permission-heading-gap); }
 .api-permission-heading h3 { font-size: 14px; line-height: 18px; }
-.api-permission-icon {
+.api-permission-icon,
+.api-capability-icon {
   display: grid;
-  flex: 0 0 var(--api-permission-icon-size);
+  flex: 0 0 var(--api-permission-icon-size, 32px);
   place-items: center;
-  block-size: var(--api-permission-icon-size);
+  inline-size: var(--api-permission-icon-size, 32px);
+  block-size: var(--api-permission-icon-size, 32px);
   border-radius: 50%;
   background: var(--hosting-primary-back);
   color: var(--hosting-light);
 }
-.api-permission-icon::after {
+.api-permission-icon::after,
+.api-capability-icon::after {
   content: "";
   inline-size: 18px;
   block-size: 18px;
@@ -547,13 +572,7 @@
 .api-permission-select { margin-inline-start: calc(var(--api-permission-icon-size) + var(--api-permission-heading-gap)); }
 .api-page .api-permission-select .api-filter-panel button { min-block-size: 44px; }
 .api-capabilities thead th:nth-child(2) { width: 37%; }
-.api-capability-name { display: flex; align-items: center; gap: 8px; }
-.api-capability-icon {
-  flex: 0 0 18px;
-  block-size: 18px;
-  background: var(--hosting-icon-primary);
-  mask: var(--api-capability-icon) center / contain no-repeat;
-}
+.api-capability-name { display: flex; align-items: center; gap: 12px; }
 .api-capability-name .api-capability-badge {
   --sites-domain-badge-background: var(--hosting-plan-success-back);
   padding: 1px 6px;
@@ -798,12 +817,15 @@
 @container sites (max-width: 680px) {
   .api-capabilities :is(table, tbody, tr, th, td) { display: block; }
   .api-capabilities thead { position: absolute; inline-size: 1px; block-size: 1px; clip-path: inset(50%); overflow: hidden; }
-  .api-capabilities tbody tr { padding-block: 16px; padding-inline: 46px 16px; }
+  .api-capabilities tbody tr { padding-block: 16px; padding-inline: 64px 16px; }
   .api-capabilities tbody :is(th, td) { padding: 0; }
   .api-capabilities .api-capability-name { position: relative; font-size: 16px; line-height: 22px; }
   .api-capabilities .api-capability-icon {
+    --api-permission-icon-size: 36px;
     position: absolute;
-    inset-inline-start: -30px;
+    inset-inline-start: -48px;
+  }
+  .api-capabilities .api-capability-icon::after {
     inline-size: 20px;
     block-size: 20px;
   }
