@@ -1,4 +1,4 @@
-import { useContext, useLayoutEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import closeIcon from './assets/checkout/close.svg'
 import BalanceTopUp from './BalanceTopUp.jsx'
@@ -265,6 +265,12 @@ function FtpStatus({ compact }) {
 
 function TimmyPrompt() {
   const [message, setMessage] = useState('')
+  const [voice, setVoice] = useState(null)
+  const [recording, setRecording] = useState(false)
+  const [requestingMicrophone, setRequestingMicrophone] = useState(false)
+  const recorder = useRef(null)
+  const audioUrls = useRef([])
+  const mounted = useRef(false)
   const [questions, setQuestions] = useState([])
   const [open, setOpen] = useState(false)
   const [chatHost, setChatHost] = useState(null)
@@ -273,7 +279,16 @@ function TimmyPrompt() {
   const transcript = useRef(null)
   const composing = useRef(false)
   const showToast = useContext(HostingToastContext)
-  const canSend = Boolean(message.trim())
+  const canSend = Boolean(message.trim() || voice) && !recording && !requestingMicrophone
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      recorder.current?.stream.getTracks().forEach(track => track.stop())
+      audioUrls.current.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [])
 
   useLayoutEffect(() => {
     setChatHost(input.current.closest('.hosting-shell'))
@@ -293,9 +308,10 @@ function TimmyPrompt() {
   function sendMessage(event) {
     event.preventDefault()
     const text = message.trim()
-    if (!text || composing.current) return
-    setQuestions(current => [...current, text])
+    if (!canSend || composing.current) return
+    setQuestions(current => [...current, { text, voice }])
     setMessage('')
+    setVoice(null)
     setOpen(true)
     chatInput.current?.focus({ preventScroll: true })
   }
@@ -305,8 +321,51 @@ function TimmyPrompt() {
     input.current?.focus({ preventScroll: true })
   }
 
-  function voiceHint() {
-    showToast({ message: 'В демо можно отправить текстовый вопрос.' })
+  async function toggleVoice() {
+    if (recording) {
+      recorder.current.stop()
+      return
+    }
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      showToast({ message: 'Запись голоса недоступна в этом браузере.' })
+      return
+    }
+    setRequestingMicrophone(true)
+    let stream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      if (!mounted.current) {
+        stream.getTracks().forEach(track => track.stop())
+        return
+      }
+      const nextRecorder = new MediaRecorder(stream)
+      const chunks = []
+      nextRecorder.ondataavailable = event => {
+        if (event.data.size) chunks.push(event.data)
+      }
+      nextRecorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop())
+        if (!mounted.current) return
+        setRecording(false)
+        if (!chunks.length) {
+          showToast({ message: 'Не удалось записать голосовое сообщение.' })
+          return
+        }
+        const url = URL.createObjectURL(new Blob(chunks, { type: nextRecorder.mimeType }))
+        audioUrls.current.push(url)
+        setVoice(url)
+        showToast({ message: 'Голосовое сообщение записано', success: true })
+      }
+      recorder.current = nextRecorder
+      nextRecorder.start()
+      setVoice(null)
+      setRecording(true)
+    } catch {
+      stream?.getTracks().forEach(track => track.stop())
+      showToast({ message: 'Не удалось включить микрофон. Проверьте разрешение на запись.' })
+    } finally {
+      if (mounted.current) setRequestingMicrophone(false)
+    }
   }
 
   return (
@@ -318,12 +377,13 @@ function TimmyPrompt() {
           <input ref={input} type="text" value={message} onChange={event => setMessage(event.target.value)}
             onCompositionStart={() => { composing.current = true }}
             onCompositionEnd={() => { composing.current = false }}
-            aria-label="Чем вам помочь" placeholder="Чем вам помочь" />
-          <button type="button" className="dashboard-timmy-voice" aria-label="Голосовое сообщение" onClick={voiceHint}>
+            aria-label="Чем вам помочь" placeholder={recording ? 'Запись… Нажмите микрофон, чтобы закончить' : voice ? 'Голосовое сообщение готово к отправке' : 'Чем вам помочь'} />
+          <button type="button" className="dashboard-timmy-voice" aria-label={recording ? 'Остановить запись' : 'Голосовое сообщение'}
+            aria-pressed={recording} disabled={requestingMicrophone} onClick={toggleVoice}>
             <TintedArtwork name="timmy-microphone" tone="title" />
           </button>
           <button type="submit" className="dashboard-timmy-send" aria-label="Отправить сообщение" disabled={!canSend}>
-            <Artwork name="timmy-arrow-up" />
+            <span className="timmy-send-icon" aria-hidden="true" />
           </button>
         </form>
       </section>
@@ -343,7 +403,10 @@ function TimmyPrompt() {
           <div className="timmy-chat-transcript" ref={transcript} role="log" aria-label="Переписка">
             {questions.map((question, index) => (
               <div className="timmy-chat-exchange" key={index}>
-                <p className="timmy-chat-bubble timmy-chat-question">{question}</p>
+                <div className="timmy-chat-bubble timmy-chat-question">
+                  {question.text && <p>{question.text}</p>}
+                  {question.voice && <audio controls src={question.voice} aria-label="Голосовое сообщение" />}
+                </div>
                 <div className="timmy-chat-bubble">
                   <strong>Как добавить сайт</strong>
                   <ol>
@@ -357,16 +420,18 @@ function TimmyPrompt() {
             ))}
           </div>
           <form className="timmy-chat-composer" onSubmit={sendMessage}>
-            <textarea ref={chatInput} rows={1} aria-label="Сообщение для Timmy" placeholder="Задать вопрос…"
+            <textarea ref={chatInput} rows={1} aria-label="Сообщение для Timmy"
+              placeholder={recording ? 'Запись голосового сообщения…' : voice ? 'Голосовое сообщение готово к отправке' : 'Задать вопрос…'}
               value={message} onChange={event => setMessage(event.target.value)} onKeyDown={event => {
                 if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) sendMessage(event)
               }} />
             <div className="timmy-chat-tools">
-              <button type="button" className="timmy-chat-icon-button" aria-label="Голосовое сообщение" onClick={voiceHint}>
+              <button type="button" className="timmy-chat-icon-button" aria-label={recording ? 'Остановить запись' : 'Голосовое сообщение'}
+                aria-pressed={recording} disabled={requestingMicrophone} onClick={toggleVoice}>
                 <Artwork name="timmy-microphone" />
               </button>
               <button type="submit" className="timmy-chat-send" aria-label="Отправить сообщение" disabled={!canSend}>
-                <Artwork name="timmy-arrow-up" />
+                <span className="timmy-send-icon" aria-hidden="true" />
               </button>
             </div>
           </form>

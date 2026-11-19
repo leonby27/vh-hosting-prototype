@@ -36,7 +36,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px;
+  padding: 6px 10px 6px 6px;
   cursor: text;
   border: 1px solid var(--hosting-line);
   border-radius: 16px;
@@ -78,14 +78,47 @@
 }
 
 .dashboard-timmy-form button.dashboard-timmy-send {
+  inline-size: 36px;
+  block-size: 36px;
   background: var(--hosting-title);
-  transition: opacity var(--hosting-motion-fast) ease;
+  color: var(--hosting-background);
+  transition: background-color var(--hosting-motion-color) ease, color var(--hosting-motion-color) ease;
 }
 
-.dashboard-timmy-form .dashboard-timmy-send:hover:enabled { opacity: 0.82; }
-.dashboard-timmy-form .dashboard-timmy-send:disabled { opacity: 0.55; cursor: default; }
-.dashboard-timmy-send img { inline-size: 22px; block-size: 22px; }
-.hosting-shell[data-theme="light"] .dashboard-timmy-send img { filter: invert(1); }
+.dashboard-timmy-voice .dashboard-tinted-art,
+.dashboard-timmy-voice img {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+.dashboard-timmy-form .dashboard-timmy-send:enabled,
+.hosting-shell .timmy-chat-send:enabled {
+  background: var(--hosting-primary-back);
+  color: #fff;
+}
+
+.dashboard-timmy-voice[aria-pressed="true"] .dashboard-tinted-art {
+  background: var(--hosting-plan-danger);
+}
+
+.timmy-chat-icon-button[aria-pressed="true"] {
+  background: var(--hosting-plan-danger);
+}
+
+.timmy-send-icon {
+  display: block;
+  inline-size: 18px;
+  block-size: 18px;
+  background: currentColor;
+  mask: url('./assets/dashboard/timmy-send.svg') center / contain no-repeat;
+}
+
+.dashboard-timmy-form .dashboard-timmy-send:hover:enabled { background: var(--hosting-primary-hover); }
+.dashboard-timmy-form .dashboard-timmy-send:disabled {
+  background: var(--hosting-chip);
+  color: var(--hosting-icon-secondary);
+  cursor: default;
+}
 
 .dashboard-billing,
 .dashboard-service-grid,
@@ -956,7 +989,8 @@
 
 .hosting-shell .timmy-chat-send:disabled { background: #303137; cursor: default; }
 .timmy-chat-send img { inline-size: 17px; block-size: 17px; }
-.timmy-chat-send:disabled img { filter: invert(.65); }
+.timmy-chat-send:disabled { color: #a6a6a6; }
+.timmy-chat-question audio { max-inline-size: 100%; }
 
 .hosting-shell[data-compact="true"] .timmy-chat {
   inset-inline-end: max(12px, calc((100% - var(--hosting-preview-width)) / 2 + 12px));
