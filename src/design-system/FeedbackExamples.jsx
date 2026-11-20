@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AnimatedBlock } from '../hosting-motion.jsx'
 import successIcon from '../assets/dashboard/status-ok.svg'
-import { Badge, Button, Dialog, FeatureHint, Link, PageAlert, Select, Spinner, Toast, Tooltip, TooltipBubble } from '../ui/index.js'
+import { Button, FeatureHint, Link, PageAlert, Select, Spinner, Toast, TooltipBubble, VHTheme } from '../ui/index.js'
 import { Example } from './Preview.jsx'
 
 const spinnerSizes = [40, 32, 24]
@@ -41,20 +41,20 @@ const alertVariants = [
   { label: 'Без крестика', omit: 'dismiss' },
   { label: 'Без описания', omit: 'description' },
   { label: 'Без заголовка', omit: 'title' },
-  { label: 'С кнопкой под описанием', appearance: 'inline' },
+  { label: 'С кнопкой под описанием', actionPosition: 'below' },
 ]
 const alertColors = alertTones.map(({ tone, label }) => ({ value: tone, label }))
 
 function AlertSample({ alert, variant }) {
   const [dismissed, setDismissed] = useState(false)
   const [activated, setActivated] = useState(false)
-  const { label, omit, appearance } = variant
+  const { label, omit, actionPosition } = variant
   const [firstLine, secondLine] = alert.lines
 
   return <div className="catalog-alert-sample">
     <span className="catalog-sample-label">{label}</span>
     <AnimatedBlock open={!dismissed}>
-      <PageAlert appearance={appearance} tone={alert.tone} title={omit === 'title' ? undefined : alert.title}
+      <PageAlert actionPosition={actionPosition} tone={alert.tone} title={omit === 'title' ? undefined : alert.title}
         description={omit === 'description' ? undefined : <>{firstLine}<br />{secondLine}</>}
         action={omit === 'action' ? undefined : {
           label: activated ? 'Готово' : alert.action,
@@ -70,7 +70,6 @@ function AlertSample({ alert, variant }) {
 
 export function AlertExample() {
   const [tone, setTone] = useState('neutral')
-  const [dialog, setDialog] = useState(false)
   const alert = alertTones.find(item => item.tone === tone)
 
   return <div className="catalog-example-flow">
@@ -83,19 +82,6 @@ export function AlertExample() {
           {alertVariants.map(variant => <AlertSample key={variant.label} alert={alert} variant={variant} />)}
         </div>
       </AnimatedBlock>
-    </Example>
-    <Example title="Диалог">
-      <div className="catalog-row catalog-centered">
-        <Button variant="neutral" onClick={() => setDialog(true)}>Открыть диалог</Button>
-      </div>
-      <Dialog open={dialog} title="Настройки" description="Изменения сохраняются для всех сайтов."
-        onClose={() => setDialog(false)} />
-    </Example>
-    <Example title="Статусы">
-      <div className="catalog-row catalog-centered">
-        <Badge>Доступно</Badge><Badge tone="info">Подключаем</Badge><Badge tone="success">Подключено</Badge>
-        <Badge tone="warning">Требует внимания</Badge><Badge tone="danger">Ошибка</Badge>
-      </div>
     </Example>
   </div>
 }
@@ -112,15 +98,18 @@ export function ToastExample() {
 }
 
 export function TooltipExample() {
-  return <Example>
-    <div className="catalog-stack catalog-feedback-stack">
+  return <div className="catalog-example-flow">
+    <TooltipSamples title="Светлые" theme="dark" />
+    <TooltipSamples title="Тёмные" theme="light" />
+  </div>
+}
+
+function TooltipSamples({ title, theme }) {
+  return <Example title={title}>
+    <VHTheme theme={theme} className="catalog-stack catalog-feedback-stack">
       <TooltipBubble>Доступно на тарифе «Плюс»</TooltipBubble>
       <TooltipBubble size="large">Резервная копия включает файлы сайта и базы данных.</TooltipBubble>
-      <TooltipBubble size="large" variant="surface">Подробности об условиях тарифа</TooltipBubble>
-      <Tooltip content="Доступно на тарифе «Плюс»">
-        {id => <Button variant="neutral" aria-describedby={id}>Условия тарифа</Button>}
-      </Tooltip>
-    </div>
+    </VHTheme>
   </Example>
 }
 

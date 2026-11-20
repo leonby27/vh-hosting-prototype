@@ -260,6 +260,9 @@
 .top-up-method-overlay .top-up-method-list {
   position: fixed;
   inset: var(--top-up-menu-top, auto) auto auto var(--top-up-menu-left, auto);
+  padding-block: 5px;
+  --vh-menu-surface: var(--hosting-list-back);
+  --vh-menu-shadow: 0 6px 14px -6px rgb(24 39 75 / 12%), 0 10px 32px -4px rgb(24 39 75 / 10%);
   --vh-menu-max-height: var(--top-up-menu-height, calc(100dvh - 16px));
   overscroll-behavior: contain;
 }

@@ -629,7 +629,7 @@
   text-align: start;
 }
 
-.sites-page .sites-faq button:is(:hover, [aria-expanded="true"]) {
+.sites-page .sites-faq button:is(:hover, :focus-visible) {
   color: var(--hosting-link-hover);
 }
 

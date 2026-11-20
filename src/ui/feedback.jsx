@@ -22,7 +22,7 @@ export function Progress({ label, value, max = 100, warning = false }) {
 }
 
 export function Alert({ tone = 'info', children, ...props }) {
-  return <PageAlert {...props} appearance="inline" tone={tone === 'danger' ? 'error' : tone} description={children} />
+  return <PageAlert actionPosition="below" {...props} tone={tone === 'danger' ? 'error' : tone} description={children} />
 }
 
 export function Toast({ children, icon, action, onDismiss, announce = true }) {
@@ -33,25 +33,24 @@ export function Toast({ children, icon, action, onDismiss, announce = true }) {
   </div>
 }
 
-export function PageAlert({ title, description, tone = 'warning', action, onDismiss, icon, appearance = 'default' }) {
-  const inline = appearance === 'inline'
-  const actionButton = !action || isValidElement(action) ? action : <Button
-    variant={inline ? 'outline' : 'neutral'} appearance={inline ? 'plan-outline' : 'alert-action'}
+export function PageAlert({ title, description, tone = 'warning', action, onDismiss, icon, actionPosition = 'side' }) {
+  const actionBelow = actionPosition === 'below'
+  const actionButton = !action || isValidElement(action) ? action : <Button variant="neutral" appearance="alert-action"
     pressable={false} className="sites-page-alert-button" onClick={action.onClick}>{action.label}</Button>
   return (
     <div className="vh-alert-container">
-      <section className="sites-page-alert hosting-reveal" data-tone={tone} data-appearance={appearance} aria-label={title}>
+      <section className="sites-page-alert hosting-reveal" data-tone={tone} aria-label={title}>
         {icon ? <span className="sites-page-alert-icon sites-page-alert-custom-icon">{icon}</span> :
           pageAlertIcons[tone] ? <img className="sites-page-alert-icon" src={pageAlertIcons[tone]} width="28" height="28" alt="" />
           : <Icon name={tone === 'success' ? 'success-solid' : 'info-solid'} size={28} className="sites-page-alert-icon" />}
         <div className="sites-page-alert-copy">
           {title && <h2>{title}</h2>}
           {description && <p>{description}</p>}
-          {inline && actionButton}
         </div>
-        {((!inline && actionButton) || onDismiss) && (
+        {actionBelow && actionButton && <div className="sites-page-alert-action-below">{actionButton}</div>}
+        {((!actionBelow && actionButton) || onDismiss) && (
           <div className="sites-page-alert-actions">
-            {!inline && actionButton}
+            {!actionBelow && actionButton}
             {onDismiss && (
               <Button variant="neutral" appearance="alert-action" pressable={false}
                 className="sites-page-alert-close" aria-label="Закрыть уведомление" onClick={onDismiss}>

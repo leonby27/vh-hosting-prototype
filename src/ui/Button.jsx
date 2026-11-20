@@ -3,7 +3,7 @@ import './button-appearances.css'
 const buttonSizes = { 'site-activation': 44, 'top-up': 48, checkout: 48, 'compact-outline': 32 }
 
 export function Button({ as: Element = 'button', href, variant = 'primary', tone = 'accent', size,
-  loading = false, disabled, icon, rightIcon, children, className = '', type = 'button', style, onClick,
+  loading = false, disabled, icon, rightIcon, iconOnly = false, children, className = '', type = 'button', style, onClick,
   appearance = 'default', pressable = true, ...props }) {
   const isButton = Element === 'button'
   const inactive = disabled || loading
@@ -21,7 +21,7 @@ export function Button({ as: Element = 'button', href, variant = 'primary', tone
     className={['vh-action vh-button vh-focus',
       pressable && 'hosting-pressable', className].filter(Boolean).join(' ')}
     data-appearance={appearance} data-size={size ?? buttonSizes[appearance] ?? 40}
-    data-variant={variant} data-tone={tone} data-loading={loading || undefined}
+    data-variant={variant} data-tone={tone} data-loading={loading || undefined} data-button-icon-only={iconOnly || undefined}
     style={{ ...colors, ...style }}>
     {loading ? <span className="vh-spinner" aria-hidden="true" /> : icon}
     {children}

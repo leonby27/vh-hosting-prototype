@@ -245,7 +245,6 @@
 }
 .api-code-copy > .vh-button { --vh-button-text-override: var(--hosting-secondary); }
 .api-code-copy > .vh-button:hover { --vh-button-text-override: var(--hosting-title); }
-.api-code-copy .vh-tooltip-content { inset-inline: auto 0; }
 .api-code-line {
   display: grid;
   grid-template-columns: calc(2ch + 11px) minmax(0, 1fr);

@@ -427,9 +427,6 @@
   box-sizing: border-box;
   inline-size: min(100%, 280px);
   overflow-y: auto;
-  padding-block: 5px;
-  --vh-menu-surface: var(--hosting-list-back);
-  --vh-menu-shadow: 0 6px 14px -6px rgb(24 39 75 / 12%), 0 10px 32px -4px rgb(24 39 75 / 10%);
 }
 
 .plan-payment-panel:not([data-side="below"]) {
@@ -446,7 +443,6 @@
 }
 
 .plan-changes .plan-payment-panel ul {
-  padding-inline: 7px;
   list-style: none;
 }
 

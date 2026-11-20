@@ -6,16 +6,24 @@ import { Button } from './Button.jsx'
 import { useMenuDisclosure } from './menu-disclosure.js'
 import { Radio } from './selection.jsx'
 
+export const defaultSegmentedSize = 40
+export const segmentedSizes = [48, 44, defaultSegmentedSize, 32]
+
+function segmentedSizeStyle(size) {
+  return segmentedSizes.includes(size) ? { '--vh-segment-size': `${size}px` } : undefined
+}
+
 function NavigationItemContent({ icon, label, count, suffix }) {
   return <>{icon}{label}{count != null && <span className="vh-tab-count">{count}</span>}{suffix}</>
 }
 
 export function TabList({
   tabs, value, onChange, idPrefix, label, variant = 'line',
-  className = '', indicator = true, size, surface, controls = true,
+  className = '', indicator = true, size = variant === 'segmented' ? defaultSegmentedSize : undefined, surface, controls = true,
   ref, navigate, preventScroll = false,
 }) {
-  const track = variant === 'segmented' ? 'hosting-segmented' : 'sites-tabs'
+  const segmented = variant === 'segmented'
+  const track = segmented ? 'hosting-segmented' : 'sites-tabs'
   const enabled = tabs.filter(tab => !tab.disabled)
   const active = enabled.find(tab => tab.id === value)?.id ?? enabled[0]?.id
 
@@ -44,7 +52,8 @@ export function TabList({
   }
 
   return <div ref={ref} className={[track, className, indicator && 'hosting-indicator-track'].filter(Boolean).join(' ')}
-    role="tablist" aria-label={label} data-size={size} data-segment-surface={variant === 'segmented' ? surface : undefined} onKeyDown={move}>
+    role="tablist" aria-label={label} data-size={size} data-segment-surface={segmented ? surface : undefined}
+    style={segmented ? segmentedSizeStyle(size) : undefined} onKeyDown={move}>
     {indicator && <TabIndicator selected={active} />}
     {tabs.map(tab => <button key={tab.id} id={tab.elementId ?? `${idPrefix}-tab-${tab.id}`} type="button" role="tab" disabled={tab.disabled}
       data-decorated={Boolean(tab.icon || tab.count != null || tab.suffix) || undefined}
@@ -57,7 +66,8 @@ export function TabList({
 
 export function SegmentedOptions({ name, label, options, value, onChange, onReselect, indicator = true, size, surface, className = '' }) {
   return <div className={`hosting-segmented${indicator ? ' hosting-indicator-track' : ''} ${className}`.trim()}
-    data-size={size} data-segment-surface={surface} role={label ? 'radiogroup' : undefined} aria-label={label}>
+    data-size={size} data-segment-surface={surface} style={segmentedSizeStyle(size)}
+    role={label ? 'radiogroup' : undefined} aria-label={label}>
     {indicator && <TabIndicator selected={value} />}
     {options.map(option => <label key={option.value}>
       <Radio name={name} value={option.value} checked={value === option.value} aria-label={option.accessibleLabel}

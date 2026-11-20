@@ -131,7 +131,7 @@ function ChangeItem({ item, onUpdate }) {
 }
 
 function Notice({ notice, onAction }) {
-  return <PageAlert appearance="inline" tone={notice.tone} title={notice.title}
+  return <PageAlert actionPosition="below" tone={notice.tone} title={notice.title}
     description={notice.description}
     icon={<Art name={notice.icon} extension={notice.tone === 'warning' ? 'svg' : 'png'} />}
     action={notice.action && { label: notice.action.label, onClick: () => onAction(notice.action) }} />
@@ -163,10 +163,14 @@ function OtherPaymentMethods({ option, value, selected, onChange, onAction }) {
 
     function positionPanel() {
       const menu = panel.current
-      const { top, bottom } = triggerProps.ref.current.getBoundingClientRect()
+      const trigger = triggerProps.ref.current
+      const { top, bottom } = trigger.getBoundingClientRect()
+      const shell = trigger.closest('.hosting-shell')
+      const header = shell?.querySelector('.hosting-header')?.getBoundingClientRect()
+      const bottomNav = shell?.querySelector('.hosting-mobile-nav')?.getBoundingClientRect()
       // Leave room for the 6px gap at the trigger and an 8px viewport inset.
-      const above = top - 14
-      const below = window.innerHeight - bottom - 14
+      const above = top - Math.max(0, header?.bottom ?? 0) - 14
+      const below = Math.min(window.innerHeight, bottomNav?.top ?? window.innerHeight) - bottom - 14
       const opensAbove = below < menu.scrollHeight + 2 && above > below
       menu.dataset.side = opensAbove ? 'above' : 'below'
       menu.style.maxBlockSize = `${Math.max(0, opensAbove ? above : below)}px`
@@ -174,7 +178,11 @@ function OtherPaymentMethods({ option, value, selected, onChange, onAction }) {
 
     positionPanel()
     window.addEventListener('resize', positionPanel)
-    return () => window.removeEventListener('resize', positionPanel)
+    window.addEventListener('scroll', positionPanel, { passive: true })
+    return () => {
+      window.removeEventListener('resize', positionPanel)
+      window.removeEventListener('scroll', positionPanel)
+    }
   }, [open, triggerProps.ref])
 
   function finishUnlink(confirmed) {

@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { AnimatedBlock } from '../hosting-motion.jsx'
-import { Choice, DropdownItems, Icon, MenuPanel, Pagination, SearchField, SegmentedOptions, Select, TabList } from '../ui/index.js'
+import { Choice, DropdownItems, Icon, MenuPanel, Pagination, SearchField, Select, TabList } from '../ui/index.js'
+import { defaultSegmentedSize, segmentedSizes } from '../ui/navigation.jsx'
 import { Example } from './Preview.jsx'
 import { OptionsSelect } from './OptionsSelect.jsx'
 
@@ -24,23 +25,20 @@ const tabViews = [
   { value: 'plain', label: 'Обычный' },
   { value: 'icons', label: 'С иконками' },
 ]
-const segmentedSizes = [40, 32, 24].map(value => ({ value, label: `${value} px` }))
+const segmentedSizeOptions = segmentedSizes.map(value => ({ value, label: `${value} px` }))
 
-function TabsSample({ title, tabs, variant = 'line', size, surface, options }) {
+function TabsSample({ title, tabs, variant = 'line', size, surface }) {
   const id = useId()
   const [selected, setSelected] = useState(tabs[0].id)
 
   return <Example title={title} className="catalog-tab-frame" contrast={variant === 'line'}>
-    {options
-      ? <SegmentedOptions options={tabs.map(tab => ({ ...tab, value: tab.id }))} size={size} surface={surface}
-        value={selected} onChange={setSelected} name={id} label={title} />
-      : <TabList tabs={tabs} variant={variant} size={size} surface={surface} controls={false}
-        value={selected} onChange={setSelected} idPrefix={id} label={title} />}
+    <TabList tabs={tabs} variant={variant} size={size} surface={surface} controls={false}
+      value={selected} onChange={setSelected} idPrefix={id} label={title} />
   </Example>
 }
 
 export function TabsExample() {
-  const [size, setSize] = useState(32)
+  const [size, setSize] = useState(defaultSegmentedSize)
   const [view, setView] = useState('plain')
 
   function tabsWithView(tabs) {
@@ -50,12 +48,11 @@ export function TabsExample() {
   return <div className="catalog-example-flow">
     <div className="catalog-toolbar" role="group" aria-label="Параметры примеров вкладок">
       <Select label="Вид" options={tabViews} value={view} onChange={setView} />
-      <Select label="Размер вкладок блоками" options={segmentedSizes} value={size} onChange={setSize} />
+      <Select label="Размер вкладок блоками" options={segmentedSizeOptions} value={size} onChange={setSize} />
     </div>
     <TabsSample title="С линией" tabs={tabsWithView(lineTabs)} />
     <TabsSample title="Блоками" tabs={tabsWithView(segmentedTabs)} variant="segmented" size={size} />
     <TabsSample title="Блоками 2" tabs={tabsWithView(segmentedTabs)} variant="segmented" size={size} surface="page" />
-    <TabsSample title="Выбор значения" tabs={tabsWithView(segmentedTabs)} variant="segmented" size={size} surface="page" options />
   </div>
 }
 

@@ -46,11 +46,6 @@
 .vh-button[data-appearance="top-up"] { inline-size: 100%; }
 .vh-button[data-appearance="checkout"] { --vh-button-gap: 4px; }
 
-.vh-button[data-appearance="plan-outline"] {
-  --vh-button-padding: 8px 18px;
-  --vh-button-line-height: 16px;
-}
-
 .vh-button[data-appearance="banner-outline"] {
   --vh-button-line-height: 16px;
   --vh-button-back-override: transparent;
@@ -121,6 +116,7 @@
   --vh-button-back-override: transparent;
   --vh-button-hover-override: transparent;
   min-block-size: 0;
+  -webkit-tap-highlight-color: transparent;
   transition: color var(--hosting-motion-color) ease, background-color var(--hosting-motion-color) ease;
 }
 
@@ -140,10 +136,6 @@
 .vh-button[data-appearance="choice-card"]:is([aria-pressed="true"], [data-selected="true"], [aria-expanded="true"]) {
   --vh-button-back-override: var(--vh-selection-selected-back);
   --vh-button-border-override: var(--vh-selection-selected-border);
-}
-
-.vh-button:is([data-appearance="text"], [data-appearance="quiet"], [data-appearance="nav-action"]):active:not(:disabled) {
-  background-image: none;
 }
 
 .vh-button[data-appearance="choice-card"]:is([aria-pressed="true"], [data-selected="true"], [data-highlighted="true"]) {
@@ -216,8 +208,6 @@
   border-width: 0;
 }
 
-.vh-button[data-appearance="text"][aria-expanded="true"] { --vh-button-text-override: var(--hosting-link-hover); }
-
 .vh-button[data-appearance="icon-toggle"][aria-expanded="true"] {
   --vh-button-back-override: var(--vh-button-hover);
 }
@@ -229,6 +219,7 @@
   --vh-button-text-override: currentColor;
   border-width: 0;
   inline-size: 36px;
+  -webkit-tap-highlight-color: transparent;
 }
 .vh-button[data-appearance="toolbar-icon"][aria-expanded="true"] {
   --vh-button-back-override: var(--vh-button-hover-override);

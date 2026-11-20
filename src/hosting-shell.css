@@ -334,6 +334,8 @@ html:has(.hosting-scroll-spacer) {
   max-width: 100%;
 }
 
+.hosting-brand a { -webkit-tap-highlight-color: transparent; }
+
 .hosting-quick-links {
   gap: 20px;
   color: color-mix(in srgb, var(--hosting-light) 70%, var(--hosting-header));

@@ -90,7 +90,8 @@ function Copy({ value, label, primary = false }) {
   }
 
   const className = primary ? 'api-button api-copy-key' : 'api-code-copy'
-  return <Tooltip content={label} className={primary ? undefined : className}>
+  return <Tooltip content={primary ? label : 'Скопировать'} placement={primary ? 'bottom' : 'top'}
+    className={primary ? undefined : className}>
     {id => <IconButton variant={primary ? 'primary' : 'neutral'} size={primary ? 40 : 32}
       appearance={primary ? 'default' : 'icon-solid'} className={primary ? className : undefined} onClick={copy} label={label} aria-describedby={id}>
       <span className="api-copy-key-icon" aria-hidden="true" />
