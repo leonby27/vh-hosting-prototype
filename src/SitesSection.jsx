@@ -1,5 +1,8 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import { AnimatedBlock, TabIndicator } from './hosting-motion.jsx'
+import { ModalFrame, PageAlert } from './ui/feedback.jsx'
+import { Button, IconButton, Link } from './ui/controls.jsx'
+import { AnimatedBlock } from './hosting-motion.jsx'
+import { TabList, MenuItem } from './ui/navigation.jsx'
 import { PendingChangesContext, usePendingChanges } from './pending-changes.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
 import { removesAllServiceTargets } from './ServiceChanges.jsx'
@@ -12,7 +15,7 @@ import walletIcon from './assets/hosting/wallet.svg'
 import disableIcon from './assets/plan-changes/disable.svg'
 import renewalIcon from './assets/plan-changes/retry.svg'
 import {
-  ActiveProtectionBanner, addMonths, asset, formatDate, formatDomainCount, formatPrice, ProtectionAlert, ProtectionCheckout,
+  ActiveProtectionBanner, addMonths, asset, formatDate, formatDomainCount, formatPrice, ProtectionCheckout,
   ProtectionCheckoutSlot, ProtectionFaq, revealProtectionCheckout, SitesIcon, SitesTable, useSitesFilterSpace,
 } from './SitesProtectionUI.jsx'
 import './sites-section.css'
@@ -24,7 +27,6 @@ const tabs = [
   { id: 'network-protection', label: 'Сетевая защита' },
   { id: 'cms', label: 'Установка CMS', disabled: true },
 ]
-const availableTabs = tabs.filter(tab => !tab.disabled)
 
 const tabStatusLabels = {
   connected: 'Подключено',
@@ -95,47 +97,12 @@ function SiteTabs({ selected, onSelect, statuses, compact }) {
     return () => observer.disconnect()
   }, [selected, compact])
 
-  function moveFocus(event) {
-    const index = availableTabs.findIndex(tab => tab.id === selected)
-    const last = availableTabs.length - 1
-    const nextIndex = {
-      ArrowLeft: (index + last) % availableTabs.length,
-      ArrowRight: (index + 1) % availableTabs.length,
-      Home: 0,
-      End: last,
-    }[event.key]
-    if (nextIndex === undefined) return
-    event.preventDefault()
-    const id = availableTabs[nextIndex].id
-    if (id === selected) return
-    navigate(() => {
-      onSelect(id)
-      list.current?.querySelector(`#sites-tab-${id}`)?.focus({ preventScroll: compact })
-    })
-  }
-
-  return (
-    <div ref={list} role="tablist" aria-label="Разделы сайтов" className="sites-tabs hosting-indicator-track" onKeyDown={moveFocus}>
-      <TabIndicator selected={selected} />
-      {tabs.map(tab => (
-        <button
-          key={tab.id}
-          type="button"
-          role="tab"
-          id={`sites-tab-${tab.id}`}
-          aria-selected={selected === tab.id}
-          aria-controls={tab.disabled ? undefined : `sites-panel-${tab.id}`}
-          aria-label={statuses[tab.id] ? `${tab.label} — ${tabStatusLabels[statuses[tab.id]]}` : undefined}
-          disabled={tab.disabled}
-          tabIndex={selected === tab.id ? 0 : -1}
-          onClick={() => { if (tab.id !== selected) navigate(() => onSelect(tab.id)) }}
-        >
-          {tab.label}
-          {statuses[tab.id] && <span className="sites-tab-status" data-status={statuses[tab.id]} aria-hidden="true" />}
-        </button>
-      ))}
-    </div>
-  )
+  return <TabList ref={list} size={compact ? 'compact' : undefined} idPrefix="sites" label="Разделы сайтов" value={selected} onChange={onSelect}
+    navigate={navigate} preventScroll={compact} tabs={tabs.map(tab => ({
+      ...tab,
+      accessibleLabel: statuses[tab.id] ? `${tab.label} — ${tabStatusLabels[statuses[tab.id]]}` : undefined,
+      suffix: statuses[tab.id] && <span className="sites-tab-status" data-status={statuses[tab.id]} aria-hidden="true" />,
+    }))} />
 }
 
 function ProtectionIntro({ compact }) {
@@ -196,28 +163,28 @@ function ProtectionBanner({ compact, protectedCount, total, renew, showRenewSwit
       paymentAction={
         <div className="sites-active-payment-slot" data-open={!renew} inert={renew}>
           <div>
-            <button type="button" className="sites-active-manual-pay" onClick={onPay}>
+            <Button variant="inverse" appearance="banner-outline" size={44} className="sites-active-manual-pay" onClick={onPay}>
               <SitesIcon src={walletIcon} color="light" />Оплатить
-            </button>
+            </Button>
           </div>
         </div>
       }
       menuLabel="Управление защитой"
       menuItems={closeMenu => <>
         {!editing && (
-          <button type="button" onClick={() => { closeMenu(); onEdit() }}>
+          <MenuItem onClick={() => { closeMenu(); onEdit() }}>
             <SitesIcon src={domainsIcon} color="icon-secondary" />
             Изменить список доменов
-          </button>
+          </MenuItem>
         )}
-        <button type="button" onClick={() => { closeMenu(); requestRenewalChange() }}>
+        <MenuItem onClick={() => { closeMenu(); requestRenewalChange() }}>
           <SitesIcon src={renewalIcon} color="icon-secondary" />
           {renew ? 'Выключить' : 'Включить'} автопродление
-        </button>
-        <button type="button" onClick={() => { closeMenu(); onRequestDisable() }}>
+        </MenuItem>
+        <MenuItem onClick={() => { closeMenu(); onRequestDisable() }}>
           <SitesIcon src={disableIcon} color="icon-secondary" />
           Отключить сетевую защиту
-        </button>
+        </MenuItem>
       </>}
       caption={`${renewalCaption} · Защищённый IP ${demoDnsAddress}`}
     >
@@ -240,9 +207,9 @@ function ProtectedAddress({ copyLabel, onCopy }) {
   return (
     <span className="sites-domain-address">
       {demoDnsAddress}
-      <button type="button" aria-label={copyLabel} onClick={onCopy}>
+      <IconButton size={24} type="button" aria-label={copyLabel} onClick={onCopy}>
         <SitesIcon name="copy-dns" color="network-warning" />
-      </button>
+      </IconButton>
     </span>
   )
 }
@@ -258,11 +225,11 @@ function DomainNote({ domain, status, onInstructions, onCopyAddress }) {
         {note.suffix && ` ${note.suffix}`}
       </span>
       {note.href ? (
-        <a className="sites-text-button" href={note.href} target="_blank" rel="noopener"
-          aria-label={`${note.label} для ${domain.name}`}>{note.label}</a>
+        <Link className="sites-text-button" href={note.href} target="_blank" rel="noopener"
+          aria-label={`${note.label} для ${domain.name}`}>{note.label}</Link>
       ) : (
-        <button type="button" className="sites-text-button" aria-haspopup="dialog" aria-label={`Как сделать для ${domain.name}`}
-          onClick={() => onInstructions({ name: domain.name, status })}>Как сделать</button>
+        <Button appearance="text" pressable={false} type="button" className="sites-text-button" aria-haspopup="dialog" aria-label={`Как сделать для ${domain.name}`}
+          onClick={() => onInstructions({ name: domain.name, status })}>Как сделать</Button>
       )}
     </div>
   )
@@ -271,12 +238,8 @@ function DomainNote({ domain, status, onInstructions, onCopyAddress }) {
 function DomainInstructions({ name, status, onVerify, onClose, onCopyAddress }) {
   const dialog = useRef(null)
 
-  useEffect(() => {
-    dialog.current.showModal()
-  }, [])
-
   return (
-    <dialog ref={dialog} className="hosting-dialog sites-dialog" aria-labelledby="sites-instructions-title" onClose={onClose}>
+    <ModalFrame ref={dialog} className="hosting-dialog sites-dialog" aria-labelledby="sites-instructions-title" onClose={onClose}>
       <h3 className="hosting-dialog-title" id="sites-instructions-title">Что делать, если домену требуется действие?</h3>
       <p><strong>{name}</strong></p>
       <p>{domainInstructions[status]}</p>
@@ -284,14 +247,14 @@ function DomainInstructions({ name, status, onVerify, onClose, onCopyAddress }) 
         <p>Защищённый IP <ProtectedAddress copyLabel="Скопировать IP" onCopy={onCopyAddress} /></p>
       )}
       <div className="sites-payment-buttons">
-        <button type="button" className="sites-payment-primary" onClick={() => { dialog.current.close(); onVerify(name) }}>Имитировать проверку</button>
-        <button type="button" className="sites-payment-cancel" onClick={() => dialog.current.close()}>Закрыть</button>
+        <Button type="button" appearance="site-payment" pressable={false} onClick={() => { dialog.current.close(); onVerify(name) }}>Имитировать проверку</Button>
+        <Button type="button" appearance="site-payment" variant="neutral" pressable={false} onClick={() => dialog.current.close()}>Закрыть</Button>
       </div>
-    </dialog>
+    </ModalFrame>
   )
 }
 
-function NetworkProtection({ dark, screenState, compact, preset, statuses, setStatuses, showAttack, setShowAttack, active }) {
+function NetworkProtection({ screenState, compact, preset, statuses, setStatuses, showAttack, setShowAttack, active }) {
   const [selected, setSelected] = useState(() => new Set(preset.editingDomains
     ? Object.keys(preset.statuses).filter(name => name !== preset.removedDomain)
     : preset.domains.filter(domain => domain.name !== 'myreviews.ru')
@@ -507,7 +470,7 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
   return (
     <>
       {availabilityNotice && (
-        <ProtectionAlert
+        <PageAlert
           title={availabilityNotice[0]}
           description={availabilityNotice[1]}
           tone={availability === 'blocked' ? 'error' : 'warning'}
@@ -519,7 +482,7 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
         />
       )}
       {showAttack && hasProtection && (
-        <ProtectionAlert
+        <PageAlert
           title="Обнаружена атака на сайт"
           description="Фильтры DDoS-Guard отсекают вредоносные запросы. Сетевая защита продолжает работать."
           onDismiss={() => setShowAttack(false)}
@@ -529,14 +492,14 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
         <AnimatedBlock open={failedDomains.length > 0 || connectingDomains}>
           <div className="sites-connection-alert-content">
             {failedDomains.length > 0 ? (
-              <ProtectionAlert
+              <PageAlert
                 title="Не удалось подключить защиту"
                 description="В списке доменов отмечено, где возникла ошибка."
                 tone="error"
                 action={{ label: 'Повторить', onClick: retryConnection }}
               />
             ) : (
-              <ProtectionAlert
+              <PageAlert
                 title="Подключаем сетевую защиту"
                 description="Статусы доменов обновятся в списке после подключения."
               />
@@ -592,9 +555,8 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
           selecting={!hasProtection || editingDomains}
           filterSpace={filterSpace}
           onFilterSpaceChange={setFilterSpace}
-          dark={dark}
           onSelection={updateSelection}
-          renderNote={(domain, status) => (
+          renderNote={(domain, status) => domainNotes[status] && (
             <DomainNote domain={domain} status={status} onInstructions={setInstructions} onCopyAddress={copyDnsAddress} />
           )}
         />
@@ -686,7 +648,7 @@ function NetworkProtection({ dark, screenState, compact, preset, statuses, setSt
   )
 }
 
-export default function SitesSection({ tab, onTabChange, dark, screenState, compact }) {
+export default function SitesSection({ tab, onTabChange, screenState, compact }) {
   const antivirusScreenState = antivirusStates.some(({ id }) => id === screenState) || (screenState === 'initial' && tab === 'antivirus')
     ? screenState : null
   const networkScreenState = networkProtectionStates.some(({ id }) => id === screenState) || (screenState === 'initial' && tab === 'network-protection')
@@ -712,11 +674,11 @@ export default function SitesSection({ tab, onTabChange, dark, screenState, comp
       </header>
       <div id="sites-panel-mine" className="hosting-sheet" role="tabpanel" aria-labelledby="sites-tab-mine" hidden={tab !== 'mine'} />
       <div id="sites-panel-antivirus" className="sites-protection sites-antivirus" role="tabpanel" aria-labelledby="sites-tab-antivirus" hidden={tab !== 'antivirus'}>
-        <Antivirus dark={dark} screenState={antivirusScreenState} compact={compact} preset={antivirusPreset} active={tab === 'antivirus'}
+        <Antivirus screenState={antivirusScreenState} compact={compact} preset={antivirusPreset} active={tab === 'antivirus'}
           plan={plan} setPlan={setPlan} statuses={antivirusStatuses} setStatuses={setAntivirusStatuses} threats={antivirusThreats} />
       </div>
       <div id="sites-panel-network-protection" className="sites-protection" role="tabpanel" aria-labelledby="sites-tab-network-protection" hidden={tab !== 'network-protection'}>
-        <NetworkProtection dark={dark} screenState={networkScreenState} compact={compact} preset={networkPreset} active={tab === 'network-protection'}
+        <NetworkProtection screenState={networkScreenState} compact={compact} preset={networkPreset} active={tab === 'network-protection'}
           statuses={networkStatuses} setStatuses={setNetworkStatuses} showAttack={showAttack} setShowAttack={setShowAttack} />
       </div>
     </div>

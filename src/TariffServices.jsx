@@ -1,5 +1,9 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { AnimatedBlock, DropdownPanel } from './hosting-motion.jsx'
+import { useId, useRef, useState } from 'react'
+import { PopoverMenu, MenuItem } from './ui/navigation.jsx'
+import { Surface } from './ui/layout.jsx'
+import { ModalFrame, Tooltip } from './ui/feedback.jsx'
+import { Button, Choice, IconButton, Switch, TextField } from './ui/controls.jsx'
+import { AnimatedBlock } from './hosting-motion.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import { plusPackage, rubles } from './plan-preview-pricing.js'
 import moreIcon from './assets/plan-changes/more.svg'
@@ -69,60 +73,24 @@ function servicePrice(service) {
 }
 
 function BenefitDescription({ title, summary, description }) {
-  const id = useId()
-  const tooltip = useRef(null)
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    if (!open) return
-
-    function dismissOutside(event) {
-      if (!tooltip.current?.contains(event.target)) setOpen(false)
-    }
-
-    function dismissOnEscape(event) {
-      if (event.key === 'Escape') setOpen(false)
-    }
-
-    document.addEventListener('pointerdown', dismissOutside)
-    document.addEventListener('keydown', dismissOnEscape)
-    return () => {
-      document.removeEventListener('pointerdown', dismissOutside)
-      document.removeEventListener('keydown', dismissOnEscape)
-    }
-  }, [open])
-
   return (
     <div className="tariff-benefit-summary">
       <span>{summary}</span>
-      <span className="tariff-benefit-tooltip" ref={tooltip}>
-        <button type="button" className="tariff-benefit-info" aria-label={`Подробнее: ${title}`}
-          aria-expanded={open} aria-controls={id} aria-describedby={open ? id : undefined}
-          onPointerEnter={event => {
-            if (event.pointerType === 'mouse') setOpen(true)
-          }}
-          onPointerLeave={event => {
-            if (event.pointerType === 'mouse') setOpen(false)
-          }}
-          onFocus={event => {
-            if (event.currentTarget.matches(':focus-visible')) setOpen(true)
-          }}
-          onBlur={() => setOpen(false)}
-          onClick={event => {
-            if (event.pointerType === 'touch' || event.pointerType === 'pen') setOpen(current => !current)
-            else setOpen(true)
-          }}>
+      <Tooltip content={description} size="large" variant="surface" pressable
+        className="tariff-benefit-tooltip" contentClassName="tariff-benefit-details">
+        {id => <IconButton size={20} className="tariff-benefit-info"
+          aria-label={`Подробнее: ${title}`} aria-describedby={id}>
           <span className="tariff-action-icon" aria-hidden="true" style={{ '--tariff-action-icon': `url("${infoIcon}")` }} />
-        </button>
-        <DropdownPanel as="span" id={id} role="tooltip" open={open} className="tariff-benefit-details">{description}</DropdownPanel>
-      </span>
+        </IconButton>}
+      </Tooltip>
     </div>
   )
 }
 
 function ServiceRow({ service, card = false, children }) {
   return (
-    <li className={`tariff-service-row${card ? ' tariff-card' : ''}`} data-service={service.id}>
+    <Surface as="li" level={card ? 'surface' : 'transparent'} appearance={card ? 'card' : undefined}
+      elevation={card ? 'card' : undefined} padding="none" className="tariff-service-row" data-service={service.id}>
       <div className="tariff-service-title">
         <ServiceIcon id={service.id} />
         <div>
@@ -132,7 +100,7 @@ function ServiceRow({ service, card = false, children }) {
       </div>
       <div className="tariff-service-price">{servicePrice(service)}</div>
       <div className="tariff-service-actions">{children}</div>
-    </li>
+    </Surface>
   )
 }
 
@@ -142,77 +110,44 @@ function ServiceIcon({ id }) {
 }
 
 function Action({ children, variant = 'outline', className = '', ...props }) {
-  return <button type="button" className={`tariff-button tariff-button--${variant} hosting-pressable ${className}`} {...props}>{children}</button>
+  return <Button appearance="tariff" variant={variant} className={`tariff-button ${className ?? ''}`.trim()} {...props}>{children}</Button>
 }
 
 function ServiceActions({ title, onSettings, packageChange, onDisable, disableLabel = 'Отключить', disabling = true }) {
-  const id = useId()
-  const container = useRef(null)
-  const trigger = useRef(null)
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    if (!open) return
-
-    function dismiss(event) {
-      if (!container.current?.contains(event.target)) setOpen(false)
-    }
-
-    document.addEventListener('pointerdown', dismiss)
-    return () => document.removeEventListener('pointerdown', dismiss)
-  }, [open])
-
-  function close() {
-    trigger.current.focus({ preventScroll: true })
-    setOpen(false)
-  }
-
-  return (
-    <div className="tariff-disclosure tariff-service-disclosure" ref={container}
-      onBlur={event => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
-      }}
-      onKeyDown={event => {
-        if (open && event.key === 'Escape') {
-          event.preventDefault()
-          event.stopPropagation()
-          close()
-        }
-      }}>
-      <Action ref={trigger} variant="neutral" className="tariff-service-icon-button tariff-service-menu-button" aria-label={`Действия: ${title}`}
-        aria-expanded={open} aria-controls={id} onClick={() => setOpen(current => !current)}>
-        <span className="tariff-action-icon" aria-hidden="true" style={{ '--tariff-action-icon': `url("${moreIcon}")` }} />
-      </Action>
-      <DropdownPanel id={id} open={open} className="tariff-menu tariff-service-menu">
+  return <PopoverMenu className="tariff-disclosure tariff-service-disclosure" panelClassName="tariff-menu tariff-service-menu"
+    preventScroll triggerProps={{ 'aria-label': `Действия: ${title}` }}
+    renderTrigger={props => <Action {...props} variant="neutral" className="tariff-service-icon-button tariff-service-menu-button">
+      <span className="tariff-action-icon" aria-hidden="true" style={{ '--tariff-action-icon': `url("${moreIcon}")` }} />
+    </Action>}>
+    {close => <>
         {packageChange && (
-          <button type="button" className="hosting-menu-item" onClick={event => {
+          <MenuItem onClick={event => {
             close()
             packageChange.onSelect(event)
           }}>
             <span className="tariff-action-icon" aria-hidden="true" style={{ '--tariff-action-icon': `url("${changePackageIcon}")` }} />
             {packageChange.label}
-          </button>
+          </MenuItem>
         )}
         {onSettings && (
-          <button type="button" className="hosting-menu-item" onClick={() => {
+          <MenuItem onClick={() => {
             close()
             onSettings()
           }}>
             <span className="tariff-action-icon" aria-hidden="true" style={{ '--tariff-action-icon': `url("${settingsIcon}")` }} />
             Настроить
-          </button>
+          </MenuItem>
         )}
-        <button type="button" className={disabling ? 'hosting-menu-item tariff-service-menu-danger' : 'hosting-menu-item'}
+        <MenuItem tone={disabling ? 'danger' : undefined}
           onClick={() => {
             close()
             onDisable()
           }}>
           <span className="tariff-action-icon" aria-hidden="true" style={{ '--tariff-action-icon': `url("${disabling ? disableIcon : benefitCheckIcon}")` }} />
           {disableLabel}
-        </button>
-      </DropdownPanel>
-    </div>
-  )
+        </MenuItem>
+    </>}
+  </PopoverMenu>
 }
 
 export function ServiceSettings({ service, ptr, renew, onSave, onClose }) {
@@ -220,12 +155,8 @@ export function ServiceSettings({ service, ptr, renew, onSave, onClose }) {
   const id = useId()
   const dialog = useRef(null)
 
-  useLayoutEffect(() => {
-    dialog.current.showModal()
-  }, [])
-
   return (
-    <dialog ref={dialog} className="hosting-dialog tariff-ip-dialog" aria-labelledby={id} onClose={onClose}>
+    <ModalFrame ref={dialog} className="hosting-dialog tariff-ip-dialog" aria-labelledby={id} onClose={onClose}>
       <form onSubmit={event => {
         event.preventDefault()
         const form = new FormData(event.currentTarget)
@@ -236,23 +167,18 @@ export function ServiceSettings({ service, ptr, renew, onSave, onClose }) {
         {isIp ? (
           <>
             <dl><dt>Адрес</dt><dd>{service.description}</dd><dt>Домен на этом адресе</dt><dd>davydov.ru</dd></dl>
-            <div className="tariff-service-settings-field">
-              <span id={`${id}-ptr-label`}>PTR-запись</span>
-              <input name="ptr" aria-labelledby={`${id}-ptr-label`} defaultValue={ptr} autoFocus />
-            </div>
+            <TextField name="ptr" label="PTR-запись" defaultValue={ptr} autoFocus />
             <p>При отключении услуги домен вернётся на общий IP сервера.</p>
           </>
         ) : (
-          <label className="tariff-service-settings-renew">
-            <input type="checkbox" name="renew" defaultChecked={renew} /> Автопродление
-          </label>
+          <Choice name="renew" size={20} defaultChecked={renew} label="Автопродление" />
         )}
         <div className="tariff-service-actions">
           <Action onClick={() => dialog.current.close()}>Отмена</Action>
-          <button type="submit" className="tariff-button tariff-button--primary hosting-pressable">Сохранить</button>
+          <Action type="submit" variant="primary">Сохранить</Action>
         </div>
       </form>
-    </dialog>
+    </ModalFrame>
   )
 }
 
@@ -301,7 +227,7 @@ function ConnectedPackage({ entry, packageId, appliedServices, onPackageChange, 
 
   return (
     <section className="tariff-current-package" aria-labelledby={id}>
-      <div className="tariff-card tariff-active-banner">
+      <Surface appearance="card" elevation="card" className="tariff-card tariff-active-banner">
         <div className="tariff-active-header">
           <div className="tariff-active-copy">
             <p>Мой пакет</p>
@@ -317,20 +243,20 @@ function ConnectedPackage({ entry, packageId, appliedServices, onPackageChange, 
             }} />
         </div>
         <div>
-          <button type="button" className="tariff-active-benefits-toggle"
+          <Button appearance="text" size={32} pressable={false} type="button" className="tariff-active-benefits-toggle"
             aria-expanded={benefitsOpen} aria-controls={`${id}-benefits`} onClick={() => setBenefitsOpen(open => !open)}>
             Преимущества пакета
             <span className="tariff-action-icon" aria-hidden="true" style={{ '--tariff-action-icon': `url("${caretIcon}")` }} />
-          </button>
+          </Button>
           <AnimatedBlock open={benefitsOpen}>
             <div id={`${id}-benefits`} className="tariff-active-benefits">
               <BenefitList benefits={includedBenefits} />
             </div>
           </AnimatedBlock>
         </div>
-      </div>
+      </Surface>
       {upgrading && (
-        <div className="tariff-card tariff-package tariff-package-upgrade" data-package={premium.id}>
+        <Surface appearance="card" elevation="card" padding="none" className="tariff-card tariff-package tariff-package-upgrade" data-package={premium.id}>
           <div className="tariff-package-banner">
             <div className="tariff-package-upgrade-copy">
               <h2>Улучшить до Премиума за {rubles(premium.amount)} / мес.</h2>
@@ -342,7 +268,7 @@ function ConnectedPackage({ entry, packageId, appliedServices, onPackageChange, 
               </Action>
             </div>
           </div>
-        </div>
+        </Surface>
       )}
       {confirmDisable && (
         <WarningDialog title={`Отключить пакет «${entry.title}»?`}
@@ -357,7 +283,7 @@ function ConnectedPackage({ entry, packageId, appliedServices, onPackageChange, 
 }
 
 export default function TariffServices({
-  packageId, appliedPackage, onPackageChange, onPackageSwitch, services, appliedServices, onServiceChange,
+  compact, packageId, appliedPackage, onPackageChange, onPackageSwitch, services, appliedServices, onServiceChange,
   serviceRenewals, onServiceRenew, onServiceSettings, onDetails, onSecurity,
 }) {
   const id = useId()
@@ -382,7 +308,7 @@ export default function TariffServices({
                   else onPackageSwitch(entry.id, event.detail === 0)
                 }
                 return (
-                  <article key={entry.id} className="tariff-card tariff-package" data-package={entry.id}
+                  <Surface as="article" appearance="card" elevation="card" padding="none" key={entry.id} className="tariff-card tariff-package" data-package={entry.id}
                     onClick={event => {
                       if (!event.target.closest('button, .tariff-benefit-details')) togglePackage(event)
                     }}>
@@ -396,7 +322,7 @@ export default function TariffServices({
                     <div className="tariff-package-banner">
                       <div className="tariff-package-heading">
                         <div className="tariff-package-title">
-                          <button type="button" className="tariff-package-selection"
+                          <IconButton size={24} appearance="selection-dot" style={{ '--vh-selection-dot-check': 'var(--tariff-banner-start)' }}
                             aria-label={`Пакет «${entry.title}»`} aria-pressed={selected} onClick={togglePackage} />
                           <h2>{entry.title}</h2>
                         </div>
@@ -410,14 +336,14 @@ export default function TariffServices({
                     <div className="tariff-package-body">
                       <BenefitList benefits={packageBenefits(entry)} />
                       <div className="tariff-package-footer">
-                        <Action variant={selected ? 'neutral' : 'primary'}
+                        <Action variant={selected ? 'neutral' : 'primary'} size={compact ? 40 : 46} pressable={false}
                           aria-label={selected ? `Убрать пакет «${entry.title}» из заказа` : `Выбрать пакет «${entry.title}»`}
                           onClick={togglePackage}>
                           {selected ? 'Убрать из заказа' : `Выбрать «${entry.title}»`}
                         </Action>
                       </div>
                     </div>
-                  </article>
+                  </Surface>
                 )
               })}
             </div>
@@ -428,18 +354,18 @@ export default function TariffServices({
       <AnimatedBlock open={connected.length > 0}>
         <section className="tariff-section" aria-labelledby={`${id}-connected`}>
           <h2 id={`${id}-connected`}>Подключено</h2>
-          <ul className="tariff-card tariff-service-list tariff-connected-services">
+          <Surface as="ul" appearance="card" elevation="card" padding="none" className="tariff-card tariff-service-list tariff-connected-services">
             {connected.map(service => (
               <ServiceRow key={service.id} service={service}>
-                <button type="button" role="switch" aria-checked={serviceRenewals[service.id]} className="tariff-service-switch"
+                <Switch appearance="inline" checked={serviceRenewals[service.id]} className="tariff-service-switch"
                   aria-label={`Автопродление: ${service.title}`} onClick={() => onServiceRenew(service, !serviceRenewals[service.id])}>
-                  <span className="hosting-switch" aria-hidden="true" />Автопродление
-                </button>
+                  Автопродление
+                </Switch>
                 <ServiceActions title={service.title} onSettings={() => onServiceSettings(service)}
                   onDisable={() => onServiceChange(service.id, false)} />
               </ServiceRow>
             ))}
-          </ul>
+          </Surface>
         </section>
       </AnimatedBlock>
 
@@ -448,7 +374,7 @@ export default function TariffServices({
         <ul className="tariff-security-cards">
           {security.map(service => (
             <li key={service.id}>
-              <a className="tariff-card tariff-security-card" href={`?sites=${service.id}`} onClick={event => {
+              <Surface as="a" appearance="card" elevation="card" className="tariff-card tariff-security-card" href={`?sites=${service.id}`} onClick={event => {
                 if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
                 event.preventDefault()
                 onSecurity(service.id)
@@ -462,7 +388,7 @@ export default function TariffServices({
                   <p>{service.description}</p>
                 </div>
                 <div className="tariff-service-price">{servicePrice(service)}</div>
-              </a>
+              </Surface>
             </li>
           ))}
         </ul>

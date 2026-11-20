@@ -1,3 +1,4 @@
+export const apiAgentsSection = 'API и AI-агенты'
 export const apiAddress = 'https://public-api.timeweb.ru'
 export const apiDocsUrl = 'https://timeweb.com/ru/docs/publichnyj-api-timeweb/metody-api-dlya-virtualnogo-hostinga/'
 export const mcpAddress = `${apiAddress}/mcp`

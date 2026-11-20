@@ -1,14 +1,20 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
-import colors from '../colors.json'
-import typography from '../typography.json'
+import { Fragment, useEffect, useId, useRef, useState } from 'react'
+import { Button, Switch } from './ui/controls.jsx'
+import { darkTokens } from './ui/hosting-theme.js'
+import { AssetIcon } from './ui/Icon.jsx'
+import { SidebarNav } from './ui/layout.jsx'
+import { MenuItem, PopoverMenu, SegmentedOptions } from './ui/navigation.jsx'
 import logo from './assets/hosting/logo.svg'
 import darkLogo from './assets/hosting/logo-dark.svg'
 import mobileLogo from './assets/hosting/mobile-logo.svg?no-inline'
 import mobileBalanceAdd from './assets/hosting/mobile-balance-add.svg?no-inline'
 import { HostingToast, HostingToastContext } from './hosting-toast.jsx'
-import { DropdownPanel } from './hosting-motion.jsx'
 import LeaveCheckoutDialog from './LeaveCheckoutDialog.jsx'
 import { PendingChangesContext } from './pending-changes.jsx'
+import { vhThemes } from './ui/theme.jsx'
+import { designSystemSection } from './design-system-section.js'
+import { apiAgentsSection } from './api-agents-data.js'
+import { integratorKnowledge, integratorNews, integratorPages, integratorSection, integratorSettings, integratorSupport } from './integrator-data.js'
 import './hosting-shell.css'
 
 const icons = {
@@ -31,7 +37,7 @@ const sidebarGroups = [
   ],
   [
     ['ide', 'IDE'],
-    ['api', 'API и AI-агенты'],
+    ['api', apiAgentsSection],
     ['ssh', 'SSH-консоль'],
     ['monitoring', 'Мониторинг нагрузки'],
     ['logs', 'Логи'],
@@ -63,12 +69,25 @@ const mobileSections = [
   ['mobile-sites', 'Сайты', 'Сайты'],
   ['mobile-domains', 'Домены', 'Домены и SSL'],
 ]
+const integratorSidebarGroups = [
+  [['partner', integratorSection]],
+  [['plan', integratorSettings, 'Настройки'], ['knowledge', integratorKnowledge, 'База знаний']],
+]
+const integratorMobileSections = [
+  ['mobile-dashboard', 'Программа', integratorSection],
+  ['plan', 'Настройки', integratorSettings],
+  ['knowledge', 'База знаний', integratorKnowledge],
+]
 const supportLinks = [
   ['support-message', 'Написать в поддержку'],
   ['support-telegram', 'Написать в Telegram'],
   ['support-help', 'База знаний'],
   ['support-phone', '8 (800) 700-1081'],
   ['support-tickets', 'Тикеты'],
+]
+const integratorSupportLinks = [
+  ['support-tickets', 'Поддержка', integratorSupport],
+  ['support-help', 'База знаний', integratorKnowledge],
 ]
 const demoAccounts = [
   ['demo002', 'Партнёрский аккаунт'],
@@ -77,88 +96,6 @@ const demoAccounts = [
   ['demo005', 'Cloud'],
   ['demo006', 'Почтовый тариф'],
 ]
-const { collection } = colors
-const menuText = typography.textStyles.find(style => style.name === 'Text Small 14px/Medium')
-
-function themeTokens(modeId, dark = false) {
-  const palette = new Map(collection.variables.map(variable => [variable.name, variable.valuesByMode[modeId]?.hex]))
-  return {
-    '--hosting-header': palette.get('Base/Header'),
-    '--hosting-background': palette.get('Base/Background'),
-    '--hosting-preview-backdrop': palette.get('Base/Under Background'),
-    '--hosting-empty-state-background': palette.get('Base/On Background'),
-    '--hosting-surface': palette.get('Base/On Background'),
-    '--hosting-text': palette.get('Text/Secondary Dark'),
-    '--hosting-muted': palette.get('Icons/Secondary'),
-    '--hosting-title': palette.get('Text/Primary'),
-    '--hosting-text-primary-light': palette.get('Text/Primary Light'),
-    '--hosting-link': palette.get('Base/Accent'),
-    '--hosting-accent-light': palette.get('Base/Accent Light'),
-    '--hosting-link-text': palette.get(dark ? 'Base/Accent Bright Hover' : 'Text/Accent'),
-    '--hosting-link-hover': palette.get(dark ? 'Base/Accent Bright' : 'Text/Accent Hover'),
-    '--hosting-line': palette.get('Base/Line/Default Line'),
-    '--hosting-line-warning': palette.get('Base/Line/Warning'),
-    '--hosting-list-back': palette.get('List/Back'),
-    '--hosting-list-hover': palette.get('List/Item Hover'),
-    '--hosting-chip': palette.get(dark ? 'Base/Surface 3' : 'Base/Surface 2'),
-    '--hosting-menu-surface': palette.get(dark ? 'Base/Surface 2' : 'Base/On Background'),
-    '--hosting-tooltip-back': palette.get('Tooltip/Back'),
-    '--hosting-tooltip-content': palette.get('Tooltip/Content'),
-    '--hosting-switch-off': palette.get('Form Controls/Switcher/Inactive'),
-    '--hosting-switch-on': palette.get('Form Controls/Switcher/Active'),
-    '--hosting-switch-thumb': palette.get('Form Controls/Switcher/Inverse'),
-    '--hosting-focus': palette.get('Base/Accent Bright'),
-    '--hosting-top-up-year-border': palette.get('Mono/Green'),
-  '--hosting-surface-3': palette.get('Base/Surface 3'),
-    '--hosting-card-surface': palette.get('Base/Surface'),
-    '--hosting-surface-60': palette.get('Base/Surface 60%'),
-    '--hosting-on-surface': palette.get('Base/On Surface'),
-    '--hosting-segment-surface': palette.get(dark ? 'Base/Surface' : 'Base/Under Background'),
-    '--hosting-secondary': palette.get(dark ? 'Text/Secondary Dark' : 'Text/Secondary'),
-    '--hosting-icon-primary': palette.get('Icons/Primary'),
-    '--hosting-icon-secondary-light': palette.get('Icons/Secondary Light'),
-    '--hosting-icon-secondary': palette.get(dark ? 'Icons/Secondary Dark' : 'Icons/Secondary'),
-    '--hosting-icon-info': palette.get('Icons/Secondary Dark'),
-    '--hosting-icon-success': palette.get('Icons/Green'),
-    '--hosting-neutral-back': palette.get('Buttons/Neutral/Back'),
-    '--hosting-neutral-hover': palette.get('Buttons/Neutral/Back Hover'),
-    '--hosting-neutral-border': palette.get('Buttons/Neutral/Border'),
-    '--hosting-primary-back': palette.get(dark ? 'Buttons/Primary Blue/Back Hover' : 'Buttons/Primary Blue/Back'),
-    '--hosting-primary-hover': palette.get('Buttons/Primary Blue/Back Hover'),
-    '--hosting-plan-info-back': palette.get('Alerts/Blue Back'),
-    '--hosting-plan-success-back': palette.get('Alerts/Green Back'),
-    '--hosting-plan-warning-back': palette.get('Mono/Orange 10'),
-    '--hosting-alert-error-back': palette.get('Alerts/Red Back'),
-    '--hosting-warning-light': palette.get('Base/Warning Light'),
-    '--hosting-warning-text': palette.get('Text/Warning'),
-    '--hosting-text-orange': palette.get('Text/Orange'),
-    '--hosting-warning-text-emphasis': palette.get(dark ? 'Text/Warning Hover' : 'Text/Warning'),
-    '--hosting-plan-warning': palette.get('Text/Orange Hover'),
-    '--hosting-plan-credit': palette.get(dark ? 'Text/Green Hover' : 'Text/Green'),
-    '--hosting-plan-branch-line': palette.get('Base/Line/Dark'),
-    '--hosting-plan-leader-line': palette.get('Base/Line/Extra Dark'),
-    '--hosting-plan-outline-border': palette.get('Buttons/Outline Blue/Border'),
-    '--hosting-plan-outline-back': palette.get('Buttons/Outline Blue/Back'),
-    '--hosting-plan-outline-hover': palette.get('Buttons/Outline Blue/Back Hover'),
-    '--hosting-plan-selected-back': palette.get('Base/Accent Light 70%'),
-    '--hosting-plan-selected-line': palette.get('Base/Line/Active'),
-    '--hosting-plan-icon-orange': palette.get('Icons/Orange'),
-    '--hosting-plan-icon-pink': palette.get('Mono/Pink'),
-    '--hosting-plan-danger': palette.get(dark ? 'Buttons/Primary Red/Back Hover' : 'Buttons/Primary Red/Back'),
-    '--hosting-plan-danger-hover': palette.get('Buttons/Primary Red/Back Hover'),
-    '--hosting-plan-error-text': palette.get(dark ? 'Buttons/Primary Red/Back' : 'Buttons/Primary Red/Back Hover'),
-    '--hosting-network-green': palette.get('Buttons/Primary Green/Back'),
-    '--hosting-network-green-hover': palette.get('Buttons/Primary Green/Back Hover'),
-    '--hosting-network-warning': palette.get(dark ? 'Text/Orange' : 'Text/Orange Hover'),
-    '--hosting-network-progress-back': palette.get('Base/Accent Light'),
-    '--hosting-font': `"${menuText.fontName.family}", Inter, system-ui, sans-serif`,
-    '--hosting-font-size': `${menuText.fontSize}px`,
-    '--hosting-line-height': `${menuText.lineHeight.value}px`,
-  }
-}
-
-const lightTokens = themeTokens(collection.defaultModeId)
-const darkTokens = themeTokens(collection.modes.find(mode => mode.name === 'Dark').modeId, true)
 const darkBannerTokens = {
   '--hosting-dark-banner-back': darkTokens['--hosting-background'],
   '--hosting-dark-banner-title': darkTokens['--hosting-title'],
@@ -175,6 +112,7 @@ const previewViews = [
   ['desktop', 'Desktop'],
   ['desktop-wide', 'Широкий экран'],
 ]
+const previewViewOptions = previewViews.map(([value, accessibleLabel]) => ({ value, accessibleLabel, icon: <Icon name={value} /> }))
 
 function readDarkTheme() {
   try {
@@ -195,130 +133,113 @@ function readPreviewView() {
 }
 
 function Icon({ name }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`hosting-icon hosting-icon--${name}`}
-      style={{ '--hosting-icon-url': `url("${icons[`./assets/hosting/${name}.svg`]}")` }}
-    />
-  )
+  return <AssetIcon src={icons[`./assets/hosting/${name}.svg`]} monochrome size={24}
+    className={`hosting-icon hosting-icon--${name}`} />
 }
 
 function QuickLinks({ selected, onSelect }) {
   return (
     <nav className="hosting-quick-links" aria-label="Ссылки в шапке">
       {quickLinks.map(([label, count]) => (
-        <button type="button" key={label} aria-current={selected === label ? 'page' : undefined} onClick={() => onSelect(label)}>
+        <Button appearance="nav-action" pressable={false} type="button" key={label} aria-current={selected === label ? 'page' : undefined} onClick={() => onSelect(label)}>
           {label}
           {count && <span className="hosting-count">{count}</span>}
-        </button>
+        </Button>
       ))}
     </nav>
   )
 }
 
-function HeaderMenu({ label, icon, open, onToggle, trigger, children, className = '', listLabel }) {
-  const menuId = `hosting-${icon}-menu`
+function HeaderMenu({ label, icon, open, onOpenChange, trigger, children, className = '', listLabel, placement }) {
+  const toolbar = icon === 'prototype' || icon === 'page-states'
   return (
-    <div className={`hosting-dropdown ${className}`.trim()}>
-      <button
-        className="hosting-menu-trigger"
-        type="button"
-        aria-label={label}
-        aria-expanded={open}
-        aria-controls={menuId}
-        onClick={onToggle}
-      >
+    <PopoverMenu className={`hosting-dropdown ${className}`.trim()} open={open} onOpenChange={onOpenChange}
+      placement={placement} panelAs="ul" panelLabel={listLabel} panelClassName="hosting-dropdown-list"
+      optionSize={44} triggerProps={{ 'aria-label': label }}
+      renderTrigger={props => <Button appearance={toolbar ? 'toolbar-icon' : 'nav-action'} size={toolbar ? 36 : undefined}
+        pressable={false} {...props} className="hosting-menu-trigger">
         {trigger ?? <>
           {icon === 'support' && <Icon name={icon} />}
           <span className="hosting-action-label">{label}</span>
           {icon === 'account' && <Icon name={icon} />}
           <Icon name="caret" />
         </>}
-      </button>
-      <DropdownPanel as="ul" id={menuId} className="hosting-dropdown-list" aria-label={listLabel} open={open}>
-        {children}
-      </DropdownPanel>
-    </div>
+      </Button>}>
+      {close => typeof children === 'function' ? children(close) : children}
+    </PopoverMenu>
   )
 }
 
-function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selected, onSelect, dark, onToggleTheme, states, activeState, onChooseState, previewView, onPreviewChange }) {
+function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selected, onSelect, dark, onToggleTheme, states, activeState, onChooseState, previewView, onPreviewChange, integrator, integratorBalance, onDeposit }) {
   const [dropdown, setDropdown] = useState(null)
   const [account, setAccount] = useState('demo001')
-  const header = useRef(null)
-
-  useEffect(() => {
-    if (!dropdown) return
-
-    function closeOnOutsideClick(event) {
-      const clickedMenu = event.target instanceof Element && event.target.closest('.hosting-dropdown')
-      if (!clickedMenu || !header.current?.contains(clickedMenu)) setDropdown(null)
-    }
-
-    function closeOnEscape(event) {
-      if (event.key !== 'Escape') return
-      header.current?.querySelector('.hosting-menu-trigger[aria-expanded="true"]')?.focus()
-      setDropdown(null)
-    }
-
-    document.addEventListener('pointerdown', closeOnOutsideClick)
-    document.addEventListener('keydown', closeOnEscape)
-    return () => {
-      document.removeEventListener('pointerdown', closeOnOutsideClick)
-      document.removeEventListener('keydown', closeOnEscape)
-    }
-  }, [dropdown])
 
   function select(label, tab) {
     setDropdown(null)
     onSelect(label, tab)
   }
 
-  function followLink(event, label, tab, navigate = onSelect) {
+  function followLink(event, label, tab) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
-    navigate(label, tab)
+    select(label, tab)
   }
 
-  function toggleDropdown(name) {
-    setDropdown(current => current === name ? null : name)
+  function changeDropdown(name, open) {
+    setDropdown(current => open ? name : current === name ? null : current)
   }
 
+  function openBalance() {
+    if (!integrator) {
+      select('Оплата')
+      return
+    }
+    setDropdown(null)
+    onDeposit()
+  }
+
+  const previewViewName = useId()
+  function selectPreviewView(view) {
+    setDropdown(null)
+    onPreviewChange(view)
+  }
   const accountMenu = (
     <HeaderMenu
-      label={compact ? 'Профиль' : account}
+      label={compact ? 'Профиль' : integrator ? 'cu203223' : account}
       icon="account"
       open={dropdown === 'account'}
-      onToggle={() => toggleDropdown('account')}
+      onOpenChange={open => changeDropdown('account', open)}
+      placement={compact ? 'top' : 'bottom'}
       trigger={compact ? <><Icon name="mobile-profile" /><span>Профиль</span></> : undefined}
     >
-      <li><button type="button" onClick={() => select('Настройка аккаунта')}>Настройка аккаунта</button></li>
-      <li><button type="button" onClick={() => select('Безопасность')}>Безопасность</button></li>
-      <li>
-        <button type="button" role="switch" aria-checked={dark} aria-label="Тёмная тема" onClick={onToggleTheme}>
-          Темная тема <span className="hosting-beta">Бета</span>
-          <span className="hosting-switch" aria-hidden="true" />
-        </button>
-      </li>
-      <li><button className="hosting-menu-muted" type="button" onClick={() => setDropdown(null)}>Выйти</button></li>
-      {demoAccounts.map(([id, description], index) => (
-        <li key={id} className={index === 0 ? 'hosting-menu-divider' : undefined}>
-          <button className="hosting-account-row" type="button" onClick={() => {
-            setAccount(id)
-            select('Дашборд')
-          }}>
-            <Icon name="account" />
-            <span>{id}<small>{description}</small></span>
-          </button>
+      {close => <>
+        <li><MenuItem onClick={() => { close(); select(integrator ? integratorSettings : 'Настройка аккаунта') }}>Настройка аккаунта</MenuItem></li>
+        <li><MenuItem onClick={() => { close(); integrator ? select(integratorSettings, 'security') : select('Безопасность') }}>Безопасность</MenuItem></li>
+        <li>
+          <MenuItem as={Switch} checked={dark} aria-label="Тёмная тема" onClick={onToggleTheme} trackAfter>
+            Тёмная тема <span className="hosting-beta">Бета</span>
+          </MenuItem>
         </li>
-      ))}
-      <li><button className="hosting-menu-muted" type="button" onClick={() => select('Добавить аккаунт')}>Добавить аккаунт</button></li>
+        {!integrator && <li><MenuItem tone="muted" onClick={close}>Выйти</MenuItem></li>}
+        {!integrator && demoAccounts.map(([id, description], index) => (
+          <li key={id} className={index === 0 ? 'hosting-menu-divider' : undefined}>
+            <MenuItem icon={<Icon name="account" />} onClick={() => {
+              close()
+              setAccount(id)
+              select('Дашборд')
+            }}>
+              <span className="vh-list-item-copy">{id}<small>{description}</small></span>
+            </MenuItem>
+          </li>
+        ))}
+        {!integrator && <li><MenuItem tone="muted"
+          onClick={() => { close(); select('Добавить аккаунт') }}>Добавить аккаунт</MenuItem></li>}
+      </>}
     </HeaderMenu>
   )
 
   return (
-    <header className="hosting-header" ref={header}>
+    <header className="hosting-header">
       <div className="hosting-preview-controls">
         <HeaderMenu
           label="Навигация прототипа"
@@ -326,54 +247,69 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
           className="hosting-prototype-menu"
           listLabel="Экраны прототипа"
           open={dropdown === 'prototype'}
-          onToggle={() => toggleDropdown('prototype')}
+          onOpenChange={open => changeDropdown('prototype', open)}
           trigger={<Icon name="menu" />}
         >
           <li className="hosting-prototype-heading">Страницы</li>
-          <li>
-            <a className="hosting-menu-item" href="./" onClick={event => followLink(event, 'Дашборд')}><Icon name="dashboard" />Дашборд</a>
-          </li>
-          <li><a className="hosting-menu-item" href="?sites=antivirus" onClick={event => followLink(event, 'Сайты', 'antivirus')}><Icon name="domains" />Антивирус</a></li>
-          <li><a className="hosting-menu-item" href="?sites=network-protection" onClick={event => followLink(event, 'Сайты', 'network-protection')}><Icon name="vps" />Сетевая защита</a></li>
-          <li><a className="hosting-menu-item" href="?tariff=services" onClick={event => followLink(event, 'Настройки тарифа', 'services')}><Icon name="plan" />Другие сервисы</a></li>
+          <li><MenuItem as="a" href="./" icon={<Icon name="dashboard" />}
+            onClick={event => followLink(event, 'Дашборд')}>Дашборд</MenuItem></li>
+          <li><MenuItem as="a" href="?sites=antivirus" icon={<Icon name="domains" />}
+            onClick={event => followLink(event, 'Сайты', 'antivirus')}>Антивирус</MenuItem></li>
+          <li><MenuItem as="a" href="?sites=network-protection" icon={<Icon name="vps" />}
+            onClick={event => followLink(event, 'Сайты', 'network-protection')}>Сетевая защита</MenuItem></li>
+          <li><MenuItem as="a" href="?tariff=services" icon={<Icon name="plan" />}
+            onClick={event => followLink(event, 'Настройки тарифа', 'services')}>Другие сервисы</MenuItem></li>
+          <li><MenuItem as="a" href="?api=connection" icon={<Icon name="api" />}
+            aria-current={selected === apiAgentsSection ? 'page' : undefined}
+            onClick={event => followLink(event, apiAgentsSection, 'connection')}>{apiAgentsSection}</MenuItem></li>
           <li className="hosting-prototype-heading hosting-menu-divider">Компоненты</li>
-          <li><a className="hosting-menu-item" href="?changes" onClick={event => followLink(event, 'Что изменится')}><Icon name="logs" />Что изменится</a></li>
+          <li><MenuItem as="a" href="?changes" icon={<Icon name="logs" />}
+            onClick={event => followLink(event, 'Что изменится')}>Что изменится</MenuItem></li>
+          <li>
+            <MenuItem as="a" href="?catalog" icon={<Icon name="plan" />}
+              aria-current={selected === designSystemSection ? 'page' : undefined}
+              onClick={event => followLink(event, designSystemSection)}>
+              {designSystemSection}
+            </MenuItem>
+          </li>
+          <li className="hosting-prototype-heading hosting-menu-divider">Панели</li>
+          <li><MenuItem as="a" href="?integrator=program" icon={<Icon name="partner" />}
+            aria-current={integrator ? 'page' : undefined}
+            onClick={event => followLink(event, integratorSection, 'clients')}>Панель интегратора</MenuItem></li>
         </HeaderMenu>
-        <div className="hosting-preview-switch" role="group" aria-label="Режим просмотра">
-          {previewViews.map(([view, label]) => (
-            <button key={view} type="button" aria-label={label} title={label} aria-pressed={previewView === view} onClick={() => {
-              setDropdown(null)
-              onPreviewChange(view)
-            }}>
-              <Icon name={view} />
-            </button>
-          ))}
-        </div>
+        <SegmentedOptions name={previewViewName} label="Режим просмотра" className="hosting-preview-switch"
+          options={previewViewOptions} value={previewView} onChange={selectPreviewView} onReselect={selectPreviewView} />
       </div>
       <div className="hosting-product-header">
         <div className="hosting-frame hosting-header-inner">
           <div className="hosting-brand">
-            <a href="./" aria-label="Timeweb Hosting" onClick={event => followLink(event, 'Дашборд', undefined, select)}>
+            <a href={integrator ? '?integrator=program' : './'} aria-label="Timeweb Hosting"
+              onClick={event => followLink(event, integrator ? integratorSection : 'Дашборд')}>
               {compact ? <img src={mobileLogo} width="96" height="20" alt="Timeweb" />
                 : <img src={dark ? darkLogo : logo} width="186" height="26" alt="timeweb hosting" />}
             </a>
           </div>
           {compact ? (
-            <button type="button" className="hosting-mobile-balance" aria-label="Пополнить баланс, 2 784 ₽" onClick={() => select('Оплата')}>
-              2 784 ₽ <span><img src={mobileBalanceAdd} width="24" height="24" alt="" /></span>
-            </button>
+            <Button appearance="nav-action" pressable={false} type="button" className="hosting-mobile-balance" aria-label={`Пополнить баланс, ${integrator ? integratorBalance : '2 784 ₽'}`}
+              onClick={openBalance}>
+              {integrator ? integratorBalance : '2 784 ₽'} <span><img src={mobileBalanceAdd} width="24" height="24" alt="" /></span>
+            </Button>
           ) : <>
-            <QuickLinks selected={selected} onSelect={select} />
+            {integrator ? <nav className="hosting-quick-links" aria-label="Ссылки в шапке">
+              <Button appearance="nav-action" pressable={false} type="button" aria-current={selected === integratorNews ? 'page' : undefined} onClick={() => select(integratorNews)}>
+                Новости <span className="hosting-count">1</span>
+              </Button>
+            </nav> : <QuickLinks selected={selected} onSelect={select} />}
             <div className="hosting-header-actions">
-              <button type="button" className="hosting-balance" onClick={() => select('Оплата')}>
+              <Button appearance="nav-action" pressable={false} type="button" className="hosting-balance" onClick={openBalance}>
                 <Icon name="wallet" />
-                <span>3 990 ₽</span>
-                <span className="hosting-expiration">до 6 дек. 2026</span>
-              </button>
-              <HeaderMenu label="Поддержка" icon="support" open={dropdown === 'support'} onToggle={() => toggleDropdown('support')}>
-                {supportLinks.map(([icon, label]) => (
-                  <li key={icon} className={icon === 'support-tickets' ? 'hosting-menu-divider' : undefined}>
-                    <button type="button" onClick={() => select(label)}><Icon name={icon} />{label}</button>
+                <span>{integrator ? integratorBalance : '3 990 ₽'}</span>
+                {!integrator && <span className="hosting-expiration">до 6 дек. 2026</span>}
+              </Button>
+              <HeaderMenu label="Поддержка" icon="support" open={dropdown === 'support'} onOpenChange={open => changeDropdown('support', open)}>
+                {close => (integrator ? integratorSupportLinks : supportLinks).map(([icon, label, section = label]) => (
+                  <li key={icon} className={!integrator && icon === 'support-tickets' ? 'hosting-menu-divider' : undefined}>
+                    <MenuItem icon={<Icon name={icon} />} onClick={() => { close(); select(section) }}>{label}</MenuItem>
                   </li>
                 ))}
               </HeaderMenu>
@@ -388,21 +324,24 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
         className="hosting-state-menu"
         listLabel="Состояния страницы"
         open={dropdown === 'states'}
-        onToggle={() => toggleDropdown('states')}
+        onOpenChange={open => changeDropdown('states', open)}
         trigger={<Icon name="menu" />}
       >
-        {[{ id: 'initial', label: 'Исходное состояние' }, ...states].map(state => (
+        {close => [{ id: 'initial', label: 'Исходное состояние' }, ...states].map(state => (
           <li key={state.id}>
-            <button type="button" className="hosting-menu-item" aria-pressed={activeState === state.id} onClick={() => onChooseState(state.id)}>
+            <MenuItem selected={activeState === state.id} onClick={() => {
+              if (integrator) close()
+              onChooseState(state.id)
+            }}>
               {state.label}
-            </button>
+            </MenuItem>
           </li>
         ))}
       </HeaderMenu>
       {compact && (
-        <nav className="hosting-mobile-nav" aria-label="Разделы хостинга">
-          {mobileSections.map(([icon, label, section]) => (
-            <button type="button" key={icon} aria-current={!menuOpen && selected === section ? 'page' : undefined} onClick={() => {
+        <nav className="hosting-mobile-nav" aria-label={integrator ? 'Разделы панели интегратора' : 'Разделы хостинга'}>
+          {(integrator ? integratorMobileSections : mobileSections).map(([icon, label, section]) => (
+            <Button appearance="nav-action" pressable={false} type="button" key={icon} aria-current={!menuOpen && selected === section ? 'page' : undefined} onClick={() => {
               if (selected !== section) {
                 select(section)
               } else if (menuOpen) onToggleMenu()
@@ -416,45 +355,34 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
                 )}
               </span>
               {label}
-            </button>
+            </Button>
           ))}
           {accountMenu}
-          <button type="button" ref={menuToggleRef} aria-current={menuOpen ? 'page' : undefined} aria-controls="hosting-more" onClick={() => {
+          <Button appearance="nav-action" pressable={false} type="button" ref={menuToggleRef} aria-current={menuOpen ? 'page' : undefined} aria-expanded={menuOpen} aria-controls="hosting-more" onClick={() => {
             setDropdown(null)
             onToggleMenu()
             window.scrollTo(0, 0)
           }}>
             <Icon name="mobile-more" />Ещё
-          </button>
+          </Button>
         </nav>
       )}
     </header>
   )
 }
 
-function Sidebar({ selected, onSelect }) {
+const toSidebarNavigation = groups => groups.map(group =>
+  group.map(([icon, id, label = id]) => ({ id, label, icon: <Icon name={icon} /> })))
+const sidebarNavigation = toSidebarNavigation(sidebarGroups)
+const integratorSidebarNavigation = toSidebarNavigation(integratorSidebarGroups)
+
+function Sidebar({ selected, onSelect, integrator }) {
   return (
     <aside className="hosting-sidebar">
       <div className="hosting-sidebar-inner">
-        <div className="hosting-mobile-links"><QuickLinks selected={selected} onSelect={onSelect} /></div>
-        <nav aria-label="Боковое меню хостинга">
-          {sidebarGroups.map(group => (
-            <ul className="hosting-sidebar-group" key={group[0][0]}>
-              {group.map(([icon, label]) => (
-                <li key={icon}>
-                  <button
-                    type="button"
-                    aria-current={selected === label ? 'page' : undefined}
-                    onClick={() => onSelect(label)}
-                  >
-                    <Icon name={icon} />
-                    <span>{label}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ))}
-        </nav>
+        {!integrator && <div className="hosting-mobile-links"><QuickLinks selected={selected} onSelect={onSelect} /></div>}
+        <SidebarNav label={integrator ? 'Панель интегратора' : 'Боковое меню хостинга'}
+          groups={integrator ? integratorSidebarNavigation : sidebarNavigation} value={selected} onChange={onSelect} />
       </div>
     </aside>
   )
@@ -464,15 +392,20 @@ function MoreIcon({ name, size = 20 }) {
   return <img src={moreIcons[`./assets/hosting/mobile-more-${name}.svg`]} width={size} height={size} alt="" />
 }
 
-function MobileMore({ open, onSelect }) {
+const integratorMoreGroups = [
+  ...integratorSidebarGroups,
+  [['news', integratorNews, 'Новости'], ['knowledge', integratorSupport, 'Поддержка']],
+]
+
+function MobileMore({ open, onSelect, integrator }) {
   return (
     <main id="hosting-more" aria-label="Ещё" hidden={!open}>
-      <nav className="hosting-more-nav" aria-label="Дополнительные разделы хостинга">
-        {moreGroups.map(group => (
+      <nav className="hosting-more-nav" aria-label={integrator ? 'Дополнительные разделы панели интегратора' : 'Дополнительные разделы хостинга'}>
+        {(integrator ? integratorMoreGroups : moreGroups).map(group => (
           <ul className="hosting-more-group" key={group[0][0]}>
-            {group.map(([icon, label]) => (
+            {group.map(([icon, section, label = section]) => (
               <li key={icon}>
-                <button type="button" onClick={() => onSelect(label)}>
+                <MenuItem layout="mobile-navigation" onClick={() => onSelect(section)}>
                   <span className="hosting-more-icon"><MoreIcon name={icon} /></span>
                   <span className="hosting-more-row">
                     <span>{label}</span>
@@ -487,7 +420,7 @@ function MobileMore({ open, onSelect }) {
                       <MoreIcon name="chevron" />
                     </span>
                   </span>
-                </button>
+                </MenuItem>
               </li>
             ))}
           </ul>
@@ -499,7 +432,7 @@ function MobileMore({ open, onSelect }) {
 
 export default function HostingShell({
   children, renderSection, initialSection = 'Дашборд', initialScreenState = null,
-  onSectionChange, onScreenStateChange, getPageStates, isCurrentSection,
+  onSectionChange, onScreenStateChange, getPageStates, isCurrentSection, getIntegratorBalance, onIntegratorDeposit,
 }) {
   const [toast, setToast] = useState(null)
   const [selected, setSelected] = useState(initialSection)
@@ -513,6 +446,7 @@ export default function HostingShell({
   const [leaveDialog, setLeaveDialog] = useState(null)
   const compact = previewView === 'mobile' || narrowViewport
   const moreOpen = compact && menuOpen
+  const integrator = Object.values(integratorPages).includes(selected)
 
   useEffect(() => {
     const media = window.matchMedia(compactViewport)
@@ -547,10 +481,11 @@ export default function HostingShell({
     }
     navigate(() => {
       if (moreOpen && document.activeElement?.closest('#hosting-more')) menuToggleRef.current?.focus({ preventScroll: true })
-      if (label !== selected) setScreenState(current => ({ ...current, id: null }))
+      const integratorNavigation = integrator && Object.values(integratorPages).includes(label)
+      if (label !== selected && !integratorNavigation) setScreenState(current => ({ ...current, id: null }))
       setSelected(label)
       setMenuOpen(false)
-      onSectionChange?.(label, tab, label === selected)
+      onSectionChange?.(label, tab, label === selected || integratorNavigation)
       window.scrollTo(0, 0)
     })
   }
@@ -572,7 +507,8 @@ export default function HostingShell({
 
   return (
     <div className="hosting-shell" data-theme={dark ? 'dark' : 'light'} data-view={previewView} data-compact={compact}
-      style={{ ...(dark ? darkTokens : lightTokens), ...darkBannerTokens }}>
+      data-integrator={integrator || undefined}
+      style={{ ...vhThemes[dark ? 'dark' : 'light'], ...darkBannerTokens }}>
       <HostingHeader
         compact={compact}
         menuOpen={moreOpen}
@@ -592,12 +528,19 @@ export default function HostingShell({
         }}
         previewView={previewView}
         onPreviewChange={changePreview}
+        integrator={integrator}
+        integratorBalance={integrator ? getIntegratorBalance?.(screenState.id) : undefined}
+        onDeposit={() => {
+          setMenuOpen(false)
+          if (selected !== integratorSection) selectSection(integratorSection)
+          onIntegratorDeposit?.()
+        }}
       />
       <div className="hosting-workspace-viewport">
         <div className="hosting-workspace-content">
           <div className="hosting-frame hosting-layout" data-section={moreOpen ? undefined : selected}>
-            {!compact && <Sidebar selected={selected} onSelect={selectSection} />}
-            {compact && <MobileMore open={moreOpen} onSelect={selectSection} />}
+            {!compact && selected !== designSystemSection && <Sidebar selected={selected} onSelect={selectSection} integrator={integrator} />}
+            {compact && <MobileMore open={moreOpen} onSelect={selectSection} integrator={integrator} />}
             <main className={content ? 'hosting-content' : 'hosting-sheet'} aria-label={selected} hidden={moreOpen}>
               <PendingChangesContext value={{ pending, navigate }}>
                 <HostingToastContext value={setToast}>

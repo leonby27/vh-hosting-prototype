@@ -42,42 +42,11 @@
 
 .hosting-leave-actions { gap: 12px; }
 
-.hosting-shell .hosting-leave-actions button {
-  min-block-size: 44px;
-  padding: 8px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 16px;
-}
-
-.hosting-shell .hosting-leave-actions button[value="checkout"] {
-  background: var(--hosting-primary-back);
-  color: var(--hosting-light);
-}
-
-.hosting-shell .hosting-leave-actions button[value="checkout"]:hover { background: var(--hosting-primary-hover); }
-
-.hosting-shell .hosting-leave-actions button[value="leave"] {
-  border: 1px solid var(--hosting-plan-outline-border);
-  background: var(--hosting-plan-outline-back);
-  color: var(--hosting-link-text);
-}
-
-.hosting-shell .hosting-leave-actions button[value="leave"]:hover { background: var(--hosting-plan-outline-hover); }
-
-.hosting-shell .hosting-leave-close {
+.hosting-leave-close {
   position: absolute;
   inset-block-start: 10px;
   inset-inline-end: 10px;
-  display: grid;
-  place-items: center;
-  inline-size: 32px;
-  block-size: 32px;
-  border-radius: 8px;
 }
-
-.hosting-leave-close:hover { background: var(--hosting-neutral-hover); }
-.hosting-leave-close img { display: block; }
 
 .hosting-shell[data-compact="true"] dialog.hosting-leave-checkout {
   padding: 32px 20px 24px;

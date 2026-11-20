@@ -1,5 +1,11 @@
+import { MenuItem, MenuPanel, SegmentedOptions, moveMenuFocus } from './ui/navigation.jsx'
 import { Fragment, useContext, useId, useLayoutEffect, useRef, useState } from 'react'
-import { DropdownPanel, TabIndicator, useAnimatedHeight } from './hosting-motion.jsx'
+import { Surface } from './ui/layout.jsx'
+import { PageAlert } from './ui/feedback.jsx'
+import { useMenuDisclosure } from './ui/menu-disclosure.js'
+import { Button, Choice, IconButton, Link, Stepper } from './ui/controls.jsx'
+import { SelectionCard } from './ui/selection.jsx'
+import { useAnimatedHeight } from './hosting-motion.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import listIcon from './assets/hosting/logs.svg'
@@ -41,17 +47,13 @@ function Art({ name, extension, className }) {
 }
 
 const artwork = {
-  '--plan-checked': `url("${asset('checked')}")`,
-  '--plan-unchecked': `url("${asset('unchecked')}")`,
-  '--plan-checked-dark': `url("${asset('checked-dark')}")`,
-  '--plan-unchecked-dark': `url("${asset('unchecked-dark')}")`,
   '--plan-leader-art': `url("${asset('leader')}")`,
 }
 
 export function CheckLine({ option, onChange }) {
   return (
     <label className="plan-check-line">
-      <input type="checkbox" checked={option.checked} onChange={event => onChange(event.target.checked)} />
+      <Choice as="span" size={20} checked={option.checked} onChange={event => onChange(event.target.checked)} />
       <span className="plan-check-text">
         <span>{option.label}</span>
         {option.hint && (
@@ -63,35 +65,27 @@ export function CheckLine({ option, onChange }) {
   )
 }
 
-function IconButton({ icon, label, onClick, disabled }) {
+function PlanIconButton({ icon, label, onClick, disabled }) {
   return (
-    <button type="button" className="plan-icon-button" aria-label={label} onClick={onClick} disabled={disabled}>
+    <IconButton size={24} appearance="icon-solid" className="plan-icon-button" label={label} onClick={onClick} disabled={disabled}>
       <Art name={icon} />
-    </button>
+    </IconButton>
   )
 }
 
 function TermPicker({ term, onChange }) {
+  const name = useId()
   if (term.options) {
     return (
-      <div className="plan-segments hosting-indicator-track" role="group" aria-label="Срок оплаты">
-        <TabIndicator selected={term.value} />
-        {term.options.map(({ value, label }) => (
-          <button key={value} type="button" aria-pressed={term.value === value} onClick={() => onChange(value)}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <SegmentedOptions name={name} label="Срок оплаты" options={term.options}
+        value={term.value} onChange={onChange} size={40} surface="page" />
     )
   }
 
-  return (
-    <div className="hosting-stepper" role="group" aria-label="Срок в месяцах">
-      <IconButton icon="minus" label="Уменьшить срок" disabled={term.value <= term.min} onClick={() => onChange(term.value - 1)} />
-      <output aria-live="polite">{term.value} мес.</output>
-      <IconButton icon="plus" label="Увеличить срок" disabled={term.value >= term.max} onClick={() => onChange(term.value + 1)} />
-    </div>
-  )
+  return <Stepper label="Срок в месяцах" value={`${term.value} мес.`}
+    decreaseLabel="Уменьшить срок" increaseLabel="Увеличить срок"
+    atMin={term.value <= term.min} atMax={term.value >= term.max}
+    onDecrease={() => onChange(term.value - 1)} onIncrease={() => onChange(term.value + 1)} />
 }
 
 function ChangeItem({ item, onUpdate }) {
@@ -100,13 +94,13 @@ function ChangeItem({ item, onUpdate }) {
       <div className="plan-item-heading">
         <span className="plan-item-title">{item.title}</span>
         {item.removed ? (
-          <button type="button" className="plan-text-button" onClick={() => onUpdate({ removed: false })}>Вернуть</button>
+          <Button appearance="text" pressable={false} type="button" className="plan-text-button" onClick={() => onUpdate({ removed: false })}>Вернуть</Button>
         ) : (
           <span className="plan-item-values">
             {item.previous && <del className="plan-money">{item.previous}</del>}
             {item.amount && <span className={item.credit ? 'plan-money plan-credit' : 'plan-money'}>{item.amount}</span>}
             {item.detail && <span className="plan-secondary">{item.detail}</span>}
-            {item.removable && <IconButton icon="remove" label={item.removeLabel ?? `Убрать ${item.accessibleName ?? item.title}`} onClick={() => onUpdate({ removed: true })} />}
+            {item.removable && <PlanIconButton icon="remove" label={item.removeLabel ?? `Убрать ${item.accessibleName ?? item.title}`} onClick={() => onUpdate({ removed: true })} />}
           </span>
         )}
       </div>
@@ -137,21 +131,10 @@ function ChangeItem({ item, onUpdate }) {
 }
 
 function Notice({ notice, onAction }) {
-  const alert = notice.tone === 'warning'
-  return (
-    <div className={`plan-notice plan-notice--${notice.tone}`}>
-      <span className="plan-notice-icon">
-        <Art name={notice.icon} extension={alert ? 'svg' : 'png'} />
-      </span>
-      <div className="plan-notice-body">
-        {notice.title && <p className="plan-notice-title">{notice.title}</p>}
-        <p>{notice.description}</p>
-        {notice.action && (
-          <button type="button" className="plan-outline-button" onClick={() => onAction(notice.action)}>{notice.action.label}</button>
-        )}
-      </div>
-    </div>
-  )
+  return <PageAlert appearance="inline" tone={notice.tone} title={notice.title}
+    description={notice.description}
+    icon={<Art name={notice.icon} extension={notice.tone === 'warning' ? 'svg' : 'png'} />}
+    action={notice.action && { label: notice.action.label, onClick: () => onAction(notice.action) }} />
 }
 
 export function PaymentOptionLabel({ option, hint = option.hint, icon }) {
@@ -169,11 +152,8 @@ export function PaymentOptionLabel({ option, hint = option.hint, icon }) {
 }
 
 function OtherPaymentMethods({ option, value, selected, onChange, onAction }) {
-  const id = useId()
-  const disclosure = useRef(null)
-  const trigger = useRef(null)
+  const { id, open, close: closeMenu, setOpen, containerProps, triggerProps } = useMenuDisclosure({ preventScroll: true })
   const panel = useRef(null)
-  const [open, setOpen] = useState(false)
   const [unlinkChoice, setUnlinkChoice] = useState(null)
   const current = selected && option.choices.find(choice => choice.id === value)
   const saved = option.choices.filter(choice => choice.unlinkLabel)
@@ -183,7 +163,7 @@ function OtherPaymentMethods({ option, value, selected, onChange, onAction }) {
 
     function positionPanel() {
       const menu = panel.current
-      const { top, bottom } = trigger.current.getBoundingClientRect()
+      const { top, bottom } = triggerProps.ref.current.getBoundingClientRect()
       // Leave room for the 6px gap at the trigger and an 8px viewport inset.
       const above = top - 14
       const below = window.innerHeight - bottom - 14
@@ -192,69 +172,40 @@ function OtherPaymentMethods({ option, value, selected, onChange, onAction }) {
       menu.style.maxBlockSize = `${Math.max(0, opensAbove ? above : below)}px`
     }
 
-    function closeOnOutsideClick(event) {
-      if (!disclosure.current.contains(event.target)) setOpen(false)
-    }
-
     positionPanel()
     window.addEventListener('resize', positionPanel)
-    document.addEventListener('pointerdown', closeOnOutsideClick)
-    return () => {
-      window.removeEventListener('resize', positionPanel)
-      document.removeEventListener('pointerdown', closeOnOutsideClick)
-    }
-  }, [open])
-
-  function closeMenu() {
-    trigger.current.focus({ preventScroll: true })
-    setOpen(false)
-  }
+    return () => window.removeEventListener('resize', positionPanel)
+  }, [open, triggerProps.ref])
 
   function finishUnlink(confirmed) {
     setUnlinkChoice(null)
     if (!confirmed) return
 
-    if (saved.length === 1) disclosure.current.closest('fieldset')?.focus({ preventScroll: true })
+    if (saved.length === 1) containerProps.ref.current.closest('fieldset')?.focus({ preventScroll: true })
     onAction({ id: 'unlink-payment-method', method: unlinkChoice.id, label: unlinkChoice.unlinkLabel })
   }
 
   return (
-    <div
-      ref={disclosure}
-      className="plan-payment-disclosure"
-      data-wide={option.wide || undefined}
-      onBlur={event => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
-      }}
-      onKeyDown={event => {
-        if (!open || event.key !== 'Escape') return
-        event.preventDefault()
-        event.stopPropagation()
-        closeMenu()
-      }}
-    >
-      <button
-        ref={trigger}
-        type="button"
+    <div {...containerProps} onKeyDown={event => {
+      containerProps.onKeyDown(event)
+      moveMenuFocus(event, panel.current, open, () => setOpen(true))
+    }} className="plan-payment-disclosure" data-wide={option.wide || undefined}>
+      <Button {...triggerProps} appearance="choice-card" variant="neutral" pressable={false}
         className={`plan-payment-option plan-payment-trigger${option.wide ? ' plan-payment-option--wide' : ''}`}
-        data-selected={Boolean(current)}
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={() => setOpen(current => !current)}
-      >
+        data-selected={Boolean(current)}>
         <PaymentOptionLabel option={option} hint={current?.listLabel ?? current?.label ?? option.hint} />
-      </button>
-      <DropdownPanel ref={panel} className="plan-payment-panel" id={id} open={open}>
+      </Button>
+      <MenuPanel ref={panel} className="plan-payment-panel" id={id} open={open}>
         <ul>
           {option.choices.map(choice => (
             <li key={choice.id}>
-              <button type="button" aria-pressed={value === choice.id} onClick={() => {
+              <MenuItem layout="split" selected={value === choice.id} onClick={() => {
                 closeMenu()
                 onChange(choice.id)
               }}>
                 <span>{choice.listLabel ?? choice.label}</span>
                 {choice.unlinkLabel && <small>сохранён</small>}
-              </button>
+              </MenuItem>
             </li>
           ))}
         </ul>
@@ -264,18 +215,18 @@ function OtherPaymentMethods({ option, value, selected, onChange, onAction }) {
             <ul className="plan-payment-unlink">
               {saved.map(choice => (
                 <li key={choice.id}>
-                  <button type="button" onClick={() => {
+                  <MenuItem tone="muted" onClick={() => {
                     closeMenu()
                     setUnlinkChoice(choice)
                   }}>
                     {choice.unlinkLabel}
-                  </button>
+                  </MenuItem>
                 </li>
               ))}
             </ul>
           </>
         )}
-      </DropdownPanel>
+      </MenuPanel>
       {unlinkChoice && (
         <WarningDialog
           title={`Вы уверены, что хотите ${unlinkChoice.unlinkLabel.replace(/^Отвязать /, 'отвязать ')}?`}
@@ -305,16 +256,10 @@ function PaymentGroup({ group, onChange, onAction }) {
             onAction={onAction}
           />
         ) : (
-          <label key={option.id} className={option.wide ? 'plan-payment-option plan-payment-option--wide' : 'plan-payment-option'}>
-            <input
-              type="radio"
-              name={id}
-              value={option.id}
-              checked={group.value === option.id}
-              onChange={() => onChange(option.id)}
-            />
+          <SelectionCard key={option.id} className={option.wide ? 'plan-payment-option plan-payment-option--wide' : 'plan-payment-option'}
+            name={id} value={option.id} checked={group.value === option.id} onChange={() => onChange(option.id)}>
             <PaymentOptionLabel option={option} />
-          </label>
+          </SelectionCard>
         ))}
       </div>
     </fieldset>
@@ -342,14 +287,14 @@ function InvoiceAction({ label, amount = '', disabled, busy }) {
 
   if (!open) {
     return (
-      <button
+      <Button
         ref={trigger}
         type="button"
-        className="hosting-pressable"
+        appearance="checkout"
         disabled={disabled}
         aria-disabled={busy || undefined}
         onClick={() => { if (!busy) setOpen(true) }}
-      >{label}</button>
+      >{label}</Button>
     )
   }
 
@@ -370,18 +315,17 @@ function InvoiceAction({ label, amount = '', disabled, busy }) {
             <h3 ref={heading} tabIndex={-1}>Ждём оплату по счёту</h3>
             <strong>{amount}</strong>
           </div>
-          <IconButton icon="remove" label="Закрыть блок счёта" onClick={() => {
+          <PlanIconButton icon="remove" label="Закрыть блок счёта" onClick={() => {
             restoreFocus.current = true
             setOpen(false)
           }} />
         </div>
         <p>Изменения применим сразу после зачисления. Заказ держим 5 дней, до этого тариф и ресурсы прежние.</p>
       </div>
-      <a
-        className="plan-invoice-download hosting-pressable"
+      <Button as="a"
         href={`data:text/html;charset=utf-8,${encodeURIComponent(invoiceHtml)}`}
         download="demo-invoice.html"
-      >Скачать счёт</a>
+      >Скачать счёт</Button>
     </div>
   )
 }
@@ -484,17 +428,18 @@ export default function PlanChanges({
         <div className="plan-changes-heading">
           <h2 id={heading.id} ref={heading.ref} tabIndex={-1}>{label}</h2>
           {onDiscard && (
-            <button type="button" className="plan-changes-cancel" onClick={() => {
+            <Button appearance="quiet" size={24} pressable={false} type="button" className="plan-changes-cancel" onClick={() => {
               resetPaymentFeedback()
               onDiscard()
             }}>
               <span aria-hidden="true" style={{ '--plan-cancel-icon': `url("${closeIcon}")` }} />
               Отменить
-            </button>
+            </Button>
           )}
         </div>
       )}
-      <div className={!empty && summary && payment ? 'plan-changes-card plan-changes-card--split' : 'plan-changes-card'}>
+      <Surface appearance="card" padding="none" elevation={empty ? undefined : 'card'}
+        className={!empty && summary && payment ? 'plan-changes-card plan-changes-card--split' : 'plan-changes-card'}>
         <div className="plan-changes-card-content" ref={content}>
           {empty && <PlanChangesEmpty {...empty} />}
           {!empty && summary && (
@@ -554,9 +499,8 @@ export default function PlanChanges({
                 <div className="plan-actions">
                   {actions.some(isPaymentAction) && (
                     <div className="plan-check-line plan-payment-consent">
-                      <input
+                      <Choice as="span" size={20}
                         id={consentId}
-                        type="checkbox"
                         aria-labelledby={`${consentId}-label`}
                         checked={agreedToTerms}
                         disabled={Boolean(pendingAction)}
@@ -565,9 +509,9 @@ export default function PlanChanges({
                       <span className="plan-check-text">
                         <span id={`${consentId}-label`}>
                           <label htmlFor={consentId}>Согласен с</label>{' '}
-                          <a href="https://timeweb.com/ru/services/hosting/rules/" target="_blank" rel="noopener">правилами</a>
+                          <Link href="https://timeweb.com/ru/services/hosting/rules/" target="_blank" rel="noopener">правилами</Link>
                           {' и '}
-                          <a href="https://timeweb.com/ru/support/documents/" target="_blank" rel="noopener">условиями</a>
+                          <Link href="https://timeweb.com/ru/support/documents/" target="_blank" rel="noopener">условиями</Link>
                         </span>
                       </span>
                     </div>
@@ -589,19 +533,19 @@ export default function PlanChanges({
                     const failed = failedAction === action.id
                     return (
                       <Fragment key={action.id}>
-                        <button
+                        <Button
                           type="button"
-                          className="hosting-pressable"
-                          data-tone={action.tone}
+                          appearance="checkout"
+                          tone={action.tone}
                           disabled={disabled}
-                          aria-busy={busy || undefined}
+                          loading={busy}
                           aria-disabled={Boolean(pendingAction) || undefined}
+                          icon={action.icon && <Art name={action.icon} className="plan-action-icon" />}
                           aria-describedby={failed ? paymentErrorId : undefined}
                           onClick={() => pressAction(action)}
                         >
-                          {busy ? <span className="plan-action-spinner" aria-hidden="true" /> : action.icon && <Art name={action.icon} className="plan-action-icon" />}
                           {busy ? 'Оплачиваем…' : action.label}
-                        </button>
+                        </Button>
                         {failed && (
                           <p id={paymentErrorId} className="plan-payment-error" role="alert">
                             Не удалось провести оплату. Попробуйте ещё раз позже.
@@ -622,7 +566,7 @@ export default function PlanChanges({
             </div>
           )}
         </div>
-      </div>
+      </Surface>
     </section>
   )
 }

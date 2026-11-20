@@ -1,18 +1,15 @@
-import { useId, useLayoutEffect, useRef } from 'react'
+import { Button } from './ui/controls.jsx'
+import { useId, useRef } from 'react'
+import { ModalClose, ModalFrame } from './ui/feedback.jsx'
 import basket from './assets/checkout/shopping-basket.png'
-import closeIcon from './assets/checkout/close.svg'
 import './leave-checkout-dialog.css'
 
 export default function LeaveCheckoutDialog({ title, description, onClose }) {
   const id = useId()
   const dialog = useRef(null)
 
-  useLayoutEffect(() => {
-    dialog.current.showModal()
-  }, [])
-
   return (
-    <dialog ref={dialog} className="hosting-dialog hosting-leave-checkout"
+    <ModalFrame ref={dialog} className="hosting-dialog hosting-leave-checkout"
       aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`}
       onClose={event => onClose(event.currentTarget.returnValue)}
       onKeyDown={event => { if (event.key === 'Escape') event.stopPropagation() }}>
@@ -25,13 +22,11 @@ export default function LeaveCheckoutDialog({ title, description, onClose }) {
           </div>
         </div>
         <div className="hosting-leave-actions">
-          <button type="submit" value="checkout" autoFocus>Перейти к оплате</button>
-          <button type="submit" value="leave">Прервать оплату</button>
+          <Button size={44} type="submit" value="checkout" autoFocus>Перейти к оплате</Button>
+          <Button variant="outline" size={44} type="submit" value="leave">Прервать оплату</Button>
         </div>
       </form>
-      <button type="button" className="hosting-leave-close" aria-label="Закрыть" onClick={() => dialog.current.close('stay')}>
-        <img src={closeIcon} width="20" height="20" alt="" />
-      </button>
-    </dialog>
+      <ModalClose className="hosting-leave-close" onClick={() => dialog.current.close('stay')} />
+    </ModalFrame>
   )
 }

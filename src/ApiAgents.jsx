@@ -1,11 +1,18 @@
 import { Fragment, useContext, useId, useRef, useState } from 'react'
-import { AnimatedBlock, DropdownPanel, TabIndicator } from './hosting-motion.jsx'
+import { AnimatedBlock } from './hosting-motion.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
+import { Button, Choice, IconButton, Link, SearchField, TextField } from './ui/controls.jsx'
+import { Surface, TableFrame } from './ui/layout.jsx'
+import { AssetIcon } from './ui/Icon.jsx'
+import { Badge, StatusBadge, Tooltip } from './ui/feedback.jsx'
+import { MenuItem, PopoverMenu, SegmentedOptions, TabList } from './ui/navigation.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import { PlanChangesEmpty } from './PlanChanges.jsx'
+import { ProtectionFaq } from './SitesProtectionUI.jsx'
 import claudeCodeIcon from './assets/api-agents/claudecode-color.svg'
 import claudeIcon from './assets/api-agents/claude-color.svg'
 import cursorIcon from './assets/api-agents/cursor.svg'
+import keyIcon from './assets/api-agents/key-fill.svg'
 import vsCodeIcon from './assets/api-agents/vscode.svg'
 import windsurfIcon from './assets/api-agents/windsurf.svg'
 import codexIcon from './assets/api-agents/codex-color.svg'
@@ -22,12 +29,9 @@ import backupsIcon from './assets/api-agents/archive-fill.svg'
 import accountIcon from './assets/api-agents/user-circle-fill.svg'
 import otherClientsIcon from './assets/plan-changes/more.svg'
 import apiMcpPrism from './assets/hosting/api-mcp-prism.png'
-import searchIcon from './assets/network-protection/search.svg'
-import caretIcon from './assets/hosting/caret.svg'
-import { apiAddress, apiDocsUrl, capabilities, clients, demoApiKeys, journal, permissions, presets, secretPlaceholder } from './api-agents-data.js'
+import { apiAddress, apiAgentsSection, apiDocsUrl, capabilities, clients, demoApiKeys, journal, permissions, presets, secretPlaceholder } from './api-agents-data.js'
 import './api-agents.css'
 
-export const apiAgentsSection = 'API и AI-агенты'
 export const apiTabs = [['connection', 'Подключение'], ['keys', 'Ключи'], ['journal', 'Журнал']]
 const clientTabIcons = {
   'Claude Code': { src: claudeCodeIcon },
@@ -45,6 +49,21 @@ const capabilityIcons = {
 const connectionTabs = [
   ['http', 'API', { src: apiIcon, monochrome: true }],
   ...clients.map(([label], index) => [`client-${index}`, label, clientTabIcons[label] ?? otherTabIcon]),
+]
+const connectionQuestions = [
+  {
+    id: 'api-docs', title: 'Документация API',
+    answer: <>Описание методов и примеры запросов есть в <Link href={apiDocsUrl}
+      target="_blank" rel="noopener noreferrer">документации API Timeweb <span aria-hidden="true">↗</span></Link>.</>,
+  },
+  {
+    id: 'mcp-setup', title: 'Как подключить MCP',
+    answer: 'В разделе «Как подключить» выберите своего клиента, выпустите ключ и добавьте MCP-сервер по инструкции для этого клиента.',
+  },
+  {
+    id: 'request-limits', title: 'Ограничения на число запросов',
+    answer: 'Код 429 в журнале означает, что превышен лимит запросов. Уменьшите частоту запросов и повторите запрос после паузы.',
+  },
 ]
 const accessLabels = { none: 'Нет доступа', read: 'Чтение', write: 'Чтение и запись' }
 const durations = [['none', 'Бессрочный'], ['365', '1 год'], ['90', '90 дней'], ['30', '30 дней'], ['custom', 'Свой срок']]
@@ -70,11 +89,14 @@ function Copy({ value, label, primary = false }) {
     }
   }
 
-  const className = primary ? 'api-button api-primary api-copy-key' : 'api-code-copy'
-  return <button type="button" className={className} onClick={copy} aria-label={label} title={label}>
-    <span className="api-copy-key-icon" aria-hidden="true" />
-    {primary && label}
-  </button>
+  const className = primary ? 'api-button api-copy-key' : 'api-code-copy'
+  return <Tooltip content={label} className={primary ? undefined : className}>
+    {id => <IconButton variant={primary ? 'primary' : 'neutral'} size={primary ? 40 : 32}
+      appearance={primary ? 'default' : 'icon-solid'} className={primary ? className : undefined} onClick={copy} label={label} aria-describedby={id}>
+      <span className="api-copy-key-icon" aria-hidden="true" />
+      {primary && label}
+    </IconButton>}
+  </Tooltip>
 }
 
 function Address({ label, value }) {
@@ -124,10 +146,10 @@ function ConnectionSteps({ steps }) {
 }
 
 function IssueConnectionKeyButton({ onClick, children }) {
-  return <button type="button" className="api-button api-client-key-button" onClick={onClick}>
-    <span className="api-client-key-icon" aria-hidden="true" />
+  return <Button variant="outline" appearance="compact-outline" pressable={false} onClick={onClick}
+    icon={<AssetIcon src={keyIcon} monochrome />}>
     {children}
-  </button>
+  </Button>
 }
 
 function ApiInstructions({ onCreate }) {
@@ -143,8 +165,8 @@ function ApiInstructions({ onCreate }) {
       <p>Скопируйте адрес API и укажите его в скрипте, интеграции или настройках Terraform.</p>
       <CodeSample label="Адрес API" value={apiAddress} wrap />
     </div>,
-    <>Выберите нужный метод и настройте авторизацию по <a className="api-step-link" href={apiDocsUrl}
-      target="_blank" rel="noopener noreferrer">документации API <span aria-hidden="true">↗</span></a>.</>,
+    <>Выберите нужный метод и настройте авторизацию по <Link href={apiDocsUrl}
+      target="_blank" rel="noopener noreferrer">документации API <span aria-hidden="true">↗</span></Link>.</>,
   )
   return <ConnectionSteps steps={steps} />
 }
@@ -186,14 +208,14 @@ function ConnectionInstructions({ secret, onCreate, initialMethod = 'http' }) {
   return <>
     <div className="api-connection-tabs">
       <ApiTabs tab={method} onTabChange={setMethod} tabs={connectionTabs} idPrefix={idPrefix}
-        label="Способ подключения" className="hosting-segmented" />
+        label="Способ подключения" variant="segmented" surface="page" />
     </div>
-    <ApiDropdown className="api-connection-select" buttonLabel={`Способ подключения: ${selectedLabel}`}
-      buttonContent={<><ConnectionIcon icon={selectedIcon} />{selectedLabel}</>}>
-      {close => connectionTabs.map(([id, label, icon]) => <button key={id} type="button" aria-pressed={method === id}
-        onClick={() => { setMethod(id); close() }}>
-        <ConnectionIcon icon={icon} />{label}
-      </button>)}
+    <ApiDropdown className="api-connection-select" optionSize={44} buttonLabel={`Способ подключения: ${selectedLabel}`}
+      buttonIcon={<AssetIcon {...selectedIcon} />} buttonContent={selectedLabel}>
+      {close => connectionTabs.map(([id, label, icon]) => <MenuItem key={id} selected={method === id}
+        icon={<AssetIcon {...icon} />} onClick={() => { setMethod(id); close() }}>
+        {label}
+      </MenuItem>)}
     </ApiDropdown>
     <AnimatedBlock>
       {connectionTabs.map(([id], index) => <div key={id} id={`${idPrefix}-panel-${id}`} role="tabpanel"
@@ -206,7 +228,7 @@ function ConnectionInstructions({ secret, onCreate, initialMethod = 'http' }) {
 }
 
 function DataTable({ headings, label, className = '', hasActions = false, children }) {
-  return <div className={`api-table-scroll ${className}`.trim()} tabIndex={0} role="region" aria-label={label}>
+  return <TableFrame className={`api-table-scroll ${className}`.trim()} label={label}>
     <table role="table">
       <thead role="rowgroup"><tr role="row">
         {headings.map(heading => <th key={heading} scope="col" role="columnheader">{heading}</th>)}
@@ -214,14 +236,14 @@ function DataTable({ headings, label, className = '', hasActions = false, childr
       </tr></thead>
       <tbody role="rowgroup">{children}</tbody>
     </table>
-  </div>
+  </TableFrame>
 }
 
 function CapabilityName({ id, label, upcoming }) {
   return <span className="api-capability-name">
     <span className="api-capability-icon" aria-hidden="true"
       style={{ '--api-capability-icon': `url("${capabilityIcons[id]}")` }} />
-    {label}{upcoming && <span className="sites-domain-badge api-capability-badge">Скоро</span>}
+    {label}{upcoming && <Badge tone="success" className="api-capability-badge">Скоро</Badge>}
   </span>
 }
 
@@ -229,7 +251,7 @@ function Connection({ hasKeys, onCreate, onKeys }) {
   const connectionId = useId()
 
   return <div className="api-stack api-section-flow">
-    <section className="api-card api-key-promo hosting-reveal">
+    <Surface as="section" elevation="card" className="api-card api-key-promo hosting-reveal">
       <span className="api-key-promo-grain" aria-hidden="true" />
       <span className="api-key-promo-rim" aria-hidden="true" />
       <div className="api-stack api-key-promo-content">
@@ -237,15 +259,15 @@ function Connection({ hasKeys, onCreate, onKeys }) {
           <h2>Ключ для API и MCP</h2>
           <p>Подключайте интеграции и AI-агентов одним ключом. Права доступа можно выбрать при выпуске.</p>
         </div>
-        <button type="button" className="api-button api-primary" onClick={hasKeys ? onKeys : () => onCreate()}>{hasKeys ? 'Управлять ключами' : 'Выпустить ключ'}</button>
+        <Button pressable={false} className="api-button" onClick={hasKeys ? onKeys : () => onCreate()}>{hasKeys ? 'Управлять ключами' : 'Выпустить ключ'}</Button>
       </div>
       <img className="api-key-promo-art" src={apiMcpPrism} width="350" height="233" alt="" />
-    </section>
+    </Surface>
     <section className="api-stack api-section hosting-reveal" aria-labelledby={`${connectionId}-title`}>
       <h2 id={`${connectionId}-title`}>Как подключить</h2>
-      <div className="api-card api-stack">
+      <Surface elevation="card" className="api-card api-stack">
         <ConnectionInstructions onCreate={onCreate} />
-      </div>
+      </Surface>
     </section>
     <section className="api-stack api-section api-capabilities hosting-reveal">
       <h2>Возможности API и MCP</h2>
@@ -257,16 +279,17 @@ function Connection({ hasKeys, onCreate, onKeys }) {
         </tr>)}
       </DataTable>
     </section>
+    <ProtectionFaq questions={connectionQuestions} />
   </div>
 }
 
 function Keys({ keys, onCreate, onEdit, onRemove, onRotate }) {
-  if (!keys.length) return <div className="plan-changes-card hosting-reveal">
+  if (!keys.length) return <Surface appearance="card" padding="none" className="plan-changes-card hosting-reveal">
     <PlanChangesEmpty title="Ключей пока нет" icon={apiIcon}
       description="Укажите, к каким разделам получит доступ ваша интеграция.">
-      <button type="button" className="api-button api-primary" onClick={onCreate}>Выпустить ключ</button>
+      <Button pressable={false} type="button" className="api-button" onClick={onCreate}>Выпустить ключ</Button>
     </PlanChangesEmpty>
-  </div>
+  </Surface>
 
   return <section className="api-stack hosting-reveal">
     <div className="api-keys-heading">
@@ -274,7 +297,7 @@ function Keys({ keys, onCreate, onEdit, onRemove, onRotate }) {
         <h2>Мои ключи</h2>
         <p>Выпущено {keys.length} {keyNouns[countPlural.select(keys.length)]}</p>
       </div>
-      <button type="button" className="api-button api-primary" onClick={onCreate}>Выпустить ключ</button>
+      <Button pressable={false} type="button" className="api-button" onClick={onCreate}>Выпустить ключ</Button>
     </div>
     <DataTable className="api-keys-table" label="Мои ключи" hasActions
       headings={['Название ключа', 'Доступы', 'Срок', 'Последний вызов']}>
@@ -290,9 +313,9 @@ function Keys({ keys, onCreate, onEdit, onRemove, onRotate }) {
           </td>
           <td role="cell" className="api-key-expiry">
             <span className="api-mobile-cell-label" aria-hidden="true">Срок</span>
-            <span className="sites-domain-badge" data-expired={expired}>
+            <Badge tone={expired ? 'danger' : undefined} className="sites-domain-badge">
               {expired ? 'Срок истёк' : key.expires ? `До ${dateFormat.format(key.expires)}` : 'Без срока'}
-            </span>
+            </Badge>
           </td>
           <td role="cell" className="api-key-last-call">
             <span className="api-mobile-cell-label" aria-hidden="true">Последний вызов</span>
@@ -301,9 +324,9 @@ function Keys({ keys, onCreate, onEdit, onRemove, onRotate }) {
           <td role="cell" className="api-key-actions">
             <ApiDropdown className="api-key-menu" buttonLabel={`Действия с ключом «${key.name}»`} iconOnly>
               {close => <>
-                <button type="button" onClick={() => { close(); onEdit(key) }}>Настроить</button>
-                <button type="button" onClick={() => { close(); onRotate(key) }}>Перевыпустить</button>
-                <button type="button" className="api-danger" onClick={() => { close(); onRemove(key) }}>Удалить</button>
+                <MenuItem onClick={() => { close(); onEdit(key) }}>Настроить</MenuItem>
+                <MenuItem onClick={() => { close(); onRotate(key) }}>Перевыпустить</MenuItem>
+                <MenuItem tone="danger" onClick={() => { close(); onRemove(key) }}>Удалить</MenuItem>
               </>}
             </ApiDropdown>
           </td>
@@ -323,38 +346,17 @@ const permissionPresets = presets.map(([label, level, ids]) => ({ label, access:
 const permissionPresetOptions = [...permissionPresets.map(({ label }) => [label, label]), ['custom', 'Индивидуальный']]
 const permissionOptions = Object.entries(accessLabels)
 function AccessOptions({ name, label, options, value, disabledValue, onChange, compact }) {
-  if (compact) return <ApiSelect className="api-permission-select" label={label}
+  if (compact) return <ApiSelect variant="surface" className="api-permission-select" label={label}
     options={options} value={value} disabledValue={disabledValue} onChange={onChange} />
 
   return <div className="api-permission-options">
-    <div className="hosting-segmented hosting-indicator-track" role="radiogroup" aria-label={label}>
-      <TabIndicator selected={value} />
-      {options.map(([id, text]) => <label key={id}>
-        <input type="radio" name={name} value={id} checked={value === id}
-          disabled={id === disabledValue} onChange={() => onChange(id)} />
-        <span>{text}</span>
-      </label>)}
-    </div>
+    <SegmentedOptions surface="page" size={40} name={name} label={label} value={value} onChange={onChange}
+      options={options.map(([id, text]) => ({ value: id, label: text, disabled: id === disabledValue }))} />
   </div>
 }
 
 function findPermissionPreset(access) {
   return permissionPresets.find(preset => permissions.every(({ id }) => (access[id] ?? 'none') === preset.access[id]))
-}
-
-function KeyInput({ label, hideLabel = false, error, className = '', ...inputProps }) {
-  const id = useId()
-  const showError = Boolean(error && !inputProps.disabled)
-
-  return <div className={`api-field ${className}`.trim()}>
-    {!hideLabel && <span className="api-field-label" id={`${id}-label`}>{label}</span>}
-    <input {...inputProps} id={id} className="api-field-input"
-      aria-label={hideLabel ? label : undefined} aria-labelledby={hideLabel ? undefined : `${id}-label`}
-      aria-invalid={showError || undefined} aria-describedby={showError ? `${id}-error` : undefined} />
-    {error !== undefined && <AnimatedBlock open={showError}>
-      <p className="api-field-error" id={`${id}-error`}>{error}</p>
-    </AnimatedBlock>}
-  </div>
 }
 
 function KeyForm({ original, initialClient, onSave, onCancel, compact }) {
@@ -396,7 +398,7 @@ function KeyForm({ original, initialClient, onSave, onCancel, compact }) {
         const input = form.querySelector('input[aria-invalid="true"]')
         if (!input?.isConnected) return
         input.focus({ preventScroll: true })
-        input.closest('.api-field').scrollIntoView({
+        input.closest('.vh-field').scrollIntoView({
           block: 'start',
           behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
         })
@@ -407,7 +409,7 @@ function KeyForm({ original, initialClient, onSave, onCancel, compact }) {
   }
 
   const customDurationInput = <AnimatedBlock open={draft.duration === 'custom'}>
-    <KeyInput className="api-custom-duration" label="Количество дней" hideLabel placeholder="Количество дней"
+    <TextField className="api-custom-duration" label="Количество дней" hideLabel size={36} placeholder="Количество дней"
       type="number" min="1" max="3650" step="1" value={draft.days}
       required={draft.duration === 'custom'} disabled={draft.duration !== 'custom'}
       error={errors.days ?? ''}
@@ -417,19 +419,17 @@ function KeyForm({ original, initialClient, onSave, onCancel, compact }) {
   return <form className="api-stack api-section-flow hosting-reveal" noValidate onSubmit={submit}>
     <section className="api-stack api-section" aria-labelledby={`${formId}-details`}>
       <h2 id={`${formId}-details`}>Данные ключа</h2>
-      <div className="api-card api-stack">
-        <KeyInput label="Название" value={draft.name} onChange={event => setField('name', event.target.value)}
+      <Surface elevation="card" className="api-card api-stack">
+        <TextField label="Название" value={draft.name} onChange={event => setField('name', event.target.value)}
           maxLength={80} required placeholder="Например, Claude Code" error={errors.name ?? ''} />
-        <KeyInput label="Примечание" value={draft.note} placeholder="Необязательно"
+        <TextField label="Примечание" value={draft.note} placeholder="Необязательно"
           onChange={event => setField('note', event.target.value)} maxLength={180} />
         <fieldset className="api-stack">
           <legend className="api-field-label">Срок действия</legend>
           <div className="api-choices">
             {durations.map(([id, label]) => {
-              const option = <label>
-                <input type="radio" name="api-duration" value={id} checked={draft.duration === id} onChange={() => setField('duration', id)} />
-                <span>{label}</span>
-              </label>
+              const option = <Choice kind="radio" variant="button" label={label} name="api-duration" value={id}
+                checked={draft.duration === id} onChange={() => setField('duration', id)} />
               if (id !== 'custom' || compact) return <Fragment key={id}>{option}</Fragment>
 
               return <div className="api-duration-custom" key={id}>
@@ -440,21 +440,19 @@ function KeyForm({ original, initialClient, onSave, onCancel, compact }) {
           </div>
           {compact && customDurationInput}
         </fieldset>
-      </div>
+      </Surface>
     </section>
     <section className="api-stack api-section" aria-labelledby={`${formId}-access`}>
       <h2 id={`${formId}-access`}>Права доступа</h2>
-      <div className="api-card">
+      <Surface elevation="card" className="api-card">
         <fieldset className="api-stack" aria-labelledby={`${formId}-access`}>
           <div className="api-choices">
-            {permissionPresetOptions.map(([id, label]) => <label key={id}>
-              <input type="radio" name="api-access-preset" value={id} checked={selectedPreset === id}
-                onChange={() => selectPreset(id)} />
-              <span>{label}</span>
-            </label>)}
+            {permissionPresetOptions.map(([id, label]) => <Choice key={id} kind="radio" variant="button"
+              label={label} name="api-access-preset" value={id} checked={selectedPreset === id}
+              onChange={() => selectPreset(id)} />)}
           </div>
           <AnimatedBlock open={Boolean(errors.access)}>
-            <p className="api-field-error" role="status">{errors.access}</p>
+            <div className="vh-field-error" role="status">{errors.access}</div>
           </AnimatedBlock>
           <ul className="api-permission-list" role="list" aria-label="Права доступа по разделам">
             {permissions.map(({ id, label, read, write }) => {
@@ -481,11 +479,11 @@ function KeyForm({ original, initialClient, onSave, onCancel, compact }) {
             })}
           </ul>
         </fieldset>
-      </div>
+      </Surface>
     </section>
     <div className={original ? 'api-actions' : 'api-actions api-key-create-actions'}>
-      <button type="submit" className="api-button api-primary">{original ? 'Сохранить' : 'Выпустить ключ'}</button>
-      {original ? <button type="button" className="api-button" onClick={onCancel}>Отмена</button> :
+      <Button pressable={false} type="submit" className="api-button">{original ? 'Сохранить' : 'Выпустить ключ'}</Button>
+      {original ? <Button variant="neutral" pressable={false} className="api-button" onClick={onCancel}>Отмена</Button> :
         <p className="api-key-once">
           <span className="api-key-once-icon" aria-hidden="true" />
           <span>Ключ будет показан только один раз после выпуска.</span>
@@ -494,41 +492,19 @@ function KeyForm({ original, initialClient, onSave, onCancel, compact }) {
   </form>
 }
 
-function ApiDropdown({ className = '', buttonLabel, buttonContent, iconOnly = false, children }) {
-  const id = useId()
-  const trigger = useRef(null)
-  const [open, setOpen] = useState(false)
-
-  function close() {
-    setOpen(false)
-    trigger.current.focus()
-  }
-
-  return <div className={`api-dropdown ${className}`} onBlur={event => {
-    if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
-  }} onKeyDown={event => {
-    if (event.key === 'Escape' && open) {
-      event.stopPropagation()
-      close()
-    }
-  }}>
-    <button ref={trigger} type="button" className="api-button" aria-expanded={open} aria-controls={id}
-      aria-label={buttonLabel}
-      onClick={() => setOpen(current => !current)}>
-      {iconOnly ? <span className="api-kebab" aria-hidden="true" /> : <>
-        <span>{buttonContent}</span>
-        <span className="api-caret" aria-hidden="true" />
-      </>}
-    </button>
-    <DropdownPanel id={id} className="api-filter-panel" open={open}>{children(close)}</DropdownPanel>
-  </div>
+function ApiDropdown({ variant, className = '', buttonLabel, buttonContent, buttonIcon, optionSize, iconOnly = false, children }) {
+  return <PopoverMenu variant={variant} className={`api-dropdown ${className}`} panelClassName="api-filter-panel" optionSize={optionSize} leading={buttonIcon} iconOnly={iconOnly}
+    triggerProps={{ className: 'api-button', 'aria-label': buttonLabel }}
+    trigger={iconOnly ? <span className="api-kebab" aria-hidden="true" /> : buttonContent}>
+    {children}
+  </PopoverMenu>
 }
 
-function ApiSelect({ label, options, value, onChange, disabledValue, className = '' }) {
-  const selectedLabel = options.find(([key]) => key === value)[1]
-  return <ApiDropdown className={`api-filter ${className}`.trim()} buttonLabel={`${label}: ${selectedLabel}`} buttonContent={selectedLabel}>
-    {close => options.map(([key, text]) => <button key={key} type="button" aria-pressed={value === key} disabled={key === disabledValue}
-      onClick={() => { onChange(key); close() }}>{text}</button>)}
+function ApiSelect({ label, options, value, onChange, disabledValue, variant = 'toolbar', className = '' }) {
+  const selectedLabel = options.find(([key]) => key === value)?.[1] ?? label
+  return <ApiDropdown variant={variant} className={`api-filter ${className}`.trim()} buttonLabel={`${label}: ${selectedLabel}`} buttonContent={selectedLabel}>
+    {close => options.map(([key, text]) => <MenuItem key={key} selected={value === key} disabled={key === disabledValue}
+      onClick={() => { onChange(key); close() }}>{text}</MenuItem>)}
   </ApiDropdown>
 }
 
@@ -554,11 +530,7 @@ function JournalRow({ entry, keyName }) {
     </th>
     <td role="cell" className="api-log-result">
       <span className="api-mobile-cell-label" aria-hidden="true">Результат</span>
-      <span className="api-status" data-error={status >= 400}>
-        <span className="api-status-dot" aria-hidden="true" />
-        <span>{resultLabels[status]}</span>
-        <span className="api-status-code">{status}</span>
-      </span>
+      <StatusBadge code={status} tone={status >= 400 ? 'error' : 'success'}>{resultLabels[status]}</StatusBadge>
     </td>
   </tr>
 }
@@ -593,19 +565,16 @@ function Journal({ keys, compact }) {
 
   return <div className="api-stack api-journal hosting-reveal">
     <div className="api-journal-controls">
-      <label className="sites-domain-search api-search">
-        <img src={searchIcon} alt="" width="20" height="20" />
-        <input type="search" aria-label="Поиск по журналу" ref={searchField} placeholder="Запрос, ключ, источник или IP"
-          value={query} onChange={event => setQuery(event.target.value)} />
-      </label>
-      {compact && <button type="button" className="api-button api-journal-filter-toggle"
+      <SearchField variant="toolbar" className="api-search" label="Поиск по журналу" ref={searchField} placeholder="Запрос, ключ, источник или IP"
+        value={query} onChange={event => setQuery(event.target.value)} />
+      {compact && <Button variant="neutral" size={44} className="api-button" appearance="icon-toggle"
         aria-expanded={filtersOpen} aria-controls={filtersId} aria-label={hasActiveFilters ? 'Фильтры, есть активные' : 'Фильтры'}
         onClick={() => setFiltersOpen(open => !open)}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
           <path d="M3 4h18l-7 8v5l-4 3v-8z" />
         </svg>
-      </button>}
+      </Button>}
       <AnimatedBlock open={!compact || filtersOpen}>
         <div className="api-filters" id={filtersId}>
           <ApiSelect label="Источник" value={source} onChange={setSource}
@@ -620,48 +589,25 @@ function Journal({ keys, compact }) {
     <AnimatedBlock open={Boolean(search) || hasActiveFilters}>
       <div className="api-journal-summary">
         <span role="status">Найдено: {rows.length} {resultNouns[countPlural.select(rows.length)]}</span>
-        <button type="button" className="api-disclosure" onClick={reset}>Сбросить фильтры</button>
+        <Button appearance="text" pressable={false} type="button" className="api-disclosure" onClick={reset}>Сбросить фильтры</Button>
       </div>
     </AnimatedBlock>
     <AnimatedBlock>
       <div className="api-stack">
         {rows.length ? <DataTable label="Журнал запросов" headings={['Дата и время', 'Запрос', 'Ключ', 'Результат']}>
           {rows.map(entry => <JournalRow key={`${entry[0]}-${entry[3]}`} entry={entry} keyName={keyNames.get(entry[1])} />)}
-        </DataTable> : <div className="api-card api-empty">
+        </DataTable> : <Surface elevation="card" className="api-card api-empty">
           <h2>Запросы не найдены</h2>
           <p>Измените запрос или сбросьте фильтры.</p>
-        </div>}
+        </Surface>}
       </div>
     </AnimatedBlock>
   </div>
 }
 
-function ConnectionIcon({ icon }) {
-  return icon.monochrome
-    ? <span className="api-tab-icon api-tab-icon-mask" aria-hidden="true" style={{ '--api-tab-icon': `url("${icon.src}")` }} />
-    : <img className="api-tab-icon" src={icon.src} width="16" height="16" alt="" />
-}
-
-function ApiTabs({ tab, onTabChange, tabs = apiTabs, idPrefix = 'api', label = apiAgentsSection, className = 'sites-tabs' }) {
-  function move(event) {
-    const index = tabs.findIndex(([id]) => id === tab)
-    const last = tabs.length - 1
-    const next = { ArrowLeft: (index + last) % tabs.length, ArrowRight: (index + 1) % tabs.length, Home: 0, End: last }[event.key]
-    if (next === undefined) return
-    event.preventDefault()
-    const [id] = tabs[next]
-    onTabChange(id)
-    document.getElementById(`${idPrefix}-tab-${id}`).focus()
-  }
-
-  return <div className={`${className} hosting-indicator-track`} role="tablist" aria-label={label} onKeyDown={move}>
-    <TabIndicator selected={tab} />
-    {tabs.map(([id, text, icon]) => <button type="button" role="tab" key={id} id={`${idPrefix}-tab-${id}`}
-      aria-selected={tab === id} aria-controls={`${idPrefix}-panel-${id}`} tabIndex={tab === id ? 0 : -1} onClick={() => onTabChange(id)}>
-      {icon && <ConnectionIcon icon={icon} />}
-      {text}
-    </button>)}
-  </div>
+function ApiTabs({ tab, onTabChange, tabs = apiTabs, idPrefix = 'api', label = apiAgentsSection, variant = 'line', surface, size }) {
+  return <TabList tabs={tabs.map(([id, text, icon]) => ({ id, label: text, icon: icon && <AssetIcon {...icon} /> }))}
+    value={tab} onChange={onTabChange} idPrefix={idPrefix} label={label} variant={variant} surface={surface} size={size} indicator />
 }
 
 export default function ApiAgents({ tab, onTabChange, keys: accountKeys, setKeys: setAccountKeys, showDemoKeys, compact }) {
@@ -726,29 +672,29 @@ export default function ApiAgents({ tab, onTabChange, keys: accountKeys, setKeys
     requestAnimationFrame(() => heading.current?.focus({ preventScroll: true }))
   }
 
-  return <div className="sites-page api-page" style={{ '--api-caret': `url("${caretIcon}")` }}>
+  return <div className="sites-page api-page">
     <header className="sites-heading">
-      {(form || issued) && <button type="button" className="api-disclosure" onClick={form ? cancelForm : showKeys}>
+      {(form || issued) && <Button appearance="text" pressable={false} type="button" className="api-disclosure" onClick={form ? cancelForm : showKeys}>
         ← {form && tab === 'connection' ? 'Подключение' : 'Все ключи'}
-      </button>}
+      </Button>}
       <h1 ref={heading} tabIndex={-1}>{form ? form.original ? 'Настройки ключа' : 'Новый ключ' : issued ? 'Ключ выпущен' : apiAgentsSection}</h1>
-      {!form && !issued && <ApiTabs tab={tab} onTabChange={onTabChange} />}
+      {!form && !issued && <ApiTabs tab={tab} onTabChange={onTabChange} size={compact ? 'compact' : undefined} />}
     </header>
     {form && <KeyForm original={form.original} initialClient={form.client} onSave={save} onCancel={cancelForm} compact={compact} />}
     {issued && <div className="api-stack hosting-reveal">
-      <section className="api-card api-stack">
+      <Surface as="section" elevation="card" className="api-card api-stack">
         <h2>{issued.name}</h2>
         <Address label="Ключ" value={issued.secret} />
         <div className="api-actions">
           <Copy value={issued.secret} label="Скопировать ключ" primary />
-          <button type="button" className="api-button" onClick={showKeys}>К списку ключей</button>
+          <Button variant="neutral" pressable={false} className="api-button" onClick={showKeys}>К списку ключей</Button>
         </div>
         <p className="api-issued-warning">Сохраните ключ. Он показывается только один раз.</p>
-      </section>
-      <section className="api-card api-stack">
+      </Surface>
+      <Surface as="section" elevation="card" className="api-card api-stack">
         <h2>Подключение агента</h2>
         <ConnectionInstructions secret={issued.secret} initialMethod={`client-${issued.client ?? 0}`} />
-      </section>
+      </Surface>
     </div>}
     {apiTabs.map(([id]) => <div key={id} id={`api-panel-${id}`} role="tabpanel"
       aria-labelledby={`api-tab-${id}`} hidden={Boolean(form || issued) || tab !== id} tabIndex={0}>

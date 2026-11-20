@@ -15,28 +15,6 @@
 .tariff-settings h3 { font-size: 16px; line-height: 20px; }
 .tariff-settings p:not(:where(.plan-changes *)) { color: var(--hosting-text); font-size: 14px; line-height: 16px; font-weight: 400; }
 
-.tariff-tabs {
-  display: flex;
-  gap: 20px;
-  border-bottom: 1px solid var(--hosting-plan-branch-line);
-}
-
-.tariff-settings .tariff-tabs button {
-  min-height: 35px;
-  padding-block-end: 10px;
-  color: var(--hosting-text);
-  font-size: 16px;
-}
-
-.tariff-settings .tariff-tabs button[aria-selected="true"] { color: var(--hosting-title); }
-.tariff-tabs .hosting-tab-indicator { bottom: -1px; height: 2px; background: var(--hosting-link); }
-
-.tariff-card {
-  border-radius: 16px;
-  background: var(--hosting-surface);
-  box-shadow: var(--hosting-shadow);
-}
-
 .tariff-overview { display: grid; grid-template-columns: 1fr 1.17fr 1fr; }
 .tariff-overview-cell { min-width: 0; padding: 24px; }
 .tariff-overview-cell + .tariff-overview-cell { border-inline-start: 1px solid var(--hosting-line); }
@@ -56,49 +34,6 @@
   font-weight: 400;
 }
 .tariff-usage b { color: var(--hosting-title); font-weight: 500; }
-.tariff-usage progress {
-  display: block;
-  width: 100%;
-  height: 8px;
-  border: 0;
-  border-radius: 6px;
-  overflow: hidden;
-  appearance: none;
-  background: var(--hosting-line);
-}
-.tariff-usage progress::-webkit-progress-bar { background: var(--hosting-line); }
-.tariff-usage progress::-webkit-progress-value { background: var(--hosting-primary-back); border-radius: 6px; }
-.tariff-usage progress::-moz-progress-bar { background: var(--hosting-primary-back); border-radius: 6px; }
-
-.tariff-settings .tariff-button {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 8px 19px;
-  border: 1px solid var(--hosting-neutral-border);
-  border-radius: 12px;
-  background: var(--hosting-neutral-back);
-  color: var(--hosting-title);
-  font-size: 14px;
-  line-height: 18px;
-  text-align: center;
-}
-.tariff-settings .tariff-button:hover { background: var(--hosting-neutral-hover); }
-.tariff-settings .tariff-button--primary {
-  border-color: transparent;
-  background: var(--hosting-primary-back);
-  color: var(--hosting-light);
-}
-.tariff-settings .tariff-button--primary:hover { background: var(--hosting-primary-hover); }
-.tariff-settings .tariff-button--outline {
-  border-color: var(--hosting-plan-outline-border);
-  background: var(--hosting-plan-outline-back);
-  color: var(--hosting-link-text);
-}
-.tariff-settings .tariff-button--outline:hover { background: var(--hosting-plan-outline-hover); }
-
 .tariff-disclosure { position: relative; width: fit-content; }
 .tariff-menu {
   position: absolute;
@@ -106,16 +41,7 @@
   inset-block-start: calc(100% + 8px);
   inset-inline-start: 0;
   min-inline-size: max(100%, 160px);
-  padding: 4px;
-  border: 1px solid var(--hosting-line);
-  border-radius: 12px;
-  background: var(--hosting-menu-surface);
-  box-shadow: 0 4px 12px rgb(27 54 74 / 12%);
 }
-.tariff-settings .tariff-menu button:where(:not(.hosting-menu-item)) { display: block; width: 100%; padding: 10px 12px; border-radius: 8px; text-align: start; }
-.tariff-menu button[aria-pressed="true"] { color: var(--hosting-link-text); }
-.tariff-menu button:hover { background: var(--hosting-list-hover); }
-
 .tariff-offer {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -142,17 +68,15 @@
   margin-block-start: 8px;
   padding-inline-end: 22px;
 }
-.tariff-offer--annual .tariff-button { grid-column: auto; min-height: 44px; }
+.tariff-offer--annual .tariff-button { grid-column: auto; }
 
-.tariff-section, .tariff-faq { margin-block-start: 24px; }
+.tariff-section, .tariff-faq { margin-block-start: var(--hosting-section-gap); }
 .tariff-badge {
   display: inline-block;
   vertical-align: 2px;
   margin-inline-start: 4px;
-  padding: 2px 8px;
-  border-radius: 100px;
-  background: var(--hosting-plan-success-back);
-  color: var(--hosting-plan-credit);
+  --vh-badge-padding: 2px 8px;
+  --vh-badge-radius: 100px;
   font-size: 12px;
   line-height: 16px;
   font-weight: 500;
@@ -178,8 +102,8 @@
 }
 .tariff-resource-info { display: none; vertical-align: -3px; margin-inline-start: 4px; }
 .tariff-settings .tariff-warning { color: var(--hosting-plan-error-text); }
-.tariff-stepper {
-  width: 100%;
+.tariff-stepper.hosting-stepper {
+  inline-size: 100%;
   text-align: center;
 }
 .tariff-resource-price { grid-column: -2; text-align: end; }
@@ -220,7 +144,6 @@
   .tariff-offer--annual { grid-template-columns: minmax(0, 1fr); padding: 16px; }
   .tariff-offer--annual strong { font-size: 20px; line-height: 24px; }
   .tariff-offer--annual .tariff-offer-copy p { margin-block-start: 8px; line-height: 16px; }
-  .tariff-section, .tariff-faq { margin-block-start: 20px; }
   .tariff-badge, .tariff-faq-divider { display: none; }
   .tariff-resource {
     grid-template-columns: minmax(0, 160px) minmax(0, 1fr);
@@ -252,29 +175,9 @@
   .tariff-usage progress::-webkit-progress-value { background: var(--hosting-link-text); }
   .tariff-usage progress::-moz-progress-bar { background: var(--hosting-link-text); }
 
-  .tariff-settings .tariff-button--primary:hover {
-    background: color-mix(in srgb, var(--hosting-primary-hover) 88%, black);
-  }
-
-  .tariff-settings .tariff-button--neutral { border-color: var(--hosting-plan-leader-line); }
-
-  .tariff-menu button[aria-pressed="true"] { background: var(--hosting-plan-selected-back); }
-  .tariff-menu button:hover { background: var(--hosting-list-hover); }
 }
 
-.tariff-tab-count {
-  display: inline-block;
-  min-width: 20px;
-  margin-inline-start: 6px;
-  padding: 1px 5px;
-  border-radius: 6px;
-  background: var(--hosting-card-surface);
-  color: var(--hosting-text);
-  font-size: 12px;
-  line-height: 16px;
-  text-align: center;
-  vertical-align: 1px;
-}
+
 
 .tariff-services h1 { margin-block: 24px 14px; font-size: 28px; line-height: 34px; letter-spacing: -.025em; }
 .tariff-services .tariff-section { margin-block-start: 28px; }
@@ -547,57 +450,6 @@
   font-size: 24px;
   line-height: 28px;
 }
-.tariff-settings .tariff-package-selection {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  border: 1.5px solid rgb(255 255 255 / 65%);
-  border-radius: 50%;
-  transition: background-color var(--hosting-motion-color) ease, border-color var(--hosting-motion-color) ease;
-}
-.tariff-settings .tariff-package-selection[aria-pressed="true"] {
-  border-color: var(--hosting-light);
-  background-color: var(--hosting-light);
-}
-.tariff-package-selection[aria-pressed="true"]::before {
-  content: "";
-  width: 15px;
-  height: 9px;
-  border: solid var(--tariff-banner-start);
-  border-width: 0 0 2.5px 2.5px;
-  transform: translateY(-1px) rotate(-45deg);
-}
-.hosting-shell[data-theme="light"] .tariff-settings .tariff-package-selection[aria-pressed="true"] {
-  border-color: var(--hosting-title);
-  background-color: var(--hosting-title);
-}
-.hosting-shell[data-theme="light"] .tariff-package-selection[aria-pressed="true"]::before {
-  border-color: var(--hosting-light);
-}
-.hosting-shell[data-theme="light"] .tariff-settings .tariff-package-selection[aria-pressed="false"] {
-  border-color: var(--hosting-muted);
-}
-@media (hover: hover) and (pointer: fine) {
-  .tariff-settings .tariff-package-selection[aria-pressed="false"]:hover {
-    background-color: rgb(255 255 255 / 16%);
-    border-color: var(--hosting-light);
-  }
-  .hosting-shell[data-theme="light"] .tariff-settings .tariff-package-selection[aria-pressed="false"]:hover {
-    border-color: var(--hosting-link-text);
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .tariff-package-selection[aria-pressed="true"]::before {
-    animation: tariff-package-check 260ms ease-out both;
-  }
-}
-@keyframes tariff-package-check {
-  from { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
-  38% { clip-path: polygon(0 0, 34% 0, 34% 100%, 0 100%); }
-  to { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
-}
 .tariff-package-price, .tariff-package-discount-label { color: var(--tariff-banner-caption); font-size: 14px; }
 .tariff-package-price strong { color: var(--tariff-banner-ink); font-size: 22px; line-height: 26px; }
 .tariff-package-discount { display: grid; gap: 2px; text-align: end; margin-inline-start: auto; }
@@ -650,25 +502,16 @@
   border-radius: 6px;
   transition: color var(--hosting-motion-color) ease;
 }
-.tariff-settings .tariff-benefit-info:is(:hover, [aria-expanded="true"]) { color: var(--hosting-link-text); }
-.tariff-benefit-details {
-  cursor: auto;
-  position: absolute;
-  z-index: 2;
+.tariff-benefit-tooltip[data-open="true"] .tariff-benefit-info { color: var(--hosting-link-text); }
+.tariff-benefit-summary .tariff-benefit-tooltip { position: static; }
+.tariff-benefit-tooltip.vh-tooltip .tariff-benefit-details {
   inset-block-start: calc(100% - 1px);
   inset-inline-start: 0;
   width: min(280px, 100%);
-  padding: 10px 12px;
-  border: 1px solid var(--hosting-line);
-  border-radius: 12px;
-  background: var(--hosting-menu-surface);
-  color: var(--hosting-title);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 18%);
-  line-height: 18px;
+  max-width: 100%;
 }
 .tariff-package-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block-start: auto; }
-.tariff-settings .tariff-package-footer .tariff-button { width: 100%; min-height: 46px; }
-.tariff-package-footer .hosting-pressable:hover:enabled:not(:active) { translate: none; }
+.tariff-package-footer .tariff-button { width: 100%; }
 .tariff-package-discount-label { line-height: 24px; }
 
 .tariff-service-icon {
@@ -765,7 +608,6 @@
 
 .tariff-service-menu-button .tariff-action-icon { width: 24px; height: 24px; }
 .tariff-service-disclosure .tariff-service-menu { inset-inline: auto 0; min-inline-size: max-content; z-index: 3; }
-.tariff-service-menu button.tariff-service-menu-danger { color: var(--hosting-plan-error-text); }
 
 .tariff-action-icon {
   flex: none;
@@ -798,16 +640,6 @@
 
 .tariff-service-details-button .tariff-action-icon { width: 16px; height: 16px; }
 
-.tariff-settings .tariff-service-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding-inline: 4px;
-  font-size: 14px;
-}
-
-.tariff-service-switch .hosting-switch { margin: 0; }
 .tariff-settings .plan-changes-heading h2 { margin: 0; scroll-margin-top: calc(var(--hosting-header-height) + 24px); }
 
 .tariff-ip-dialog form { display: grid; gap: 16px; }
@@ -815,18 +647,6 @@
 .tariff-ip-dialog dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; font-size: 14px; }
 .tariff-ip-dialog dt { color: var(--hosting-text); }
 .tariff-ip-dialog dd { margin: 0; overflow-wrap: anywhere; }
-.tariff-ip-dialog .tariff-service-settings-field { display: grid; gap: 4px; font-size: 14px; }
-.tariff-ip-dialog input[name="ptr"] {
-  width: 100%;
-  min-height: 40px;
-  padding: 8px 12px;
-  border: 1px solid var(--hosting-line);
-  border-radius: 8px;
-  background: var(--hosting-background);
-  color: var(--hosting-title);
-  font: inherit;
-}
-.tariff-ip-dialog .tariff-service-settings-renew { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .tariff-ip-dialog input:focus-visible { outline: 2px solid var(--hosting-focus); }
 
 .hosting-shell[data-compact="true"] {
@@ -848,7 +668,7 @@
   .tariff-package-banner { min-height: 94px; padding: 16px 13px; }
   .tariff-package-body { gap: 20px; padding: 7px 16px 16px; }
   .tariff-package-discount strong { font-size: 28px; }
-  .tariff-settings .tariff-package-footer .tariff-button { min-height: 40px; }
+
   .tariff-service-row { grid-template-columns: minmax(0, 1fr); }
   .tariff-service-title { position: relative; min-height: 44px; display: flex; align-items: center; }
   .tariff-service-title .tariff-service-icon { inset-inline-start: -56px; }

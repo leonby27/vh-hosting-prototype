@@ -5,6 +5,7 @@
 .hosting-shell {
   --hosting-sidebar-width: 256px;
   --hosting-column-gap: 40px;
+  --hosting-section-gap: 24px;
   --hosting-frame-width: 1216px;
   --hosting-desktop-header-height: 76px;
   --hosting-product-header-height: var(--hosting-desktop-header-height);
@@ -40,7 +41,7 @@
   --hosting-section-max-width: none;
 }
 
-.hosting-shell button {
+.hosting-shell button:where(:not(.vh-focus)) {
   border: 0;
   padding: 0;
   background: transparent;
@@ -49,13 +50,33 @@
   cursor: pointer;
 }
 
-.hosting-shell :is(a, button):focus-visible {
+.hosting-shell :is(a, button):where(:not(.vh-focus)):focus-visible {
   outline: 2px solid var(--hosting-focus);
   outline-offset: 3px;
 }
 
 .hosting-pressable {
+  --hosting-pressable-primary-hover: var(--hosting-primary-hover);
+  --hosting-pressable-danger-hover: var(--hosting-plan-danger-hover);
   transition: background-color var(--hosting-motion-color) ease, translate 140ms ease;
+}
+
+.hosting-checkbox-pressable,
+.hosting-checkbox-pressable + .vh-choice-mark {
+  transition: scale var(--hosting-motion-fast) ease;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hosting-checkbox-pressable:active:enabled,
+  .hosting-checkbox-pressable:active:enabled + .vh-choice-mark,
+  .vh-choice[data-preview-state="pressed"] .hosting-checkbox-pressable:enabled + .vh-choice-mark {
+    scale: 0.98;
+  }
+}
+
+:is(.hosting-shell[data-theme="dark"], [data-vh-theme="dark"]) .hosting-pressable {
+  --hosting-pressable-primary-hover: color-mix(in srgb, var(--hosting-primary-hover) 88%, black);
+  --hosting-pressable-danger-hover: color-mix(in srgb, var(--hosting-plan-danger-hover) 88%, black);
 }
 
 .hosting-indicator-track {
@@ -81,7 +102,7 @@
   background: var(--hosting-segment-surface);
 }
 
-.hosting-shell .hosting-segmented :is(button, label > span) {
+:is(.hosting-shell, [data-vh-theme]) .hosting-segmented :is(button, label > span) {
   padding: 3px 8px;
   border-radius: 6px;
   color: var(--hosting-text);
@@ -97,7 +118,7 @@
   box-shadow: 0 4px 6px rgb(5 12 38 / 12%);
 }
 
-.hosting-shell .hosting-segmented :is(button[aria-pressed="true"], button[aria-selected="true"], input:checked + span) {
+:is(.hosting-shell, [data-vh-theme]) .hosting-segmented :is(button[aria-pressed="true"], button[aria-selected="true"], input:checked + span) {
   color: var(--hosting-title);
 }
 
@@ -159,38 +180,8 @@ html:has(.hosting-scroll-spacer) {
   pointer-events: none;
 }
 
-.hosting-toast:not(:empty) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: var(--hosting-title);
-  color: var(--hosting-surface);
-  box-shadow: var(--hosting-shadow);
-}
-
-.hosting-toast img {
-  flex: none;
-}
-
 .hosting-dialog {
-  inline-size: min(400px, calc(100% - 32px));
-  box-sizing: border-box;
-  padding: 24px;
-  border: 1px solid var(--hosting-line);
-  border-radius: 16px;
-  background: var(--hosting-surface);
-  color: var(--hosting-title);
-}
-
-.hosting-dialog .hosting-dialog-title {
-  margin: 0;
-  font: 700 24px / 32px var(--hosting-font);
-}
-
-.hosting-dialog::backdrop {
-  background: rgb(0 0 0 / 50%);
+  --vh-modal-width: 400px;
 }
 
 .hosting-shell[data-view="mobile"] .hosting-dialog {
@@ -203,11 +194,11 @@ html:has(.hosting-scroll-spacer) {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .hosting-dialog:modal {
+  .vh-modal:modal {
     animation: hosting-reveal var(--hosting-motion-reveal) ease-out;
   }
 
-  .hosting-dialog:modal::backdrop {
+  .vh-modal:modal::backdrop {
     animation: hosting-backdrop-reveal var(--hosting-motion-reveal, 220ms) ease-out;
   }
 
@@ -265,16 +256,18 @@ html:has(.hosting-scroll-spacer) {
   gap: 8px;
 }
 
-.hosting-preview-switch {
-  display: flex;
+.hosting-segmented.hosting-preview-switch {
+  gap: 0;
   padding: 2px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--hosting-controls-color) 9%, transparent);
 }
 
-.hosting-preview-switch button {
+.hosting-shell .hosting-preview-switch label > span {
   display: grid;
+  padding: 0;
   place-items: center;
+  justify-content: center;
   width: 32px;
   height: 32px;
   border-radius: 6px;
@@ -282,30 +275,24 @@ html:has(.hosting-scroll-spacer) {
   transition: background-color var(--hosting-motion-color) ease, color var(--hosting-motion-color) ease;
 }
 
-.hosting-preview-switch button:hover {
+.hosting-shell .hosting-preview-switch label:hover > span {
   color: var(--hosting-controls-color);
 }
 
-.hosting-preview-switch button[aria-pressed="true"] {
-  background: var(--hosting-controls-color);
+.hosting-shell .hosting-preview-switch input:checked + span {
   color: var(--hosting-controls-selected-color);
 }
 
+.hosting-preview-switch .hosting-tab-indicator {
+  inset-block: 2px;
+  background: var(--hosting-controls-color);
+  box-shadow: none;
+}
+
 .hosting-preview-switch .hosting-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.hosting-shell :is(.hosting-prototype-menu, .hosting-state-menu) > .hosting-menu-trigger {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-}
-
-.hosting-shell :is(.hosting-prototype-menu, .hosting-state-menu) > .hosting-menu-trigger:is(:hover, [aria-expanded="true"]) {
-  background: color-mix(in srgb, var(--hosting-controls-color) 14%, transparent);
+  flex-basis: 20px;
+  inline-size: 20px;
+  block-size: 20px;
 }
 
 .hosting-state-menu {
@@ -357,7 +344,6 @@ html:has(.hosting-scroll-spacer) {
 .hosting-menu-trigger {
   gap: 8px;
   white-space: nowrap;
-  transition: color var(--hosting-motion-color) ease, background-color var(--hosting-motion-color) ease;
 }
 
 .hosting-quick-links button:is(:hover, [aria-current]) {
@@ -385,14 +371,13 @@ html:has(.hosting-scroll-spacer) {
   transition: translate var(--hosting-motion-fast) ease;
 }
 
-.hosting-icon {
-  display: inline-block;
-  flex: 0 0 24px;
-  width: 24px;
-  height: 24px;
-  background-color: currentColor;
-  mask: var(--hosting-icon-url) center / contain no-repeat;
+.hosting-icon { flex-basis: 24px; }
+
+.hosting-header .vh-button[data-appearance="nav-action"] {
+  --vh-button-font-size: var(--hosting-font-size);
+  --vh-button-line-height: var(--hosting-line-height);
 }
+
 
 .hosting-balance > .hosting-icon,
 .hosting-menu-trigger :is(.hosting-icon--support, .hosting-icon--caret) {
@@ -405,10 +390,6 @@ html:has(.hosting-scroll-spacer) {
   opacity: 1;
 }
 
-.hosting-dropdown {
-  position: relative;
-}
-
 .hosting-menu-trigger .hosting-icon--caret {
   flex-basis: 16px;
   width: 16px;
@@ -419,22 +400,14 @@ html:has(.hosting-scroll-spacer) {
   transform: rotate(180deg);
 }
 
-.hosting-dropdown-list {
-  position: absolute;
-  z-index: 2;
+.hosting-header .hosting-dropdown-list.vh-dropdown-panel {
   inset-block-start: calc(100% + 12px);
-  inset-inline-end: 0;
-  width: min(252px, calc(100vw - 68px));
-  max-height: calc(100dvh - 80px);
-  overflow-y: auto;
+  inset-inline: auto 0;
+  inline-size: min(252px, calc(100vw - 68px));
+  max-block-size: calc(100dvh - 80px);
   box-sizing: border-box;
   margin: 0;
-  padding: 12px 16px;
-  border: 1px solid var(--hosting-line);
-  border-radius: var(--hosting-radius);
-  background: var(--hosting-menu-surface);
   color: var(--hosting-title);
-  box-shadow: 0 4px 12px rgb(27 54 74 / 12%);
   list-style: none;
 }
 
@@ -455,21 +428,12 @@ html:has(.hosting-scroll-spacer) {
   transition-delay: 0s;
 }
 
-.hosting-shell .hosting-menu-motion :is(a, button) {
-  font-size: var(--hosting-font-size);
-  font-weight: 500;
-}
-
 .hosting-header-actions .hosting-dropdown:first-of-type .hosting-dropdown-list {
   inset-inline-end: -6px;
 }
 
-.hosting-prototype-menu .hosting-dropdown-list {
+.hosting-header .hosting-prototype-menu .hosting-dropdown-list {
   inset-inline: 0 auto;
-}
-
-:is(.hosting-prototype-menu, .hosting-state-menu) .hosting-dropdown-list {
-  padding-inline: 4px;
 }
 
 .hosting-prototype-heading {
@@ -486,8 +450,8 @@ html:has(.hosting-scroll-spacer) {
   padding-block-start: 16px;
 }
 
-.hosting-state-menu .hosting-dropdown-list {
-  width: min(360px, calc(100vw - 32px));
+.hosting-header .hosting-state-menu .hosting-dropdown-list {
+  inline-size: min(360px, calc(100vw - 32px));
 }
 
 .hosting-menu-divider {
@@ -496,73 +460,14 @@ html:has(.hosting-scroll-spacer) {
   border-block-start: 1px solid var(--hosting-line);
 }
 
-.hosting-dropdown-list :is(a, button) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 36px;
-  padding: 0 2px;
-  border-radius: 6px;
-  box-sizing: border-box;
-  color: inherit;
-  text-align: start;
-  text-decoration: none;
-  transition: color var(--hosting-motion-color) ease;
-}
-
-.hosting-dropdown-list :is(a, button):where(:not(.hosting-menu-item)):is(:hover, :focus-visible),
-.hosting-state-menu button[aria-pressed="true"] {
-  color: var(--hosting-link-text);
-}
-
 .hosting-dropdown-list .hosting-icon {
   flex-basis: 20px;
   width: 20px;
   height: 20px;
   color: var(--hosting-muted);
-  transition: color var(--hosting-motion-color) ease;
 }
 
-.hosting-dropdown-list :is(a, button):where(:not(.hosting-menu-item)):is(:hover, :focus-visible) .hosting-icon {
-  color: var(--hosting-link);
-}
-
-.hosting-shell .hosting-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  line-height: 20px;
-  text-align: start;
-}
-
-.hosting-shell .hosting-menu-item:hover { background: var(--hosting-list-hover); }
-
-.hosting-menu-item :is(.hosting-icon, .tariff-action-icon) {
-  flex: 0 0 20px;
-  width: 20px;
-  height: 20px;
-  color: inherit;
-}
-
-.hosting-dropdown-list button.hosting-account-row {
-  align-items: flex-start;
-  min-height: 52px;
-  padding-block: 7px;
-}
-
-.hosting-account-row small {
-  display: block;
-  margin-block-start: 3px;
-  color: var(--hosting-muted);
-  font-size: 13px;
-  font-weight: 400;
-}
-
-.hosting-dropdown-list .hosting-menu-muted {
+.hosting-dropdown-list .vh-list-item.hosting-menu-muted {
   color: var(--hosting-muted);
 }
 
@@ -597,11 +502,11 @@ html:has(.hosting-scroll-spacer) {
   transition: translate var(--hosting-motion-color) ease;
 }
 
-[aria-checked="true"] .hosting-switch {
+:is([aria-checked="true"] .hosting-switch, input:checked + .hosting-switch) {
   background: var(--hosting-switch-on);
 }
 
-[aria-checked="true"] .hosting-switch::after {
+:is([aria-checked="true"] .hosting-switch, input:checked + .hosting-switch)::after {
   translate: 12px 0;
 }
 
@@ -611,6 +516,10 @@ html:has(.hosting-scroll-spacer) {
   align-items: start;
   gap: var(--hosting-column-gap);
   padding-block: 32px 48px;
+}
+
+.hosting-layout[data-section="Дизайн-система"] {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .hosting-layout[data-section="Сайты"] > .hosting-content {
@@ -628,11 +537,13 @@ html:has(.hosting-scroll-spacer) {
   min-height: max(460px, calc(100dvh - 156px));
 }
 
+.hosting-sidebar { color: var(--hosting-text); }
+
 .hosting-sidebar-inner {
   padding: 18px 28px;
 }
 
-.hosting-sidebar-group {
+.hosting-sidebar-links {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -644,35 +555,24 @@ html:has(.hosting-scroll-spacer) {
   border-block-start: 1px solid var(--hosting-line);
 }
 
-.hosting-sidebar-group button {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  width: 100%;
-  min-height: 36px;
-  text-align: start;
-  transition: color var(--hosting-motion-color) ease;
+.hosting-sidebar-group-title {
+  margin: 0 0 4px;
+  color: var(--hosting-muted);
+  font-size: 12px;
+  line-height: 16px;
 }
 
-.hosting-sidebar .hosting-icon {
+.hosting-sidebar :is(.hosting-icon, .vh-icon) {
   color: var(--hosting-muted);
   transition: color var(--hosting-motion-color) ease, translate var(--hosting-motion-fast) ease;
 }
 
-.hosting-sidebar-group button:is(:hover, :focus-visible) {
-  color: var(--hosting-link-text);
-}
-
-.hosting-sidebar-group button[aria-current] {
-  color: var(--hosting-title);
-}
-
-.hosting-sidebar-group button:is(:hover, :focus-visible, [aria-current]) .hosting-icon {
+.hosting-sidebar-links :is(button, a):is(:hover, :focus-visible, [aria-current]) :is(.hosting-icon, .vh-icon) {
   color: var(--hosting-link);
 }
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .hosting-sidebar-group button:hover:not(:active) .hosting-icon {
+  .hosting-sidebar-links :is(button, a):hover:not(:active) :is(.hosting-icon, .vh-icon) {
     translate: 0 -1px;
   }
 
@@ -680,7 +580,7 @@ html:has(.hosting-scroll-spacer) {
     translate: 0 -2px;
   }
 
-  .hosting-pressable:hover:enabled:not(:active) {
+  .hosting-pressable:is(:hover, [data-preview-state="hover"]):enabled:not(:active, [data-preview-state="pressed"]) {
     translate: 0 -0.66px;
   }
 }
@@ -770,6 +670,7 @@ html:has(.hosting-scroll-spacer) {
 }
 
 .hosting-shell[data-compact="true"] {
+  --hosting-section-gap: 20px;
   --hosting-product-header-height: 56px;
   --hosting-controls-color: var(--hosting-title);
   --hosting-controls-selected-color: var(--hosting-surface);
@@ -862,7 +763,8 @@ html:has(.hosting-scroll-spacer) {
     line-height: 14px;
   }
 
-  .hosting-mobile-nav :is([aria-current], [aria-expanded="true"], button:hover) {
+  .hosting-mobile-nav > button:is([aria-current], [aria-expanded="true"], :hover),
+  .hosting-mobile-nav .hosting-menu-trigger:is([aria-expanded="true"], :hover) {
     color: var(--hosting-link-text);
   }
 
@@ -880,7 +782,7 @@ html:has(.hosting-scroll-spacer) {
   .hosting-mobile-nav .hosting-dropdown-list {
     --hosting-menu-offset: 8px;
     inset-block: auto calc(100% + 8px);
-    max-height: calc(100dvh - var(--hosting-mobile-nav-height) - 24px);
+    max-block-size: calc(100dvh - var(--hosting-mobile-nav-height) - 24px);
   }
 
   .hosting-layout {
@@ -905,23 +807,6 @@ html:has(.hosting-scroll-spacer) {
     border-radius: 16px;
     background: var(--hosting-surface);
     box-shadow: 0 5px 10px rgb(27 54 74 / 3%);
-  }
-
-  .hosting-more-group button {
-    display: grid;
-    grid-template-columns: 28px minmax(0, 1fr);
-    align-items: center;
-    gap: 16px;
-    inline-size: 100%;
-    min-block-size: 48px;
-    color: var(--hosting-title);
-    font-size: 15px;
-    line-height: 18px;
-    text-align: start;
-  }
-
-  .hosting-more-group button:is(:hover, :focus-visible) {
-    color: var(--hosting-link-text);
   }
 
   .hosting-more-icon {
@@ -980,7 +865,7 @@ html:has(.hosting-scroll-spacer) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hosting-shell {
+  :is(.hosting-shell, [data-vh-theme]) {
     --hosting-motion-fast: 0ms;
     --hosting-motion-color: 0ms;
     --hosting-motion-menu: 0ms;

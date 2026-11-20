@@ -1,14 +1,22 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { AnimatedBlock, DropdownPanel } from './hosting-motion.jsx'
+import { AnimatedBlock } from './hosting-motion.jsx'
+import { Surface, TableFrame } from './ui/layout.jsx'
+import { AssetIcon } from './ui/Icon.jsx'
+import { Badge, Tooltip } from './ui/feedback.jsx'
+import { PopoverMenu } from './ui/navigation.jsx'
+import { Button, Choice, SearchField, Switch } from './ui/controls.jsx'
 import PlanChanges, { PlanChangesEmpty } from './PlanChanges.jsx'
 import { serviceChangesPayment } from './ServiceChanges.jsx'
 import { canSaveCard, getPaymentGroup, paymentActions, renewalOption, saveCardOption, securePaymentNote } from './plan-payment-options.js'
-import unchecked from './assets/plan-changes/unchecked.svg'
-import darkUnchecked from './assets/plan-changes/unchecked-dark.svg'
 import settingsIcon from './assets/tariff-settings/settings.svg'
 import closeIcon from './assets/checkout/close.svg'
 
 const pageSize = 20
+const statusTones = { protected: 'success', connecting: 'info', failed: 'danger', missing: 'warning', threat: 'critical' }
+
+export function protectionStatusTone(status, hasNote) {
+  return statusTones[status] ?? (hasNote ? 'warning' : undefined)
+}
 const artwork = import.meta.glob('./assets/network-protection/*.{svg,png}', {
   eager: true, query: '?url', import: 'default',
 })
@@ -33,27 +41,24 @@ export function asset(name, extension = 'svg') {
 }
 
 export function SitesIcon({ name, src = asset(name), color }) {
-  return (
-    <span className="sites-icon" aria-hidden="true" style={{ '--sites-icon-mask': `url("${src}")`, '--sites-icon-color': `var(--hosting-${color})` }}>
-      <img src={src} alt="" />
-    </span>
-  )
+  return <AssetIcon src={src} monochrome intrinsic tone={color} className="sites-icon" />
 }
 
 function ProtectionSettingsButton({ editing, iconOnly = false, onClick }) {
   const label = editing ? 'Отменить' : 'Настроить'
-  return (
-    <button type="button" className="sites-active-settings" data-icon-only={iconOnly || undefined}
-      aria-label={label} onClick={onClick}>
+  const renderButton = id => (
+    <Button variant="inverse" appearance="banner-outline" className="sites-active-settings" size={44}
+      data-icon-only={iconOnly || undefined} aria-label={label} aria-describedby={id} onClick={onClick}>
       <SitesIcon src={editing ? closeIcon : settingsIcon} color="light" />
-      {iconOnly ? <span className="sites-active-tooltip" aria-hidden="true">{label}</span> : (
+      {!iconOnly && (
         <span className="sites-active-settings-label">
           <span>{label}</span>
           <span aria-hidden="true">{editing ? 'Настроить' : 'Отменить'}</span>
         </span>
       )}
-    </button>
+    </Button>
   )
+  return iconOnly ? <Tooltip placement="top" content={label}>{renderButton}</Tooltip> : renderButton()
 }
 
 export function ActiveProtectionBanner({
@@ -75,9 +80,7 @@ export function ActiveProtectionBanner({
         <div className="sites-active-buttons">
           {primaryAction}
           {showRenewSwitch && (
-            <button type="button" className="sites-active-renew" role="switch" aria-checked={renew} onClick={onToggleRenew}>
-              <span className="hosting-switch" aria-hidden="true" />Автопродление
-            </button>
+            <Switch appearance="banner" className="sites-active-renew" checked={renew} onClick={onToggleRenew}>Автопродление</Switch>
           )}
           {paymentAction}
           <ProtectionSettingsButton editing={editing} iconOnly={iconOnly} onClick={onSettings} />
@@ -90,21 +93,8 @@ export function ActiveProtectionBanner({
   )
 }
 
-function DomainCheckbox({ checked, mixed = false, label, onChange, dark, disabled }) {
-  const state = mixed ? 'mixed' : 'checked'
-  const url = mixed || checked ? asset(dark ? `${state}-dark` : state) : dark ? darkUnchecked : unchecked
-  return (
-    <input
-      ref={node => { if (node) node.indeterminate = mixed }}
-      className="sites-domain-checkbox"
-      type="checkbox"
-      checked={checked}
-      disabled={disabled}
-      aria-label={label}
-      onChange={onChange}
-      style={{ '--sites-check-image': `url("${url}")` }}
-    />
-  )
+function DomainCheckbox({ label, ...props }) {
+  return <Choice as="span" size={20} {...props} className="sites-domain-checkbox" aria-label={label} />
 }
 
 const domainLabels = {
@@ -120,7 +110,7 @@ const domainLabels = {
 
 export function SitesTable({
   domains, statuses, statusLabels, selected, hasProtection, selecting, filterSpace, onFilterSpaceChange,
-  onSelection, dark, compact, labels = domainLabels,
+  onSelection, compact, labels = domainLabels,
   headingId = 'sites-domains-title', matchesSearch = (domain, query) => domain.name.toLowerCase().includes(query),
   isProtected = status => status === 'protected', renderDetails, renderNote, empty,
 }) {
@@ -185,11 +175,11 @@ export function SitesTable({
     return (
       <section className="sites-domains hosting-reveal" aria-labelledby={headingId}>
         <h2 id={headingId} tabIndex={-1}>{labels.title}</h2>
-        <div className="plan-changes-card">
+        <Surface appearance="card" padding="none" className="plan-changes-card">
           <PlanChangesEmpty {...empty}>
-            {empty.canAddSite && <button type="button" className="sites-empty-add">Добавить сайт</button>}
+            {empty.canAddSite && <Button size={36} className="sites-empty-add">Добавить сайт</Button>}
           </PlanChangesEmpty>
-        </div>
+        </Surface>
       </section>
     )
   }
@@ -200,25 +190,23 @@ export function SitesTable({
         <h2 id={headingId} tabIndex={-1}>{labels.title}{showCount && <>. <span aria-live="polite">{selected.size} из {domains.length}</span></>}</h2>
         {!selecting && hasProtection && (
           <label className="sites-domain-filter">
-            <DomainCheckbox dark={dark} checked={protectedOnly} onChange={event => changeProtectionFilter(event.target.checked)} />
+            <DomainCheckbox checked={protectedOnly} onChange={event => changeProtectionFilter(event.target.checked)} />
             {compact ? 'Только подключённые' : labels.filter}
           </label>
         )}
       </div>
-      <label className="sites-domain-search">
-        <SitesIcon name="search" color="icon-secondary" />
-        <input type="search" placeholder="Поиск …" aria-label={labels.search} value={search} onChange={event => changeSearch(event.target.value)} />
-      </label>
+      <SearchField icon={<SitesIcon name="search" color="icon-secondary" />} placeholder="Поиск …"
+        label={labels.search} value={search} onChange={event => changeSearch(event.target.value)} />
       <div className="sites-domain-results">
         <AnimatedBlock>
           <div className="sites-domain-results-content" ref={resultsContent}>
-            <div className="sites-table-card">
+            <TableFrame className="sites-table-card" scrollable={false}>
               <table className="sites-domain-table" role="table" aria-label={labels.table} data-selecting={selecting}>
                 <colgroup>{selecting && <col className="sites-check-column" />}<col /><col className="sites-dns-column" /><col className="sites-status-column" /></colgroup>
                 <thead>
                   <tr>
                     {selecting && <th scope="col">
-                      <DomainCheckbox label={labels.selectAll} dark={dark} checked={allSelected} mixed={selectedMatches > 0 && !allSelected} disabled={!filtered.length} onChange={selectMatches} />
+                      <DomainCheckbox label={labels.selectAll} checked={allSelected} indeterminate={selectedMatches > 0 && !allSelected} disabled={!filtered.length} onChange={selectMatches} />
                     </th>}
                     <th scope="col">{labels.name}</th>
                     <th scope="col">{labels.details}</th>
@@ -229,6 +217,8 @@ export function SitesTable({
                   {visible.map(domain => {
                     const status = statuses[domain.name] ?? 'available'
                     const statusLabel = statusLabels[status]
+                    const note = renderNote?.(domain, status)
+                    const tone = protectionStatusTone(status, Boolean(note))
                     const checked = selecting && selected.has(domain.name)
                     return (
                       <tr
@@ -239,18 +229,18 @@ export function SitesTable({
                         data-selectable={selecting || undefined}
                         data-selected={checked || undefined}
                         onClick={selecting ? event => {
-                          if (!event.target.closest('input, button, a')) selectDomain(domain.name)
+                          if (!event.target.closest('.vh-choice, input, button, a')) selectDomain(domain.name)
                         } : undefined}
                       >
-                        {selecting && <td role="cell" className="sites-domain-check"><DomainCheckbox label={`Выбрать ${domain.name}`} dark={dark} checked={checked} onChange={() => selectDomain(domain.name)} /></td>}
+                        {selecting && <td role="cell" className="sites-domain-check"><DomainCheckbox label={`Выбрать ${domain.name}`} checked={checked} onChange={() => selectDomain(domain.name)} /></td>}
                         <th role="rowheader" scope="row" className="sites-domain-name">
                           <span className="sites-domain-label" title={domain.name}>{domain.name}</span>
                           <div className="sites-mobile-dns">{renderDetails ? renderDetails(domain, true) : domain.dns}</div>
-                          {renderNote?.(domain, status)}
+                          {note}
                         </th>
-                        <td role="cell" className="sites-domain-dns">{renderDetails ? renderDetails(domain) : <span className="sites-domain-badge">{domain.dns}</span>}</td>
+                        <td role="cell" className="sites-domain-dns">{renderDetails ? renderDetails(domain) : <Badge className="sites-domain-badge">{domain.dns}</Badge>}</td>
                         <td role="cell" className="sites-domain-status">
-                          {statusLabel && <span className="sites-domain-badge" title={statusLabel}>{statusLabel}</span>}
+                          {statusLabel && <Badge className="sites-domain-badge" tone={tone} title={statusLabel}>{statusLabel}</Badge>}
                         </td>
                       </tr>
                     )
@@ -258,11 +248,11 @@ export function SitesTable({
                   {visible.length === 0 && <tr><td className="sites-table-empty" colSpan={selecting ? 4 : 3}>{labels.noResults}</td></tr>}
                 </tbody>
               </table>
-            </div>
+            </TableFrame>
             {filtered.length > limit && (
-              <button type="button" className="sites-load-more" onClick={() => setLimit(current => current + pageSize)}>
+              <Button variant="neutral" className="sites-load-more" onClick={() => setLimit(current => current + pageSize)}>
                 Показать ещё {Math.min(pageSize, filtered.length - limit)}
-              </button>
+              </Button>
             )}
           </div>
         </AnimatedBlock>
@@ -286,10 +276,10 @@ function PaymentConfirmation({ payment, description, onConfirm, onCancel }) {
       <h3 id={id} ref={title} tabIndex={-1}>{documentReady ? document.title : payment.action.label}</h3>
       <p>{description} · {formatPrice(payment.total)}. Операция в демо-режиме.</p>
       <div className="sites-payment-buttons">
-        <button type="button" className="sites-payment-primary hosting-pressable" onClick={onConfirm}>
+        <Button type="button" appearance="site-payment" onClick={onConfirm}>
           {documentReady ? 'Имитировать оплату' : document.confirm}
-        </button>
-        <button type="button" className="sites-payment-cancel hosting-pressable" onClick={onCancel}>Отменить</button>
+        </Button>
+        <Button type="button" appearance="site-payment" variant="neutral" onClick={onCancel}>Отменить</Button>
       </div>
     </section>
   )
@@ -393,20 +383,30 @@ export function ProtectionCheckout({
 
 export function ProtectionFaq({ questions }) {
   const id = useId()
-  const [open, setOpen] = useState(null)
+  const [selection, setSelection] = useState(null)
+
+  function toggleQuestion(questionId) {
+    setSelection(current => ({
+      id: questionId,
+      expanded: current?.id !== questionId || !current.expanded,
+    }))
+  }
+
   return (
     <aside className="sites-faq hosting-reveal" aria-label="Частые вопросы">
       <div className="sites-faq-bar">
         <p><SitesIcon name="faq" color="icon-secondary" />Частые вопросы</p>
         <div>
           {questions.map(question => (
-            <button type="button" key={question.id} aria-expanded={open === question.id} aria-controls={`${id}-${question.id}`} onClick={() => setOpen(current => current === question.id ? null : question.id)}>
+            <Button appearance="text" pressable={false} type="button" key={question.id} aria-expanded={selection?.id === question.id && selection.expanded} aria-controls={`${id}-${question.id}`} onClick={() => toggleQuestion(question.id)}>
               {question.title}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
-      {questions.map(question => <p className="sites-faq-answer hosting-reveal" key={question.id} id={`${id}-${question.id}`} hidden={open !== question.id}>{question.answer}</p>)}
+      <AnimatedBlock open={selection?.expanded ?? false}>
+        {questions.map(question => <p className="sites-faq-answer" key={question.id} id={`${id}-${question.id}`} hidden={selection?.id !== question.id}>{question.answer}</p>)}
+      </AnimatedBlock>
     </aside>
   )
 }
@@ -416,28 +416,6 @@ export function ProtectionNotice({ description, children }) {
     <section className="sites-protection-notice hosting-reveal">
       <p>{description}</p>
       {children && <div className="sites-payment-buttons">{children}</div>}
-    </section>
-  )
-}
-
-export function ProtectionAlert({ title, description, tone = 'warning', action, onDismiss }) {
-  return (
-    <section className="sites-page-alert hosting-reveal" data-tone={tone} aria-label={title}>
-      <img className="sites-page-alert-icon" src={asset(`page-alert-${tone}`)} width="28" height="28" alt="" />
-      <div className="sites-page-alert-copy">
-        <h2>{title}</h2>
-        <p>{description}</p>
-      </div>
-      {(action || onDismiss) && (
-        <div className="sites-page-alert-actions">
-          {action && <button className="sites-page-alert-button" type="button" onClick={action.onClick}>{action.label}</button>}
-          {onDismiss && (
-            <button type="button" className="sites-page-alert-close" aria-label="Закрыть уведомление" onClick={onDismiss}>
-              <img src={asset('page-alert-close')} width="20" height="20" alt="" />
-            </button>
-          )}
-        </div>
-      )}
     </section>
   )
 }
@@ -479,51 +457,13 @@ export function useSitesFilterSpace() {
 }
 
 function SitesDropdown({ label, children }) {
-  const id = useId()
-  const menu = useRef(null)
-  const trigger = useRef(null)
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    if (!open) return
-
-    function closeOnOutsideClick(event) {
-      if (!menu.current?.contains(event.target)) setOpen(false)
-    }
-
-    document.addEventListener('pointerdown', closeOnOutsideClick)
-    return () => document.removeEventListener('pointerdown', closeOnOutsideClick)
-  }, [open])
-
-  function closeMenu() {
-    trigger.current.focus({ preventScroll: true })
-    setOpen(false)
-  }
-
-  return (
-    <div className="sites-active-menu" ref={menu} onBlur={event => {
-      if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
-    }} onKeyDown={event => {
-      if (event.key === 'Escape' && open) {
-        event.stopPropagation()
-        closeMenu()
-      }
-    }}>
-      <button
-        ref={trigger}
-        type="button"
-        className="sites-active-menu-trigger"
-        aria-label={label}
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={() => setOpen(current => !current)}
-      >
+  return <PopoverMenu className="sites-active-menu" panelClassName="sites-active-menu-panel" preventScroll triggerProps={{ 'aria-label': label }}
+    renderTrigger={props => <Tooltip placement="top" content="Меню действий">
+      {id => <Button {...props} variant="inverse" appearance="banner-outline" size={44}
+        className="sites-active-menu-trigger" aria-describedby={id}>
         <img src={asset('banner-more')} alt="" />
-        <span className="sites-active-tooltip" aria-hidden="true">Меню действий</span>
-      </button>
-      <DropdownPanel id={id} className="sites-active-menu-panel" open={open}>
-        {children(closeMenu)}
-      </DropdownPanel>
-    </div>
-  )
+      </Button>}
+    </Tooltip>}>
+    {children}
+  </PopoverMenu>
 }

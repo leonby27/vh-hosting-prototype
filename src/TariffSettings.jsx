@@ -1,5 +1,9 @@
+import { PopoverMenu, TabList, MenuItem } from './ui/navigation.jsx'
+import { Badge, ProgressBar } from './ui/feedback.jsx'
 import { useContext, useEffect, useId, useRef, useState } from 'react'
-import { AnimatedBlock, DropdownPanel, TabIndicator } from './hosting-motion.jsx'
+import { Button as SharedButton, IconButton, Stepper } from './ui/controls.jsx'
+import { Surface } from './ui/layout.jsx'
+import { AnimatedBlock } from './hosting-motion.jsx'
 import { usePendingChanges } from './pending-changes.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
 import PlanChanges from './PlanChanges.jsx'
@@ -62,54 +66,21 @@ function Art({ name, className }) {
   )
 }
 
-function Button({ variant = 'neutral', children, ...props }) {
-  return <button type="button" className={`tariff-button tariff-button--${variant} hosting-pressable`} {...props}>{children}</button>
+function Button({ variant = 'neutral', className = '', children, ...props }) {
+  return <SharedButton appearance="tariff" variant={variant} className={`tariff-button ${className}`.trim()} {...props}>{children}</SharedButton>
 }
 
 function Choices({ label, title, options, value, onSelect, variant }) {
-  const id = useId()
-  const disclosure = useRef(null)
-  const trigger = useRef(null)
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    if (!open) return
-
-    function dismiss(event) {
-      if (!disclosure.current.contains(event.target)) setOpen(false)
-    }
-
-    document.addEventListener('pointerdown', dismiss)
-    return () => document.removeEventListener('pointerdown', dismiss)
-  }, [open])
-
-  function close() {
-    trigger.current.focus({ preventScroll: true })
-    setOpen(false)
-  }
-
-  return (
-    <div ref={disclosure} className="tariff-disclosure" onBlur={event => {
-      if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
-    }} onKeyDown={event => {
-      if (open && event.key === 'Escape') {
-        event.preventDefault()
+  return <PopoverMenu className="tariff-disclosure" panelClassName="tariff-menu"
+    preventScroll
+    triggerProps={{ 'aria-label': title }} renderTrigger={props => <Button variant={variant} {...props}>{label}</Button>}>
+    {close => options.map(([key, option]) => (
+      <MenuItem key={key} selected={value === key} onClick={() => {
         close()
-      }
-    }}>
-      <Button ref={trigger} variant={variant} aria-label={title} aria-expanded={open} aria-controls={id} onClick={() => setOpen(current => !current)}>
-        {label}
-      </Button>
-      <DropdownPanel id={id} open={open} className="tariff-menu">
-        {options.map(([key, option]) => (
-          <button type="button" key={key} aria-pressed={value === key} onClick={() => {
-            close()
-            onSelect(key)
-          }}>{option}</button>
-        ))}
-      </DropdownPanel>
-    </div>
-  )
+        onSelect(key)
+      }}>{option}</MenuItem>
+    ))}
+  </PopoverMenu>
 }
 
 function Offer({ title, description, label, onClick, annual }) {
@@ -117,7 +88,7 @@ function Offer({ title, description, label, onClick, annual }) {
     <div className={`tariff-offer hosting-reveal${annual ? ' tariff-offer--annual' : ''}`}>
       <span className="tariff-discount"><img src={discount} alt="" /></span>
       <div className="tariff-offer-copy"><strong>{title}</strong><p>{description}</p></div>
-      <Button variant="outline" onClick={onClick}>{label}</Button>
+      <Button variant="outline" size={annual ? 44 : undefined} onClick={onClick}>{label}</Button>
     </div>
   )
 }
@@ -145,16 +116,15 @@ function ResourceRow({ resource, quantity, packageId, onAdjust, onInfo }) {
       <div className="tariff-resource-title">
         <span className="tariff-resource-icon"><Art name={`${id}.svg`} /></span>
         <div>
-          <h3>{name}<button type="button" className="tariff-resource-info" aria-label={`Подробнее: ${name}`} onClick={() => onInfo({ title: name, description: info })}><Art name="info.svg" /></button></h3>
+          <h3>{name}<IconButton size={24} type="button" className="tariff-resource-info" aria-label={`Подробнее: ${name}`} onClick={() => onInfo({ title: name, description: info })}><Art name="info.svg" /></IconButton></h3>
           <p className={id === 'mysql' && 6900 / quantity >= 0.85 ? 'tariff-warning' : undefined}>{resourceUsage(resource, quantity)}</p>
         </div>
       </div>
       {step && (
-        <div className="hosting-stepper tariff-stepper" role="group" aria-label={name}>
-          <button type="button" disabled={quantity <= min} aria-label={`Уменьшить: ${name}`} onClick={() => onAdjust(resource, -step)}><Art name={quantity <= min ? 'minus-disabled.svg' : 'minus.svg'} /></button>
-          <output aria-label={name}>{number.format(quantity)}{unit && unit !== 'шт.' ? ` ${unit}` : ''}</output>
-          <button type="button" aria-label={`Увеличить: ${name}`} onClick={() => onAdjust(resource, step)}><Art name="plus.svg" /></button>
-        </div>
+        <Stepper className="tariff-stepper" label={name}
+          value={`${number.format(quantity)}${unit && unit !== 'шт.' ? ` ${unit}` : ''}`}
+          atMin={quantity <= min} decreaseLabel={`Уменьшить: ${name}`} increaseLabel={`Увеличить: ${name}`}
+          onDecrease={() => onAdjust(resource, -step)} onIncrease={() => onAdjust(resource, step)} />
       )}
       <div className="tariff-resource-price">
         {id === 'databases' && quantity > min ? <strong>Безлимит</strong> : step && cost > 0 ? (
@@ -473,29 +443,21 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
       <section className="tariff-faq hosting-reveal" aria-label="Частые вопросы">
         <div><Art name="faq.svg" /><span>Частые вопросы</span></div>
         <Art name="faq-divider.svg" className="tariff-faq-divider" />
-        <ul>{faqs.map(([title, description]) => <li key={title}><button type="button" onClick={() => setDialog({ title, description })}>{title}</button></li>)}</ul>
+        <ul>{faqs.map(([title, description]) => <li key={title}><SharedButton appearance="text" pressable={false} type="button" onClick={() => setDialog({ title, description })}>{title}</SharedButton></li>)}</ul>
       </section>
     )
   }
 
   return (
     <div className="tariff-settings">
-      <div className="tariff-tabs hosting-indicator-track" role="tablist" aria-label="Настройки тарифа" onKeyDown={event => {
-        const keys = { ArrowLeft: tab === 'tariff' ? 'services' : 'tariff', ArrowRight: tab === 'tariff' ? 'services' : 'tariff', Home: 'tariff', End: 'services' }
-        const next = keys[event.key]
-        if (!next) return
-        event.preventDefault()
-        selectTab(next, true)
-      }}>
-        {tabs.map(([key, label]) => (
-          <button type="button" role="tab" key={key} id={`${id}-${key}`} aria-controls={`${id}-${key}-panel`} aria-selected={tab === key}
-            tabIndex={tab === key ? 0 : -1} onClick={() => selectTab(key)}>{label}{key === 'services' && <span className="tariff-tab-count">{Number(Boolean(appliedPackage)) + Object.values(appliedServices).filter(Boolean).length}</span>}</button>
-        ))}
-        <TabIndicator selected={tab} />
-      </div>
+      <TabList size={35} idPrefix={id} label="Настройки тарифа" value={tab}
+        navigate={navigate} onChange={onTabChange} tabs={tabs.map(([key, label]) => ({
+          id: key, label, elementId: `${id}-${key}`, panelId: `${id}-${key}-panel`,
+          count: key === 'services' ? Number(Boolean(appliedPackage)) + Object.values(appliedServices).filter(Boolean).length : undefined,
+        }))} />
       <div className="tariff-panel" role="tabpanel" id={`${id}-tariff-panel`} aria-labelledby={`${id}-tariff`} hidden={tab !== 'tariff'}>
         <h1>Настройки тарифа</h1>
-        <div className="tariff-overview tariff-card hosting-reveal">
+        <Surface appearance="card" elevation="card" padding="none" className="tariff-overview tariff-card hosting-reveal">
           <div className="tariff-overview-cell">
             <div><p>Тариф</p><strong>{plan}</strong><p>{period === 'year' ? 'годовая' : 'помесячная'} оплата, {currentPackage ? `с пакетом «${currentPackage.title}»` : 'без пакета'}</p></div>
             <Choices label={compact ? 'Сменить' : 'Сменить тариф'} title="Сменить тариф" variant="primary" value={plan} options={['Optimo', 'Year'].map(name => [name, name])} onSelect={confirmPlan} />
@@ -504,7 +466,7 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
             {usage.map(([label, used, limit, unit]) => (
               <div key={label}>
                 <div><span>{label}</span><b>{used} из {limit}{unit}</b></div>
-                <progress aria-label={label} value={used} max={limit} />
+                <ProgressBar label={label} value={used} max={limit} />
               </div>
             ))}
           </div>
@@ -512,23 +474,23 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
             <div><p>Оплачен до</p><strong>12 сентября</strong><p>Это ещё 16 дней</p></div>
             <Choices label="Изменить период" value={period} options={[['month', 'Месяц'], ['year', 'Год']]} onSelect={confirmPeriod} />
           </div>
-        </div>
+        </Surface>
         <AnimatedBlock open={period === 'month'}>
           <Offer annual title="Годовая оплата дешевле на 30 %" description="316 ₽ / мес. вместо 452 ₽. За год это 1 632 ₽, при том же тарифе и ресурсах" label="Перейти на год" onClick={() => confirmPeriod('year')} />
         </AnimatedBlock>
 
         <section className="tariff-section hosting-reveal">
-          <h2>Ресурсы <span className="tariff-badge">{selectedPackage ? `−${selectedPackage.discount} % по пакету «${selectedPackage.title}»` : '−20 % по пакету «Плюс»'}</span></h2>
-          <ul className="tariff-card tariff-resources">
+          <h2>Ресурсы <Badge className="tariff-badge" tone="success">{selectedPackage ? `−${selectedPackage.discount} % по пакету «${selectedPackage.title}»` : '−20 % по пакету «Плюс»'}</Badge></h2>
+          <Surface as="ul" appearance="card" elevation="card" padding="none" className="tariff-card tariff-resources">
             {resources.map(resource => <ResourceRow key={resource.id} resource={resource} quantity={quantities[resource.id]} packageId={packageId} onAdjust={changeQuantity} onInfo={setDialog} />)}
-          </ul>
+          </Surface>
         </section>
 
         {tab === 'tariff' && renderChanges()}
         {renderFaq()}
       </div>
       <div className="tariff-panel" role="tabpanel" id={`${id}-services-panel`} aria-labelledby={`${id}-services`} hidden={tab !== 'services'}>
-        <TariffServices
+        <TariffServices compact={compact}
           packageId={packageId} appliedPackage={appliedPackage} onPackageChange={setPackageId} onPackageSwitch={switchPackage}
           services={services} appliedServices={appliedServices} onServiceChange={updateService}
           serviceRenewals={serviceRenewals} onServiceRenew={requestServiceRenewal} onServiceSettings={setServiceSettings}

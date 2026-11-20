@@ -1,10 +1,14 @@
-import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { Button, Switch, IconButton, TextInput } from './ui/controls.jsx'
 import { createPortal } from 'react-dom'
 import closeIcon from './assets/checkout/close.svg'
 import BalanceTopUp from './BalanceTopUp.jsx'
 import { formatTopUpAmount, topUpStates } from './balance-top-up-states.js'
 import { HostingToastContext } from './hosting-toast.jsx'
-import { TabIndicator } from './hosting-motion.jsx'
+import { SegmentedOptions } from './ui/navigation.jsx'
+import { AssetIcon } from './ui/Icon.jsx'
+import { Surface } from './ui/layout.jsx'
+import { Badge, Tooltip } from './ui/feedback.jsx'
 import './dashboard.css'
 
 const assets = {
@@ -45,6 +49,7 @@ const serviceStatuses = [
 const percentages = ['100%', '80%', '60%', '40%', '20%', '0']
 const mobilePercentages = ['50%', '40%', '30%', '20%', '10%', '0']
 const cpuSeconds = ['80', '64', '48', '32', '16', '0']
+const monitoringUnits = [{ value: '%', label: '%' }, { value: 'CP', label: 'CP' }]
 const dates = ['01.01', '03.01', '05.01', '07.01', '09.01', '11.01', '13.01']
 
 function Artwork({ name }) {
@@ -52,23 +57,12 @@ function Artwork({ name }) {
 }
 
 function TintedArtwork({ name, tone, label, className = '' }) {
-  const url = assets[`./assets/dashboard/${name}.svg`]
-  return (
-    <span
-      className={`dashboard-tinted-art ${className}`}
-      role={label ? 'img' : undefined}
-      aria-label={label}
-      aria-hidden={label ? undefined : true}
-      style={{ '--artwork-mask': `url("${url}")`, '--artwork-color': `var(--hosting-${tone})` }}
-    >
-      <img src={url} alt="" />
-    </span>
-  )
+  return <AssetIcon src={assets[`./assets/dashboard/${name}.svg`]} monochrome intrinsic tone={tone}
+    label={label} className={`dashboard-tinted-art ${className}`.trim()} />
 }
 
 function DashboardButton({ children, onClick, label, primary = false }) {
-  const className = `dashboard-button hosting-pressable${primary ? ' dashboard-button--primary' : ''}`
-  return <button type="button" className={className} aria-label={label} onClick={onClick}>{children}</button>
+  return <Button appearance="dashboard" className="dashboard-button" variant={primary ? 'primary' : 'neutral'} aria-label={label} onClick={onClick}>{children}</Button>
 }
 
 function OpenSection({ section, onSelect }) {
@@ -82,7 +76,7 @@ function OpenSection({ section, onSelect }) {
 function Billing({ onTopUp, onTariffSettings, balance, compact }) {
   return (
     <div className="dashboard-billing">
-      <section className="dashboard-card dashboard-balance hosting-reveal" aria-label="Баланс и ближайшее списание">
+      <Surface as="section" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-balance hosting-reveal" aria-label="Баланс и ближайшее списание">
         <div className="dashboard-billing-cell">
           <div className="dashboard-balance-top">
             <div>
@@ -115,14 +109,14 @@ function Billing({ onTopUp, onTariffSettings, balance, compact }) {
           </div>
           <p className="dashboard-label">Автоплатёж включён</p>
         </div>
-      </section>
-      <section className="dashboard-card dashboard-billing-cell hosting-reveal" aria-labelledby="dashboard-plan">
+      </Surface>
+      <Surface as="section" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-billing-cell hosting-reveal" aria-labelledby="dashboard-plan">
         <div>
           <h2 className="dashboard-label" id="dashboard-plan">Тариф</h2>
-          <button type="button" className="dashboard-amount dashboard-plan-link" onClick={onTariffSettings} aria-label="Настройки тарифа Optimo">Optimo</button>
+          <Button appearance="nav-action" pressable={false} type="button" className="dashboard-amount dashboard-plan-link" onClick={onTariffSettings} aria-label="Настройки тарифа Optimo">Optimo</Button>
         </div>
         {!compact && <p className="dashboard-note">Оплачен до 30.09, ещё 16 дней</p>}
-      </section>
+      </Surface>
     </div>
   )
 }
@@ -130,18 +124,22 @@ function Billing({ onTopUp, onTariffSettings, balance, compact }) {
 function ServiceCard({ service, onSelect, compact }) {
   const { title, icon, section, action, badge, rows, mobileAction, mobileRows } = service
   return (
-    <article className="dashboard-card dashboard-service hosting-reveal">
+    <Surface as="article" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-service hosting-reveal">
       <div className="dashboard-service-heading">
         <span className="dashboard-service-icon"><Artwork name={icon} /></span>
         <h3>{title}</h3>
-        {badge && <span className="dashboard-badge">{badge}</span>}
+        {badge && <Badge className="dashboard-badge" tone="info">{badge}</Badge>}
       </div>
       <ul className={service.compact ? 'dashboard-service-rows dashboard-service-rows--compact' : 'dashboard-service-rows'}>
         {(compact && mobileRows ? mobileRows : rows).map(({ name, detail, info }, index) => (
           <li key={index}>
             <span>{name}</span>
             {detail && <span className="dashboard-service-detail">{detail}</span>}
-            {info && <span title="Информация о домене"><TintedArtwork name="info" tone="icon-info" label="Информация о домене" /></span>}
+            {info && <Tooltip content="Информация о домене">
+              {id => <IconButton size={24} label="Информация о домене" aria-describedby={id}>
+                <TintedArtwork name="info" tone="icon-info" />
+              </IconButton>}
+            </Tooltip>}
           </li>
         ))}
       </ul>
@@ -149,11 +147,12 @@ function ServiceCard({ service, onSelect, compact }) {
         <DashboardButton onClick={() => onSelect(section)}>{compact && mobileAction ? mobileAction : action}</DashboardButton>
         <OpenSection section={section} onSelect={onSelect} />
       </div>
-    </article>
+    </Surface>
   )
 }
 
 function Monitoring({ onSelect, dark, compact }) {
+  const unitName = useId()
   const [unit, setUnit] = useState('CP')
   const [showSeconds, setShowSeconds] = useState(false)
   const marks = showSeconds ? cpuSeconds : compact ? mobilePercentages : percentages
@@ -164,22 +163,18 @@ function Monitoring({ onSelect, dark, compact }) {
   }
 
   return (
-    <section className="dashboard-card dashboard-monitor hosting-reveal" aria-labelledby="dashboard-monitor-title">
+    <Surface as="section" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-monitor hosting-reveal" aria-labelledby="dashboard-monitor-title">
       <div className="dashboard-monitor-top">
         <div>
           <h3 id="dashboard-monitor-title">
-            {compact ? 'Нагрузка:' : 'Мониторинг'} <button type="button" className="dashboard-metric" onClick={() => onSelect('Мониторинг нагрузки')}>
+            {compact ? 'Нагрузка:' : 'Мониторинг'} <Button appearance="text" pressable={false} type="button" className="dashboard-metric" onClick={() => onSelect('Мониторинг нагрузки')}>
               CPU <TintedArtwork name="arrow-down" tone="link-text" />
-            </button>
+            </Button>
           </h3>
           <p>Сегодня: 60 сек из 80 сек</p>
         </div>
-        <div className="hosting-segmented hosting-indicator-track" role="group" aria-label="Единицы нагрузки">
-          <TabIndicator selected={unit} />
-          {['%', 'CP'].map(value => (
-            <button key={value} type="button" aria-pressed={unit === value} onClick={() => selectUnit(value)}>{value}</button>
-          ))}
-        </div>
+        <SegmentedOptions name={unitName} label="Единицы нагрузки" options={monitoringUnits}
+          value={unit} onChange={selectUnit} onReselect={selectUnit} />
       </div>
       <figure className="dashboard-chart" aria-label={compact ? 'График нагрузки CPU с 1 по 11 января' : 'График нагрузки CPU с 1 по 13 января'}>
         <div className="dashboard-chart-y" aria-hidden="true">
@@ -209,7 +204,7 @@ function Monitoring({ onSelect, dark, compact }) {
         </>}
         <OpenSection section="Мониторинг нагрузки" onSelect={onSelect} />
       </div>
-    </section>
+    </Surface>
   )
 }
 
@@ -227,7 +222,7 @@ function FtpStatus({ compact }) {
   }
 
   return (
-    <section className="dashboard-card dashboard-ftp hosting-reveal" aria-labelledby="dashboard-ftp-title">
+    <Surface as="section" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-ftp hosting-reveal" aria-labelledby="dashboard-ftp-title">
       <h3 id="dashboard-ftp-title">FTP-доступ и статус сервисов</h3>
       <div className="dashboard-ftp-panels">
         <div className="dashboard-ftp-details">
@@ -237,9 +232,9 @@ function FtpStatus({ compact }) {
                 <dt>{label}</dt>
                 <dd>
                   <span>{ftpDetails[label]}</span>
-                  <button type="button" aria-label={`Скопировать ${label}`} onClick={() => copyDetail(label, ftpDetails[label])}>
+                  <IconButton size={24} type="button" aria-label={`Скопировать ${label}`} onClick={() => copyDetail(label, ftpDetails[label])}>
                     <TintedArtwork name="copy" tone="icon-secondary" />
-                  </button>
+                  </IconButton>
                 </dd>
               </div>
             ))}
@@ -253,13 +248,13 @@ function FtpStatus({ compact }) {
               <span className="dashboard-status-icon"><TintedArtwork name={compact && icon === 'web' ? 'mobile-web' : icon} tone="icon-primary" /></span>
               <span>{label}</span>
               {icon === 'ssh'
-                ? <button type="button" className="dashboard-ssh" role="switch" aria-label="SSH" aria-checked={sshEnabled} onClick={() => setSshEnabled(value => !value)}><span className="hosting-switch" aria-hidden="true" /></button>
+                ? <Switch className="dashboard-ssh" aria-label="SSH" checked={sshEnabled} onClick={() => setSshEnabled(value => !value)} />
                 : <TintedArtwork name="status-ok" tone="icon-success" label="Работает" />}
             </li>
           ))}
         </ul>
       </div>
-    </section>
+    </Surface>
   )
 }
 
@@ -374,17 +369,17 @@ function TimmyPrompt() {
         <form className="dashboard-timmy-form" onSubmit={sendMessage} onClick={event => {
           if (!event.target.closest('button')) input.current.focus()
         }}>
-          <input ref={input} type="text" value={message} onChange={event => setMessage(event.target.value)}
+          <TextInput variant="inset" ref={input} type="text" value={message} onChange={event => setMessage(event.target.value)}
             onCompositionStart={() => { composing.current = true }}
             onCompositionEnd={() => { composing.current = false }}
             aria-label="Чем вам помочь" placeholder={recording ? 'Запись… Нажмите микрофон, чтобы закончить' : voice ? 'Голосовое сообщение готово к отправке' : 'Чем вам помочь'} />
-          <button type="button" className="dashboard-timmy-voice" aria-label={recording ? 'Остановить запись' : 'Голосовое сообщение'}
+          <IconButton size={40} className="dashboard-timmy-voice" label={recording ? 'Остановить запись' : 'Голосовое сообщение'}
             aria-pressed={recording} disabled={requestingMicrophone} onClick={toggleVoice}>
             <TintedArtwork name="timmy-microphone" tone="title" />
-          </button>
-          <button type="submit" className="dashboard-timmy-send" aria-label="Отправить сообщение" disabled={!canSend}>
+          </IconButton>
+          <IconButton type="submit" size={36} variant="primary" appearance="icon-solid" className="dashboard-timmy-send" label="Отправить сообщение" disabled={!canSend}>
             <span className="timmy-send-icon" aria-hidden="true" />
-          </button>
+          </IconButton>
         </form>
       </section>
       {chatHost && createPortal(
@@ -396,9 +391,9 @@ function TimmyPrompt() {
           }}>
           <header className="timmy-chat-header">
             <h2 id="timmy-chat-title">Timmy</h2>
-            <button type="button" className="timmy-chat-icon-button" aria-label="Закрыть чат" onClick={closeChat}>
+            <IconButton size={32} appearance="icon-on-dark" className="timmy-chat-icon-button" label="Закрыть чат" onClick={closeChat}>
               <img className="timmy-chat-close-icon" src={closeIcon} width="19" height="19" alt="" />
-            </button>
+            </IconButton>
           </header>
           <div className="timmy-chat-transcript" ref={transcript} role="log" aria-label="Переписка">
             {questions.map((question, index) => (
@@ -420,19 +415,19 @@ function TimmyPrompt() {
             ))}
           </div>
           <form className="timmy-chat-composer" onSubmit={sendMessage}>
-            <textarea ref={chatInput} rows={1} aria-label="Сообщение для Timmy"
+            <TextInput multiline variant="composer" ref={chatInput} rows={1} aria-label="Сообщение для Timmy"
               placeholder={recording ? 'Запись голосового сообщения…' : voice ? 'Голосовое сообщение готово к отправке' : 'Задать вопрос…'}
               value={message} onChange={event => setMessage(event.target.value)} onKeyDown={event => {
                 if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) sendMessage(event)
               }} />
             <div className="timmy-chat-tools">
-              <button type="button" className="timmy-chat-icon-button" aria-label={recording ? 'Остановить запись' : 'Голосовое сообщение'}
+              <IconButton size={32} appearance="icon-on-dark" className="timmy-chat-icon-button" label={recording ? 'Остановить запись' : 'Голосовое сообщение'}
                 aria-pressed={recording} disabled={requestingMicrophone} onClick={toggleVoice}>
                 <Artwork name="timmy-microphone" />
-              </button>
-              <button type="submit" className="timmy-chat-send" aria-label="Отправить сообщение" disabled={!canSend}>
+              </IconButton>
+              <IconButton type="submit" size={32} variant="primary" appearance="icon-solid" className="timmy-chat-send" label="Отправить сообщение" disabled={!canSend}>
                 <span className="timmy-send-icon" aria-hidden="true" />
-              </button>
+              </IconButton>
             </div>
           </form>
         </section>,

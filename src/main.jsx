@@ -1,9 +1,6 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import colors from '../colors.json'
-import colorsUrl from '../colors.json?url'
-import typography from '../typography.json'
-import typographyUrl from '../typography.json?url'
+import { designSystemSection } from './design-system-section.js'
 import './styles.css'
 import HostingShell from './HostingShell.jsx'
 import Dashboard from './Dashboard.jsx'
@@ -12,151 +9,15 @@ import { topUpStates } from './balance-top-up-states.js'
 import PlanChangesPreview from './PlanChangesPreview.jsx'
 import { planChangeScenarios } from './PlanChangesScenarios.jsx'
 import SitesSection from './SitesSection.jsx'
-import ApiAgents, { apiAgentsSection, apiTabs } from './ApiAgents.jsx'
-import { apiKeysPreset } from './api-agents-data.js'
+import ApiAgents, { apiTabs } from './ApiAgents.jsx'
+import { apiAgentsSection, apiKeysPreset } from './api-agents-data.js'
 import { antivirusStates } from './antivirus-states.js'
 import { networkProtectionStates } from './network-protection-states.js'
+import IntegratorPanel from './IntegratorPanel.jsx'
+import { getIntegratorDemo, integratorPages, integratorSection, integratorSettings, integratorSettingsTabs, integratorStates, integratorTabs, money } from './integrator-data.js'
 
-const { collection, paintStyles, source } = colors
-const { textStyles } = typography
-const colorGroups = new Map()
-for (const variable of collection.variables) {
-  const group = variable.name.split('/')[0]
-  if (!colorGroups.has(group)) colorGroups.set(group, [])
-  colorGroups.get(group).push(variable)
-}
-const variablesById = new Map(collection.variables.map(variable => [variable.id, variable]))
-const exportDate = new Intl.DateTimeFormat('ru', {
-  dateStyle: 'long',
-  timeZone: 'UTC',
-}).format(new Date(source.readDate))
-
-function Table({ headings, children }) {
-  return (
-    <div className="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            {headings.map(heading => <th scope="col" key={heading}>{heading}</th>)}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
-  )
-}
-
-function Swatch({ value }) {
-  if (value?.type === 'VARIABLE_ALIAS') {
-    return <code>{variablesById.get(value.id)?.name ?? value.id}</code>
-  }
-
-  if (!value?.hex) return <span aria-label="Нет значения">—</span>
-
-  return (
-    <span className="swatch">
-      <span className="swatch-sample" style={{ backgroundColor: value.hex }} aria-hidden="true" />
-      <code>{value.hex}</code>
-    </span>
-  )
-}
-
-function Colors() {
-  return (
-    <section id="colors" aria-labelledby="colors-title">
-      <h2 id="colors-title">Цвета</h2>
-      <p className="section-meta">
-        {collection.variables.length} переменных · {collection.modes.map(mode => mode.name).join(' и ')}
-        {' · '}<a href={colorsUrl} download="colors.json">Скачать JSON</a>
-      </p>
-      {[...colorGroups].map(([group, variables]) => (
-        <details key={group} open={group === 'Base' || undefined}>
-          <summary>{group} <span>{variables.length}</span></summary>
-          <Table headings={['Переменная', ...collection.modes.map(mode => mode.name)]}>
-            {variables.map(variable => (
-              <tr key={variable.id}>
-                <th scope="row">{variable.name}</th>
-                {collection.modes.map(mode => (
-                  <td key={mode.modeId}><Swatch value={variable.valuesByMode[mode.modeId]} /></td>
-                ))}
-              </tr>
-            ))}
-          </Table>
-        </details>
-      ))}
-      <details>
-        <summary>Стили заливки <span>{paintStyles.length}</span></summary>
-        <Table headings={['Стиль', 'Цвет']}>
-          {paintStyles.map(style => (
-            <tr key={style.id}>
-              <th scope="row">{style.name}</th>
-              <td>
-                <div className="paint-list">
-                  {style.paints.map((paint, index) => (
-                    <Swatch key={index} value={paint} />
-                  ))}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </Table>
-      </details>
-    </section>
-  )
-}
-
-function formatMeasure({ unit, value }) {
-  if (unit === 'AUTO') return 'Auto'
-  return unit === 'PERCENT' ? `${value}%` : `${value} px`
-}
-
-function Typography() {
-  const families = [...new Set(textStyles.map(style => style.fontName.family))]
-  return (
-    <section id="typography" aria-labelledby="typography-title">
-      <h2 id="typography-title">Типографика</h2>
-      <p className="section-meta">
-        {families.join(', ')} · Стили ({textStyles.length})
-        {' · '}<a href={typographyUrl} download="typography.json">Скачать JSON</a>
-      </p>
-      <Table headings={['Стиль', 'Начертание', 'Размер', 'Высота строки', 'Межбуквенный интервал']}>
-        {textStyles.map(style => (
-          <tr key={style.id}>
-            <th scope="row">{style.name}</th>
-            <td>{style.fontName.style}</td>
-            <td>{style.fontSize} px</td>
-            <td>{formatMeasure(style.lineHeight)}</td>
-            <td>{formatMeasure(style.letterSpacing)}</td>
-          </tr>
-        ))}
-      </Table>
-    </section>
-  )
-}
-
-function DesignSystemCatalog() {
-  return (
-    <main className="catalog">
-      <header>
-        <h1>VH Design System</h1>
-        <p className="section-meta">
-          Выгрузка из Figma от <time dateTime={source.readDate}>{exportDate}</time>
-        </p>
-        <nav aria-label="Разделы">
-          <a href="./">К дашборду</a>
-          <a href="#colors">Цвета</a>
-          <a href="#typography">Типографика</a>
-          <a href={source.url}>Библиотека в Figma</a>
-        </nav>
-      </header>
-      <Colors />
-      <Typography />
-    </main>
-  )
-}
-
+const DesignSystemCatalog = lazy(() => import('./DesignSystemCatalog.jsx'))
 const query = new URLSearchParams(window.location.search)
-const showCatalog = query.has('catalog')
 const planChangesSection = 'Что изменится'
 const sitesSection = 'Сайты'
 const tariffSection = 'Настройки тарифа'
@@ -175,6 +36,7 @@ const tariffServiceStates = [
 ]
 
 function getPrototypeStates(section, tab) {
+  if (Object.values(integratorPages).includes(section)) return integratorStates
   if (section === 'Дашборд') return topUpStates
   if (section === planChangesSection) return planChangesStates
   if (section === tariffSection && (!tab || tab === 'services')) return tariffServiceStates
@@ -193,6 +55,11 @@ function replacePrototypeUrl(url) {
 
 function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
   const url = new URL(window.location.href)
+  if (section === designSystemSection) url.searchParams.set('catalog', '')
+  else if (url.searchParams.has('catalog')) {
+    url.searchParams.delete('catalog')
+    if (url.hash.startsWith('#component=') || ['#colors', '#typography'].includes(url.hash)) url.hash = ''
+  }
   if (section === planChangesSection) url.searchParams.set('changes', '')
   else url.searchParams.delete('changes')
   if (section === tariffSection) url.searchParams.set('tariff', tab === 'services' ? tab : '')
@@ -201,6 +68,13 @@ function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
   else url.searchParams.delete('sites')
   if (section === apiAgentsSection) url.searchParams.set('api', tab === 'mine' ? 'connection' : tab)
   else url.searchParams.delete('api')
+  const integratorPage = Object.keys(integratorPages).find(page => integratorPages[page] === section)
+  if (integratorPage) url.searchParams.set('integrator', integratorPage)
+  else url.searchParams.delete('integrator')
+  if (section === integratorSection && tab !== 'clients') url.searchParams.set('ptab', tab)
+  else url.searchParams.delete('ptab')
+  if (section === integratorSettings && tab !== 'account') url.searchParams.set('settings-tab', tab)
+  else url.searchParams.delete('settings-tab')
   if (!keepState) url.searchParams.delete('state')
   replacePrototypeUrl(url)
 }
@@ -219,7 +93,12 @@ function HostingApp() {
   const requestedApiTab = query.get('api')
   const [apiTab, setApiTab] = useState(apiTabs.some(([id]) => id === requestedApiTab) ? requestedApiTab : 'connection')
   const [apiKeys, setApiKeys] = useState([])
-  const initialSection = query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection : query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : 'Дашборд'
+  const [integratorTab, setIntegratorTab] = useState(() => readTab(integratorTabs, query.get('ptab')))
+  const [settingsTab, setSettingsTab] = useState(() => readTab(integratorSettingsTabs, query.get('settings-tab')))
+  const [integratorDemos, setIntegratorDemos] = useState({})
+  const [integratorPayment, setIntegratorPayment] = useState(null)
+  const initialSection = query.has('integrator') ? (Object.hasOwn(integratorPages, query.get('integrator')) ? integratorPages[query.get('integrator')] : integratorSection) :
+    query.has('catalog') ? designSystemSection : query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection : query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : 'Дашборд'
   const requestedState = query.get('state')
   const initialScreenState = requestedState === 'initial' || getPrototypeStates(initialSection).some(state => state.id === requestedState)
     ? requestedState : null
@@ -228,6 +107,14 @@ function HostingApp() {
     if (section === sitesSection) setSitesTab(tab)
     if (section === apiAgentsSection) setApiTab('connection')
     if (section === tariffSection) setTariffTab(tab === 'services' ? tab : 'tariff')
+    if (section === integratorSection) {
+      tab = readTab(integratorTabs, tab)
+      setIntegratorTab(tab)
+    }
+    if (section === integratorSettings) {
+      tab = readTab(integratorSettingsTabs, tab)
+      setSettingsTab(tab)
+    }
     syncPrototypeLocation(section, tab, keepState)
   }
 
@@ -247,6 +134,23 @@ function HostingApp() {
   }
 
   function renderSection(section, onSelect, dark, screenState, compact) {
+    if (Object.values(integratorPages).includes(section)) {
+      const scenario = integratorScenario(screenState)
+      return <IntegratorPanel section={section} tab={section === integratorSettings ? settingsTab : integratorTab}
+        scenario={scenario} onTabChange={tab => selectSection(section, tab, true)}
+        payment={integratorPayment} setPayment={setIntegratorPayment}
+        demo={integratorDemos[scenario] ?? getIntegratorDemo(scenario)}
+        updateDemo={update => setIntegratorDemos(current => ({
+          ...current, [scenario]: update(current[scenario] ?? getIntegratorDemo(scenario)),
+        }))} />
+    }
+    if (section === designSystemSection) {
+      return (
+        <Suspense fallback={<p role="status">Загрузка дизайн-системы…</p>}>
+          <DesignSystemCatalog compact={compact} />
+        </Suspense>
+      )
+    }
     if (section === apiAgentsSection) {
       return <ApiAgents tab={apiTab} keys={apiKeys} setKeys={setApiKeys} compact={compact} showDemoKeys={screenState === apiKeysPreset.id} onTabChange={tab => {
         setApiTab(tab)
@@ -265,7 +169,7 @@ function HostingApp() {
         onTabChange={selectTariffTab} onSecurity={tab => onSelect(sitesSection, tab)} />
     }
     if (section === sitesSection) {
-      return <SitesSection tab={sitesTab} onTabChange={selectSitesTab} dark={dark} screenState={screenState} compact={compact} />
+      return <SitesSection tab={sitesTab} onTabChange={selectSitesTab} screenState={screenState} compact={compact} />
     }
     return null
   }
@@ -277,11 +181,27 @@ function HostingApp() {
       onSectionChange={selectSection}
       onScreenStateChange={syncPrototypeState}
       isCurrentSection={(section, tab) => section === sitesSection ? sitesTab === (tab ?? 'mine')
-        : section === tariffSection ? tariffTab === (tab === 'services' ? tab : 'tariff') : true}
+        : section === tariffSection ? tariffTab === (tab === 'services' ? tab : 'tariff')
+          : section === apiAgentsSection ? !tab || apiTab === tab
+            : section === integratorSection ? integratorTab === readTab(integratorTabs, tab)
+              : section === integratorSettings ? settingsTab === readTab(integratorSettingsTabs, tab) : true}
       getPageStates={getPageStates}
       renderSection={renderSection}
+      onIntegratorDeposit={() => setIntegratorPayment('deposit')}
+      getIntegratorBalance={state => {
+        const scenario = integratorScenario(state)
+        return money((integratorDemos[scenario] ?? getIntegratorDemo(scenario)).balance)
+      }}
     />
   )
 }
 
-createRoot(document.getElementById('root')).render(showCatalog ? <DesignSystemCatalog /> : <HostingApp />)
+function readTab(tabs, id) {
+  return tabs.find(tab => tab.id === id)?.id ?? tabs[0].id
+}
+
+function integratorScenario(state) {
+  return integratorStates.some(option => option.id === state) ? state : 'default'
+}
+
+createRoot(document.getElementById('root')).render(<HostingApp />)

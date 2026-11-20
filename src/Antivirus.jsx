@@ -1,12 +1,15 @@
+import { MenuItem } from './ui/navigation.jsx'
 import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { Badge, ModalFrame, PageAlert, Tooltip } from './ui/feedback.jsx'
+import { Button, Choice, IconButton } from './ui/controls.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
 import { AnimatedBlock } from './hosting-motion.jsx'
 import { usePendingChanges } from './pending-changes.jsx'
 import { removesAllServiceTargets } from './ServiceChanges.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import {
-  ActiveProtectionBanner, addMonths, asset, formatDate, formatPrice, plural, ProtectionAlert, ProtectionCheckout,
-  ProtectionCheckoutSlot, ProtectionFaq, revealProtectionCheckout, SitesIcon, SitesTable, useSitesFilterSpace,
+  ActiveProtectionBanner, addMonths, asset, formatDate, formatPrice, plural, ProtectionCheckout,
+  ProtectionCheckoutSlot, ProtectionFaq, protectionStatusTone, revealProtectionCheckout, SitesIcon, SitesTable, useSitesFilterSpace,
 } from './SitesProtectionUI.jsx'
 import { antivirusPlans, antivirusStatusLabels, saveAntivirus } from './antivirus-states.js'
 import domainLinkIcon from './assets/dashboard/arrow-out.svg'
@@ -69,7 +72,7 @@ function AntivirusIntro({ onDetails }) {
       <div className="antivirus-intro-note" hidden>
         <img src={art('promo-alert')} alt="" />
         <p>С заражением сайта каждый месяц сталкиваются около 900 наших клиентов.{' '}
-          <button type="button" className="sites-text-button" onClick={onDetails}>Подробнее об услуге</button>
+          <Button appearance="text" pressable={false} type="button" className="sites-text-button" onClick={onDetails}>Подробнее об услуге</Button>
         </p>
       </div>
     </section>
@@ -118,8 +121,7 @@ function AntivirusPlans({ selected, onSelect, compact }) {
             <label className="antivirus-plan" key={id}>
               <div className="antivirus-plan-summary">
                 <span className="antivirus-plan-heading">
-                  <input
-                    type="radio"
+                  <Choice as="span" kind="radio" size={24}
                     name="antivirus-plan"
                     aria-label={plan.title}
                     value={id}
@@ -128,7 +130,6 @@ function AntivirusPlans({ selected, onSelect, compact }) {
                       if (event.currentTarget.matches(':focus-visible')) showSlide(index, 'instant')
                     }}
                     onChange={() => onSelect(id)}
-                    style={{ '--antivirus-radio': `url("${art(id === selected ? 'radio-checked' : 'radio')}")` }}
                   />
                   <strong>{plan.title}</strong>
                 </span>
@@ -153,9 +154,9 @@ function AntivirusPlans({ selected, onSelect, compact }) {
       </div>
       <div className="antivirus-plan-dots" role="group" aria-label="Переключение карточек уровней">
         {planEntries.map(([id, plan], index) => (
-          <button key={id} type="button" aria-label={`Показать уровень «${plan.title}»`} aria-current={slide === index || undefined} onClick={() => selectSlide(index)}>
+          <Button appearance="carousel-dot" pressable={false} key={id} type="button" aria-label={`Показать уровень «${plan.title}»`} aria-current={slide === index || undefined} onClick={() => selectSlide(index)}>
             <span aria-hidden="true" />
-          </button>
+          </Button>
         ))}
       </div>
     </section>
@@ -163,27 +164,15 @@ function AntivirusPlans({ selected, onSelect, compact }) {
 }
 
 function DesktopDomain({ name }) {
-  const tooltipId = useId()
-  const [tooltipDismissed, setTooltipDismissed] = useState(false)
   return (
     <div className="antivirus-domain-entry">
       <span title={name}>{name}</span>
-      <a
-        className="antivirus-domain-link"
-        href={`https://${name}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Открыть ${name} в новой вкладке`}
-        aria-describedby={tooltipId}
-        onMouseLeave={() => setTooltipDismissed(false)}
-        onBlur={() => setTooltipDismissed(false)}
-        onKeyDown={event => {
-          if (event.key === 'Escape') setTooltipDismissed(true)
-        }}
-      >
-        <SitesIcon src={domainLinkIcon} color="icon-primary" />
-        <span id={tooltipId} className="antivirus-domain-tooltip" role="tooltip" hidden={tooltipDismissed}>Перейти на сайт</span>
-      </a>
+      <Tooltip placement="top" content="Перейти на сайт">
+        {id => <a className="antivirus-domain-link" href={`https://${name}`} target="_blank"
+          rel="noopener noreferrer" aria-label={`Открыть ${name} в новой вкладке`} aria-describedby={id}>
+          <SitesIcon src={domainLinkIcon} color="icon-primary" />
+        </a>}
+      </Tooltip>
     </div>
   )
 }
@@ -221,7 +210,7 @@ function LinkedDomains({ site, mobile }) {
     <div className="antivirus-linked-domains antivirus-domain-disclosure" data-expanded={expanded}>
       <div className="antivirus-domains-summary">
         <DesktopDomain name={first} />
-        <button
+        <Button appearance="text" pressable={false}
           type="button"
           ref={moreButton}
           className="antivirus-domains-trigger"
@@ -230,17 +219,17 @@ function LinkedDomains({ site, mobile }) {
           aria-expanded={expanded}
           hidden={expanded}
           onClick={expandDomains}
-        >{more}</button>
+        >{more}</Button>
       </div>
       <AnimatedBlock open={expanded}>
         <div id={listId} ref={list} onClick={event => event.stopPropagation()}>
           <ul className="antivirus-domains-list">
             {others.map(name => <li key={name}><DesktopDomain name={name} /></li>)}
           </ul>
-          <button type="button" className="antivirus-domains-collapse" onClick={() => {
+          <Button appearance="text" pressable={false} type="button" className="antivirus-domains-collapse" onClick={() => {
             setExpanded(false)
             requestAnimationFrame(() => moreButton.current?.focus({ preventScroll: true }))
-          }}>Свернуть список</button>
+          }}>Свернуть список</Button>
         </div>
       </AnimatedBlock>
     </div>
@@ -270,35 +259,35 @@ function AntivirusBanner({ plan, nextPlan, count, threats, checking, missing, co
       iconOnly={compact || !renew || showRenewSwitch}
       onSettings={editing ? onCancelEdit : () => onAction('settings')}
       primaryAction={
-        <button type="button" className="sites-active-pay hosting-pressable" onClick={onOpen}>
+        <Button variant={threats ? 'inverse' : 'primary'} tone={threats ? 'accent' : 'success'} appearance="site-activation" className="sites-active-pay" onClick={onOpen}>
           <img src={art(threats ? 'open-antivirus-dark' : 'open-antivirus')} alt="" />Открыть антивирус
-        </button>
+        </Button>
       }
       paymentAction={!renew && !compact && (
-        <button type="button" className="sites-active-manual-pay" onClick={() => onAction('extend')}>
+        <Button variant="inverse" appearance="banner-outline" size={44} className="sites-active-manual-pay" onClick={() => onAction('extend')}>
           <SitesIcon src={walletIcon} color="light" />Оплатить
-        </button>
+        </Button>
       )}
       menuLabel="Управление антивирусом"
       menuItems={close => <>
-        <button type="button" onClick={() => { close(); onAction('sites') }}>
+        <MenuItem onClick={() => { close(); onAction('sites') }}>
           <SitesIcon src={art('edit-sites')} color="icon-secondary" />Изменить список сайтов
-        </button>
-        <button type="button" onClick={() => { close(); onAction('plan') }}>
+        </MenuItem>
+        <MenuItem onClick={() => { close(); onAction('plan') }}>
           <SitesIcon src={art('edit-plan')} color="icon-secondary" />Изменить тариф
-        </button>
+        </MenuItem>
         {!renew && (
-          <button type="button" onClick={() => { close(); onAction('extend') }}>
+          <MenuItem onClick={() => { close(); onAction('extend') }}>
             <SitesIcon src={walletIcon} color="icon-secondary" />Оплатить
-          </button>
+          </MenuItem>
         )}
-        <button type="button" onClick={() => { close(); onAction('renew') }}>
+        <MenuItem onClick={() => { close(); onAction('renew') }}>
           <SitesIcon src={art('renewal')} color="icon-secondary" />
           {renew ? 'Выключить' : 'Включить'} автопродление
-        </button>
-        <button type="button" className="antivirus-disable-action" onClick={() => { close(); onAction('disable') }}>
+        </MenuItem>
+        <MenuItem tone="danger" className="antivirus-disable-action" onClick={() => { close(); onAction('disable') }}>
           <SitesIcon src={art('disable')} color="plan-danger" />Отключить антивирус
-        </button>
+        </MenuItem>
       </>}
       caption={<>{formatSiteCount(count)} · {formatPrice(level.rate * count)} / мес. · {caption}{schedule && ` · ${schedule}`}</>}
     />
@@ -308,25 +297,21 @@ function AntivirusBanner({ plan, nextPlan, count, threats, checking, missing, co
 function AntivirusReport({ statuses, onClose }) {
   const dialog = useRef(null)
 
-  useEffect(() => {
-    dialog.current.showModal()
-  }, [])
-
   return (
-    <dialog className="hosting-dialog sites-dialog antivirus-report" ref={dialog} aria-labelledby="antivirus-report-title" onClose={onClose}>
+    <ModalFrame className="hosting-dialog sites-dialog antivirus-report" ref={dialog} aria-labelledby="antivirus-report-title" onClose={onClose}>
       <h3 className="hosting-dialog-title" id="antivirus-report-title">Отчёт антивируса</h3>
       <p>Статусы проверок в демо-режиме.</p>
       <ul>
         {Object.entries(statuses).map(([name, status]) => (
           <li className="sites-domain-row" data-status={status} key={name}>
-            <span>{name}</span><span className="sites-domain-status"><span className="sites-domain-badge">{antivirusStatusLabels[status]}</span></span>
+            <span>{name}</span><span className="sites-domain-status"><Badge className="sites-domain-badge" tone={protectionStatusTone(status)}>{antivirusStatusLabels[status]}</Badge></span>
           </li>
         ))}
       </ul>
       <div className="sites-payment-buttons">
-        <button type="button" className="sites-payment-cancel" onClick={() => dialog.current.close()}>Закрыть</button>
+        <Button type="button" appearance="site-payment" variant="neutral" pressable={false} onClick={() => dialog.current.close()}>Закрыть</Button>
       </div>
-    </dialog>
+    </ModalFrame>
   )
 }
 
@@ -348,7 +333,7 @@ function matchesSearch(site, query) {
   return [site.name, ...site.domains].some(name => name.toLowerCase().includes(query))
 }
 
-export default function Antivirus({ screenState, compact, dark, preset, plan, setPlan, statuses, setStatuses, threats, active }) {
+export default function Antivirus({ screenState, compact, preset, plan, setPlan, statuses, setStatuses, threats, active }) {
   const { sites } = preset
   const [nextPlan, setNextPlan] = useState(preset.nextPlan)
   const [draftPlan, setDraftPlan] = useState(preset.draftPlan ?? preset.nextPlan?.id ?? preset.plan ?? 'protection')
@@ -572,7 +557,7 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
   return (
     <>
       {suspicious && !plan && (
-        <ProtectionAlert title="Фиксируем подозрительную активность" description="Подключите антивирус, чтобы проверить файлы сайтов."
+        <PageAlert title="Фиксируем подозрительную активность" description="Подключите антивирус, чтобы проверить файлы сайтов."
           action={{ label: 'Выбрать уровень защиты', onClick: () => revealProtectionCheckout(document.getElementById('antivirus-plans-title')) }}
           onDismiss={() => setSuspicious(false)} />
       )}
@@ -590,7 +575,6 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
       )}
       <SitesTable
         compact={compact}
-        dark={dark}
         labels={tableLabels}
         headingId={tableHeading}
         domains={sites}
@@ -608,10 +592,10 @@ export default function Antivirus({ screenState, compact, dark, preset, plan, se
         renderDetails={(site, mobile) => <LinkedDomains site={site} mobile={mobile} />}
         renderNote={(site, status) => status === 'missing' && (
           <div className="sites-domain-note">
-            <button type="button" className="sites-text-button" aria-label={`Как сделать для ${site.name}`} onClick={() => {
+            <Button appearance="text" pressable={false} type="button" className="sites-text-button" aria-label={`Как сделать для ${site.name}`} onClick={() => {
               setMissingSite(site.name)
               setDialog('missing')
-            }}>Как сделать</button>
+            }}>Как сделать</Button>
           </div>
         )}
       />

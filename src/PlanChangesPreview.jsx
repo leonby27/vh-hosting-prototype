@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react'
-import { TabIndicator } from './hosting-motion.jsx'
+import { TabList } from './ui/navigation.jsx'
 import { usePendingChanges } from './pending-changes.jsx'
 import { revealProtectionCheckout } from './SitesProtectionUI.jsx'
 import PlanChanges from './PlanChanges.jsx'
@@ -289,41 +289,12 @@ const modes = [
 
 export default function PlanChangesPreview({ startsWithSavedCard = false, startsWithSufficientBalance = false, scenario }) {
   const id = useId()
-  const tabs = useRef(null)
   const [mode, setMode] = useState('dynamic')
-
-  function moveFocus(event) {
-    const index = modes.findIndex(tab => tab.id === mode)
-    const nextIndex = {
-      ArrowLeft: (index + modes.length - 1) % modes.length,
-      ArrowRight: (index + 1) % modes.length,
-      Home: 0,
-      End: modes.length - 1,
-    }[event.key]
-    if (nextIndex === undefined) return
-    event.preventDefault()
-    const next = modes[nextIndex].id
-    setMode(next)
-    tabs.current?.querySelector(`[aria-controls="${id}-${next}"]`)?.focus()
-  }
 
   return (
     <div className="plan-changes-preview hosting-reveal">
-      <div ref={tabs} className="plan-preview-tabs hosting-indicator-track" role="tablist" aria-label="Режим просмотра" onKeyDown={moveFocus}>
-        <TabIndicator selected={mode} />
-        {modes.map(tab => (
-          <button
-            type="button"
-            key={tab.id}
-            id={`${id}-tab-${tab.id}`}
-            role="tab"
-            aria-selected={mode === tab.id}
-            aria-controls={`${id}-${tab.id}`}
-            tabIndex={mode === tab.id ? 0 : -1}
-            onClick={() => setMode(tab.id)}
-          >{tab.label}</button>
-        ))}
-      </div>
+      <TabList className="plan-preview-tabs" idPrefix={id} label="Режим просмотра" value={mode}
+        onChange={setMode} tabs={modes.map(tab => ({ ...tab, panelId: `${id}-${tab.id}` }))} />
       {modes.map(tab => (
         <div
           key={tab.id}

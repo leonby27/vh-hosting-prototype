@@ -1,15 +1,14 @@
+import { MenuItem, MenuPanel, moveMenuFocus } from './ui/navigation.jsx'
 import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { ModalClose, ModalFrame } from './ui/feedback.jsx'
+import { Button, TextInput } from './ui/controls.jsx'
 import { CheckLine, PaymentOptionLabel } from './PlanChanges.jsx'
 import WarningDialog from './WarningDialog.jsx'
+import { SelectionCard } from './ui/selection.jsx'
 import { DropdownPanel } from './hosting-motion.jsx'
 import { newCard, paymentActions, paymentMethods, savedCard, savedSbp, securePaymentNote } from './plan-payment-options.js'
 import { formatTopUpAmount } from './balance-top-up-states.js'
-import closeIcon from './assets/plan-changes/unlink-close.svg'
 import cardIcon from './assets/plan-changes/pay-card-24.svg'
-import checkedIcon from './assets/plan-changes/checked.svg'
-import uncheckedIcon from './assets/plan-changes/unchecked.svg'
-import checkedDarkIcon from './assets/plan-changes/checked-dark.svg'
-import uncheckedDarkIcon from './assets/plan-changes/unchecked-dark.svg'
 import divider from './assets/plan-changes/payment-list-divider.svg'
 import lockIcon from './assets/balance-top-up/lock.svg'
 import sbpIcon from './assets/balance-top-up/sbp.svg'
@@ -26,18 +25,9 @@ const otherMethods = { label: 'Другие способы', hint: 'Выбери
 const extraMethods = ['sbp', 'yoomoney', 'sber', 'foreign', 'invoice']
   .map(id => paymentMethods.find(method => method.id === id))
 const icons = { sbp: sbpIcon, sber: sberIcon }
-const checkboxArtwork = {
-  '--plan-checked': `url("${checkedIcon}")`,
-  '--plan-unchecked': `url("${uncheckedIcon}")`,
-  '--plan-checked-dark': `url("${checkedDarkIcon}")`,
-  '--plan-unchecked-dark': `url("${uncheckedDarkIcon}")`,
-}
-
 function CloseButton({ onClick, label = 'Закрыть', buttonRef }) {
   return (
-    <button ref={buttonRef} className="top-up-close" type="button" aria-label={label} onClick={onClick}>
-      <span aria-hidden="true" style={{ '--top-up-icon': `url("${closeIcon}")` }} />
-    </button>
+    <ModalClose ref={buttonRef} className="top-up-close" label={label} onClick={onClick} />
   )
 }
 
@@ -47,7 +37,7 @@ function PeriodOptions({ annualPlan, selected, highlightYear, onSelect }) {
   return (
     <div className="top-up-periods" role="group" aria-label="Сумма за период">
       {options.map(({ amount, label, annual }) => (
-        <button key={amount} type="button" className="top-up-period" data-highlighted={annual && highlightYear} aria-pressed={selected === amount} onClick={() => onSelect(amount)}>
+        <Button appearance="choice-card" variant="neutral" key={amount} type="button" className="top-up-period" data-highlighted={annual && highlightYear} aria-pressed={selected === amount} onClick={() => onSelect(amount)}>
           <strong>{formatTopUpAmount(amount)} ₽</strong>
           <span>{label}</span>
           {annual && (
@@ -56,13 +46,13 @@ function PeriodOptions({ annualPlan, selected, highlightYear, onSelect }) {
               <span className="top-up-savings">экономия 2 628 ₽<br />+ домен .RU/.РФ в подарок</span>
             </>
           )}
-        </button>
+        </Button>
       ))}
       {annualPlan && (
-        <button type="button" className="top-up-period" aria-pressed={selected === 'custom'} onClick={() => onSelect('custom')}>
+        <Button appearance="choice-card" variant="neutral" type="button" className="top-up-period" aria-pressed={selected === 'custom'} onClick={() => onSelect('custom')}>
           <strong>Своя сумма</strong>
           <span>Пополнить баланс на любую сумму</span>
-        </button>
+        </Button>
       )}
     </div>
   )
@@ -101,7 +91,6 @@ export default function BalanceTopUp({ preset, compact, savedMethods, onUnlink, 
   const otherSelected = !visibleMethods.some(option => option.id === method)
 
   useLayoutEffect(() => {
-    dialog.current.showModal()
     title.current.focus({ preventScroll: true })
   }, [])
 
@@ -213,7 +202,7 @@ export default function BalanceTopUp({ preset, compact, savedMethods, onUnlink, 
   }
 
   return (
-    <dialog
+    <ModalFrame
       ref={dialog}
       className="hosting-dialog top-up-dialog"
       aria-labelledby={`${id}-title`}
@@ -230,7 +219,7 @@ export default function BalanceTopUp({ preset, compact, savedMethods, onUnlink, 
         if (event.target === event.currentTarget) dialog.current.close()
       }}
     >
-      <form className="top-up-form" onSubmit={submit} style={checkboxArtwork} inert={methodsOpen}>
+      <form className="top-up-form" onSubmit={submit} inert={methodsOpen}>
         <div ref={scrollArea} className="top-up-scroll">
           <header className="top-up-header">
             <h2 className="hosting-dialog-title" ref={title} id={`${id}-title`} tabIndex={-1}>Пополнить баланс</h2>
@@ -241,7 +230,7 @@ export default function BalanceTopUp({ preset, compact, savedMethods, onUnlink, 
             <p className="top-up-notice">Не хватает 309 ₽ для продления 14 ноября</p>
             <div>
               <label className="top-up-amount">
-                <input ref={input} aria-label="Сумма пополнения в рублях" inputMode="decimal" value={amount} onChange={editAmount}
+                <TextInput variant="inset" ref={input} aria-label="Сумма пополнения в рублях" inputMode="decimal" value={amount} onChange={editAmount}
                   onBlur={() => { if (valid) setAmount(formattedAmount) }} />
                 <span aria-hidden="true">₽</span>
               </label>
@@ -257,18 +246,17 @@ export default function BalanceTopUp({ preset, compact, savedMethods, onUnlink, 
               <legend>Способ оплаты</legend>
               <div className="plan-payment-options">
                 {visibleMethods.map(option => (
-                  <label key={option.id} className="plan-payment-option">
-                    <input type="radio" name={`${id}-payment`} value={option.id} checked={method === option.id}
-                      onChange={() => setMethod(option.id)} />
+                  <SelectionCard key={option.id} className="plan-payment-option" name={`${id}-payment`}
+                    value={option.id} checked={method === option.id} onChange={() => setMethod(option.id)}>
                     <PaymentOptionLabel option={option} icon={icons[option.icon] && <img src={icons[option.icon]} alt="" />} />
-                  </label>
+                  </SelectionCard>
                 ))}
                 {hasSaved && (
-                  <button ref={methodTrigger} type="button" className="plan-payment-option plan-payment-trigger top-up-other-methods"
+                  <Button appearance="choice-card" variant="neutral" pressable={false} ref={methodTrigger} type="button" className="plan-payment-option plan-payment-trigger top-up-other-methods"
                     data-selected={otherSelected} aria-expanded={methodsOpen} aria-controls={`${id}-methods`}
                     onClick={() => setMethodsOpen(true)}>
                     <PaymentOptionLabel option={otherMethods} />
-                  </button>
+                  </Button>
                 )}
               </div>
             </fieldset>
@@ -279,15 +267,15 @@ export default function BalanceTopUp({ preset, compact, savedMethods, onUnlink, 
           {documentAction ? (
             <>
               <p role="status">Документ сформирован в деморежиме</p>
-              <a className="top-up-pay" href={`data:text/plain;charset=utf-8,${encodeURIComponent(`Демо-документ\nСумма к оплате: ${documentAction.amount} ₽`)}`}
-                download={documentAction.label === 'Получить счёт' ? 'demo-invoice.txt' : 'demo-receipt.txt'}>Скачать документ</a>
-              <button type="button" onClick={() => setDocumentAction(null)}>Вернуться к оплате</button>
+              <Button as="a" appearance="top-up" tone="success" href={`data:text/plain;charset=utf-8,${encodeURIComponent(`Демо-документ\nСумма к оплате: ${documentAction.amount} ₽`)}`}
+                download={documentAction.label === 'Получить счёт' ? 'demo-invoice.txt' : 'demo-receipt.txt'}>Скачать документ</Button>
+              <Button variant="outline" onClick={() => setDocumentAction(null)}>Вернуться к оплате</Button>
             </>
           ) : (
-            <button className="top-up-pay hosting-pressable" type="submit" disabled={!valid}>
+            <Button appearance="top-up" tone="success" type="submit" disabled={!valid}>
               {action.icon === 'pay-card' && <img src={cardIcon} alt="" />}
               {action.label}
-            </button>
+            </Button>
           )}
           <p className="top-up-security"><img src={lockIcon} alt="" />{securePaymentNote.mobile}</p>
         </footer>
@@ -295,7 +283,8 @@ export default function BalanceTopUp({ preset, compact, savedMethods, onUnlink, 
       {hasSaved && (
         <DropdownPanel id={`${id}-methods`} className="top-up-method-overlay" open={methodsOpen}
           onClick={event => { if (event.target === event.currentTarget) closeMethods() }}>
-          <section ref={menu} className="plan-payment-panel top-up-method-list" aria-label="Способы оплаты">
+          <MenuPanel as="section" ref={menu} className="plan-payment-panel top-up-method-list"
+            aria-label="Способы оплаты" onKeyDown={event => moveMenuFocus(event, menu.current)}>
             {compact && (
               <header>
                 <h3>Способы оплаты</h3>
@@ -305,13 +294,13 @@ export default function BalanceTopUp({ preset, compact, savedMethods, onUnlink, 
             <ul>
               {[...savedMethods, newCard, ...extraMethods].map(option => (
                 <li key={option.id}>
-                  <button type="button" aria-pressed={method === option.id} onClick={() => {
+                  <MenuItem layout="split" selected={method === option.id} onClick={() => {
                     setMethod(option.id)
                     closeMethods()
                   }}>
                     <span>{option.listLabel ?? option.label}</span>
                     {option.unlinkLabel && <small>сохранён</small>}
-                  </button>
+                  </MenuItem>
                 </li>
               ))}
             </ul>
@@ -319,22 +308,22 @@ export default function BalanceTopUp({ preset, compact, savedMethods, onUnlink, 
             <ul className="plan-payment-unlink">
               {savedMethods.map(option => (
                 <li key={option.id}>
-                  <button type="button" onClick={() => {
+                  <MenuItem tone="muted" onClick={() => {
                     setMethodsOpen(false)
                     setUnlinkChoice(option)
                   }}>
                     {option.unlinkLabel}
-                  </button>
+                  </MenuItem>
                 </li>
               ))}
             </ul>
-          </section>
+          </MenuPanel>
         </DropdownPanel>
       )}
       {unlinkChoice && (
         <WarningDialog title={`${unlinkChoice.unlinkLabel}?`} description="Вы не сможете больше оплачивать в один клик этим способом."
           confirmLabel="Отвязать" onClose={finishUnlink} />
       )}
-    </dialog>
+    </ModalFrame>
   )
 }

@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Short shadow 100",
+    "dark": false,
+    "css": "0px 5px 20px 0px rgba(27, 54, 74, 0.03)"
+  },
+  {
+    "name": "Short shadow 100 Dark",
+    "dark": true,
+    "css": "0px 5px 20px 0px rgba(0, 0, 0, 0.1)"
+  },
+  {
+    "name": "Short shadow 200",
+    "dark": false,
+    "css": "0px 4px 12px 0px rgba(5, 12, 38, 0.07)"
+  },
+  {
+    "name": "Short shadow 200 Dark",
+    "dark": true,
+    "css": "0px 4px 12px 0px rgba(0, 0, 0, 0.2)"
+  },
+  {
+    "name": "Short shadow 300",
+    "dark": false,
+    "css": "0px 4px 12px 0px rgba(5, 12, 38, 0.12)"
+  },
+  {
+    "name": "Short shadow 300 Dark",
+    "dark": true,
+    "css": "0px 4px 12px 0px rgba(0, 0, 0, 0.5)"
+  }
+]

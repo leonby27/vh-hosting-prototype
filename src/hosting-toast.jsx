@@ -1,4 +1,5 @@
 import { createContext, useEffect } from 'react'
+import { Toast } from './ui/feedback.jsx'
 import successIcon from './assets/dashboard/status-ok.svg'
 
 export const HostingToastContext = createContext(() => {})
@@ -12,8 +13,9 @@ export function HostingToast({ toast, setToast }) {
 
   return (
     <div className="hosting-toast" role="status">
-      {toast?.success && <img src={successIcon} alt="" width="24" height="24" />}
-      {toast?.message}
+      {toast && <Toast announce={false} icon={toast.success && <img src={successIcon} alt="" width="24" height="24" />}>
+        {toast.message}
+      </Toast>}
     </div>
   )
 }

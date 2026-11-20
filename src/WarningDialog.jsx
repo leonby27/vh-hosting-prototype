@@ -1,18 +1,15 @@
-import { useId, useLayoutEffect, useRef } from 'react'
+import { Button } from './ui/controls.jsx'
+import { useId, useRef } from 'react'
+import { ModalClose, ModalFrame } from './ui/feedback.jsx'
 import alertIcon from './assets/plan-changes/unlink-alert.svg'
-import closeIcon from './assets/plan-changes/unlink-close.svg'
 import './warning-dialog.css'
 
 export default function WarningDialog({ title, description, confirmLabel, onClose }) {
   const id = useId()
   const dialog = useRef(null)
 
-  useLayoutEffect(() => {
-    dialog.current.showModal()
-  }, [])
-
   return (
-    <dialog
+    <ModalFrame
       ref={dialog}
       className="hosting-dialog hosting-dialog--sheet hosting-warning-dialog"
       aria-labelledby={`${id}-title`}
@@ -31,15 +28,11 @@ export default function WarningDialog({ title, description, confirmLabel, onClos
           </div>
         </div>
         <div className="hosting-warning-actions">
-          <button type="submit" value="cancel">{confirmLabel ? 'Отменить' : 'Понятно'}</button>
-          {confirmLabel && <button type="submit" value="confirm" className="hosting-warning-confirm">{confirmLabel}</button>}
+          <Button variant="neutral" type="submit" value="cancel">{confirmLabel ? 'Отменить' : 'Понятно'}</Button>
+          {confirmLabel && <Button tone="danger" type="submit" value="confirm">{confirmLabel}</Button>}
         </div>
       </form>
-      <button type="button" className="hosting-warning-close" aria-label="Закрыть" onClick={() => dialog.current.close('cancel')}>
-        <span className="hosting-warning-close-icon" style={{ '--hosting-warning-close-icon': `url("${closeIcon}")` }}>
-          <img src={closeIcon} alt="" />
-        </span>
-      </button>
-    </dialog>
+      <ModalClose className="hosting-warning-close" onClick={() => dialog.current.close('cancel')} />
+    </ModalFrame>
   )
 }
