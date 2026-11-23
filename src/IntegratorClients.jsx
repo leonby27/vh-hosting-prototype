@@ -1,145 +1,151 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { AnimatedBlock } from './hosting-motion.jsx'
-import { Button, Chip, Choice, Dialog, Dropdown, PageAlert, SearchField, SortHeader, Surface, TableFrame, TextField } from './ui/index.js'
+import { Button, Chip, Choice, Dialog, DropdownItems, Icon, IconButton, MultiSelect, PopoverMenu, SearchField, SortHeader, TableFrame, TextField } from './ui/index.js'
 import { daysLabel, daysLeft, money } from './integrator-data.js'
 
 const terms = [['30', 'До месяца'], ['180', 'До полугода'], ['365', 'До года'], ['custom', 'Своя сумма']]
-const reserves = ['7', '14', '30'].map(days => [days, daysLabel(Number(days))])
-const filters = [
-  ['all', 'Все', () => true],
-  ['week', 'Хватит ≤ 7 дней', client => client.balance > 0 && daysLeft(client) <= 7],
-  ['blocked', 'Заблокированы', client => client.balance === 0],
-  ['automatic', 'С автопополнением', client => client.automatic],
+const reserves = ['7', '14', '30'].map(value => ({ value, label: `Пополнять на ${daysLabel(Number(value))}` }))
+const filters = {
+  week: { label: 'Меньше 7 дней', matches: client => client.balance > 0 && daysLeft(client) <= 7 },
+  low: { label: 'Меньше 100 ₽', matches: client => client.balance > 0 && client.balance < 100 },
+  blocked: { label: 'Заблокированные', matches: client => client.balance === 0 },
+}
+const filterOptions = Object.entries(filters).map(([value, { label }]) => ({ value, label }))
+const periodOptions = [
+  { value: 'month', label: 'Месячный' },
+  { value: 'year', label: 'Годовой' },
 ]
 
-export function IntegratorChips({ label, options, value, onChange }) {
+function clientBalancePriority(client) {
+  if (filters.blocked.matches(client)) return 0
+  return filters.week.matches(client) ? 1 : 2
+}
+
+function IntegratorChips({ label, options, value, onChange }) {
   return <div className="integrator-chips" role="group" aria-label={label}>
-    {options.map(([id, text]) => <Chip key={id} selected={id === value} onSelect={() => onChange(id)}>{text}</Chip>)}
+    {options.map(([id, text]) => (
+      <Chip key={id} selected={id === value} onSelect={() => onChange(id)}>{text}</Chip>
+    ))}
   </div>
 }
 
 export function IntegratorTable({ label, children, className = '' }) {
-  return <TableFrame className="integrator-table-scroll" label={label}>
+  return <TableFrame className="integrator-table-scroll" label={label} appearance="surface">
     <table className={`integrator-table ${className}`.trim()}>{children}</table>
   </TableFrame>
 }
 
-function Remaining({ client }) {
-  return client.balance === 0 ? <span className="integrator-blocked">Заблокирован</span> : daysLabel(daysLeft(client))
-}
-
-function useClientSort(initialKey) {
-  const [sort, setSort] = useState({ key: initialKey, direction: initialKey ? 'ascending' : 'none' })
-  const fields = [['balance', 'Баланс'], ['days', 'Осталось']]
-
-  function sortClients(clients) {
-    if (sort.direction === 'none') return clients
-    const getValue = sort.key === 'balance' ? client => client.balance : daysLeft
-    const direction = sort.direction === 'ascending' ? 1 : -1
-    return [...clients].sort((first, second) => direction * (getValue(first) - getValue(second)))
-  }
-
-  const sortHeaders = fields.map(([key, label]) => <SortHeader className="integrator-client-columns" key={key}
-    direction={sort.key === key ? sort.direction : 'none'} onChange={direction => setSort({ key, direction })}>{label}</SortHeader>)
-  return { sortClients, sortHeaders }
-}
-
-export function IntegratorClients({ clients, balance, updateDemo, onTopUp, onInspect }) {
-  const [filter, setFilter] = useState('all')
-  const [search, setSearch] = useState('')
-  const [showTariff, setShowTariff] = useState(true)
-  const [create, setCreate] = useState(false)
-  const [login, setLogin] = useState('')
-  const [name, setName] = useState('')
-  const { sortClients, sortHeaders } = useClientSort()
-  const filterOptions = filters.map(([id, title, matches]) => [id, `${title} ${clients.filter(matches).length}`])
-  const matches = filters.find(([id]) => id === filter)[2]
-  const needle = search.trim().toLowerCase()
-  const rows = sortClients(clients.filter(client => matches(client) && `${client.id} ${client.name}`.toLowerCase().includes(needle)))
-  const blocked = clients.filter(filters[2][2]).length
-  const warning = clients.filter(filters[1][2]).length
-  const id = login.trim().toLowerCase()
-  const duplicate = clients.some(client => client.id === id)
-
-  function createClient(event) {
-    event.preventDefault()
-    if (!id || duplicate || !name.trim()) return
-    updateDemo(current => ({
-      ...current, clients: [...current.clients, { id, name: name.trim(), tariff: 'Optimo', rate: 12.5, balance: 0, automatic: false }],
-    }))
-    setFilter('all')
-    setSearch('')
-    closeCreate()
-  }
-
-  function closeCreate() {
-    setCreate(false)
-    setLogin('')
-    setName('')
-  }
-
-  return <>
-    <AnimatedBlock open={warning > 0 || blocked > 0}>
-      <div className="integrator-warning">
-        <PageAlert title="Проверьте баланс клиентов"
-          description={`До недели осталось у ${warning} · Заблокированы ${blocked} · На балансе для клиентов ${money(balance)}`}
-          action={{ label: 'Показать', onClick: () => setFilter(warning ? 'week' : 'blocked') }} />
-      </div>
-    </AnimatedBlock>
-    <Surface as="section" elevation="card" className="integrator-card">
-      <div className="integrator-toolbar">
-        <SearchField label="Поиск по клиентам" placeholder="Логин или название" value={search} onChange={event => setSearch(event.target.value)} />
-        <Button onClick={() => setCreate(true)}>Создать аккаунт</Button>
-        <Dropdown className="integrator-client-columns" trigger="Колонки" selection items={[{ value: 'tariff', label: 'Тариф', selected: showTariff }]}
-          onSelect={() => setShowTariff(current => !current)} />
-      </div>
-      <IntegratorChips label="Клиенты" options={filterOptions} value={filter} onChange={setFilter} />
-      <AnimatedBlock>
-        <IntegratorTable label="Список клиентов" className="integrator-client-table">
-          <thead><tr><th scope="col">Клиент</th>{showTariff && <th className="integrator-client-columns" scope="col">Тариф</th>}{sortHeaders}<th scope="col">Действия</th></tr></thead>
-          <tbody>
-            {rows.map(client => <tr key={client.id}>
-              <th scope="row"><Button appearance="text" pressable={false} type="button" className="integrator-link" onClick={() => onInspect(client.id)}>{client.id}</Button>
-                <small>{client.name}</small>
-                <small className="integrator-mobile-details">{client.tariff} · {money(client.balance)} · <Remaining client={client} /></small></th>
-              {showTariff && <td className="integrator-client-columns">{client.tariff}</td>}
-              <td className="integrator-client-columns">{money(client.balance)}</td><td className="integrator-client-columns"><Remaining client={client} /></td>
-              <td><Button variant="neutral" size={32} aria-label={`Пополнить ${client.id}`} onClick={() => onTopUp(client.id)}>Пополнить</Button></td>
-            </tr>)}
-            {!rows.length && <tr><td colSpan={showTariff ? 5 : 4}>Клиенты не найдены</td></tr>}
-          </tbody>
-        </IntegratorTable>
-      </AnimatedBlock>
-    </Surface>
-    <Dialog open={create} title="Создать аккаунт" onClose={closeCreate}>
-      <form className="integrator-form" onSubmit={createClient}>
-        <TextField label="Логин" required pattern="[A-Za-z0-9\x2D]+" value={login}
-          error={duplicate ? 'Такой логин уже есть' : ''} onChange={event => setLogin(event.target.value)} />
-        <TextField label="Название" required value={name} onChange={event => setName(event.target.value)} />
-        <Button type="submit" disabled={duplicate}>Создать аккаунт</Button>
-      </form>
-    </Dialog>
-  </>
+function Remaining({ client, prefix = '' }) {
+  return client.balance === 0
+    ? <span className="integrator-blocked">Заблокирован</span>
+    : prefix + daysLabel(daysLeft(client))
 }
 
 function availableAmount(client, term) {
   return Math.max(0, Math.ceil(client.rate * Number(term) - client.balance))
 }
 
-export function IntegratorTopUp({ demo, updateDemo, draft, setDraft }) {
+function AutoTopUpSettings({ reserve, onChange }) {
+  const [open, setOpen] = useState(false)
+  const root = useRef(null)
+
+  useLayoutEffect(() => {
+    if (!open) return
+    const anchor = root.current
+    const trigger = anchor.querySelector('button')
+    const menu = anchor.querySelector('.integrator-auto-menu')
+
+    function positionMenu() {
+      const { left, top, bottom } = trigger.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - bottom
+      const opensAbove = spaceBelow < menu.offsetHeight + 6 && top > spaceBelow
+      const x = Math.max(8, Math.min(left, window.innerWidth - menu.offsetWidth - 8))
+      anchor.dataset.side = opensAbove ? 'top' : 'bottom'
+      anchor.style.setProperty('--integrator-auto-menu-x', `${x}px`)
+      anchor.style.setProperty('--integrator-auto-menu-y', `${opensAbove ? top - menu.offsetHeight - 6 : bottom + 6}px`)
+    }
+
+    positionMenu()
+    window.addEventListener('scroll', positionMenu, true)
+    window.addEventListener('resize', positionMenu)
+    return () => {
+      window.removeEventListener('scroll', positionMenu, true)
+      window.removeEventListener('resize', positionMenu)
+    }
+  }, [open])
+
+  return <div ref={root} className="integrator-auto-settings">
+    <PopoverMenu open={open} onOpenChange={setOpen} optionSize={40} panelClassName="integrator-auto-menu" panelLabel="Запас автопополнения"
+      renderTrigger={props => <IconButton {...props} label="Настройки автопополнения" size={24} data-hover-as-pressed
+        icon={<Icon name="adjust2-outline" size={16} className="integrator-auto-settings-icon" />} />}>
+      {close => <DropdownItems selection items={reserves.map(option => ({ ...option, selected: option.value === reserve }))}
+        onSelect={value => { onChange(value); close() }} />}
+    </PopoverMenu>
+  </div>
+}
+
+export function IntegratorClients({ demo, compact, createOpen, onCloseCreate, onTopUp, updateDemo, draft, setDraft }) {
+  const [search, setSearch] = useState('')
+  const [selectedTariffs, setSelectedTariffs] = useState([])
+  const [selectedPeriods, setSelectedPeriods] = useState([])
+  const [selectedBalanceFilters, setSelectedBalanceFilters] = useState([])
+  const [balanceOrder, setBalanceOrder] = useState('none')
+  const [login, setLogin] = useState('')
+  const [name, setName] = useState('')
   const [confirm, setConfirm] = useState(false)
-  const { sortClients, sortHeaders } = useClientSort('days')
-  const { term, selected, amounts } = draft
+  const [inspectedId, setInspectedId] = useState(null)
+  const [customInput, setCustomInput] = useState(null)
   const { clients, balance, reserve = '14' } = demo
-  const rows = sortClients(clients)
-  const allSelected = clients.length > 0 && clients.every(client => selected.has(client.id))
-  const amountFor = client => amounts[client.id] ?? (term === 'custom' ? '' : availableAmount(client, term))
-  const transfers = clients.filter(client => selected.has(client.id) && Number(amountFor(client)) > 0)
-    .map(client => ({ id: client.id, amount: Number(amountFor(client)) }))
+  const tariffs = [...new Set(clients.map(client => client.tariff))].sort((first, second) => first.localeCompare(second, 'ru'))
+  const tariffOptions = tariffs.map(value => ({ value, label: value }))
+  const { term, selected, customAmount } = draft
+  const needle = search.trim().toLowerCase()
+  const rows = clients.filter(client => (!selectedBalanceFilters.length || selectedBalanceFilters.some(filter => filters[filter].matches(client)))
+    && (!selectedTariffs.length || selectedTariffs.includes(client.tariff))
+    && (!selectedPeriods.length || selectedPeriods.includes(client.billingPeriod))
+    && `${client.id} ${client.name}`.toLowerCase().includes(needle))
+  if (balanceOrder === 'none') {
+    rows.sort((first, second) => clientBalancePriority(first) - clientBalancePriority(second))
+  } else {
+    const direction = balanceOrder === 'ascending' ? 1 : -1
+    rows.sort((first, second) => direction * (first.balance - second.balance))
+  }
+  const id = login.trim().toLowerCase()
+  const duplicate = clients.some(client => client.id === id)
+  const inspected = clients.find(client => client.id === inspectedId)
+  const selectedInList = rows.filter(client => selected.has(client.id)).length
+  const allSelected = rows.length > 0 && selectedInList === rows.length
+  const hasSelection = selected.size > 0
+  const transfers = clients.filter(client => selected.has(client.id))
+    .map(client => ({ id: client.id, amount: term === 'custom' ? customAmount : availableAmount(client, term) }))
+    .filter(item => item.amount > 0)
   const total = transfers.reduce((sum, item) => sum + item.amount, 0)
   const canTransfer = total > 0 && total <= balance
-  const automatic = clients.filter(client => client.automatic)
-  const monthly = Math.round(automatic.reduce((sum, client) => sum + client.rate, 0) * 30)
+  const balanceAfterTransfer = total > balance
+    ? `Не хватает ${money(total - balance)}`
+    : `Останется ${money(balance - total)}`
+
+  function createClient(event) {
+    event.preventDefault()
+    if (!id || duplicate || !name.trim()) return
+    const createdAt = Date.now()
+    updateDemo(current => ({
+      ...current, clients: [...current.clients, {
+        id, name: name.trim(), tariff: 'Optimo', billingPeriod: 'month', rate: 12.5, balance: 0, automatic: false, createdAt,
+      }],
+    }))
+    setSelectedBalanceFilters([])
+    setSelectedTariffs([])
+    setSelectedPeriods([])
+    setSearch('')
+    closeCreate()
+  }
+
+  function closeCreate() {
+    onCloseCreate()
+    setLogin('')
+    setName('')
+  }
 
   function setSelection(ids, checked) {
     setDraft(current => {
@@ -150,13 +156,11 @@ export function IntegratorTopUp({ demo, updateDemo, draft, setDraft }) {
   }
 
   function changeTerm(value) {
-    setDraft(current => ({ ...current, term: value, amounts: {} }))
-  }
-
-  function changeAmount(id, value) {
-    if (!/^\d{0,9}$/.test(value)) return
-    setDraft(current => ({ ...current, amounts: { ...current.amounts, [id]: value },
-      selected: value ? new Set([...current.selected, id]) : current.selected }))
+    if (value === 'custom') {
+      setCustomInput(customAmount ? String(customAmount) : '')
+    } else {
+      setDraft(current => ({ ...current, term: value, customAmount: 0 }))
+    }
   }
 
   function transfer() {
@@ -172,78 +176,132 @@ export function IntegratorTopUp({ demo, updateDemo, draft, setDraft }) {
         operations: [operation, ...current.operations],
       }
     })
-    setDraft(current => ({ ...current, selected: new Set(), amounts: {} }))
+    setDraft(current => ({ ...current, selected: new Set(), customAmount: 0 }))
     setConfirm(false)
   }
 
+  function prepareTopUp(clientId) {
+    setInspectedId(null)
+    onTopUp(clientId)
+  }
+
+  function setAutomatic(id, checked) {
+    updateDemo(current => ({
+      ...current, clients: current.clients.map(client => client.id === id ? { ...client, automatic: checked } : client),
+    }))
+  }
+
   return <>
-    <Surface as="section" elevation="card" className="integrator-card" aria-label="Пополнение клиентов">
-      <ol className="integrator-steps"><li>Отметьте клиентов</li><li>Выберите срок</li><li>Проверьте итог</li></ol>
-      <div className="integrator-stack">
-        <strong>Срок для отмеченных</strong>
-        <IntegratorChips label="Срок для отмеченных" options={terms} value={term} onChange={changeTerm} />
+    <section className="integrator-client-list">
+      <div className="integrator-client-tools">
+        <div className="integrator-filter-toolbar" inert={hasSelection}>
+          <SearchField size={40} variant="toolbar" label="Поиск по клиентам" placeholder="Логин или название"
+            value={search} onChange={event => setSearch(event.target.value)} />
+          <MultiSelect size={40} variant="toolbar" label="Тариф" hideLabel placeholder="Все тарифы"
+            options={tariffOptions} value={selectedTariffs} onChange={setSelectedTariffs} />
+          <MultiSelect size={40} variant="toolbar" label="Период" hideLabel placeholder="Все периоды"
+            options={periodOptions} value={selectedPeriods} onChange={setSelectedPeriods} />
+          <MultiSelect size={40} variant="toolbar" label="Фильтр баланса" hideLabel placeholder="Любой баланс"
+            options={filterOptions} value={selectedBalanceFilters} onChange={setSelectedBalanceFilters} />
+        </div>
+        <section className="integrator-total" aria-label="Итог пополнения" inert={!hasSelection}>
+          <IntegratorChips label="Период пополнения" options={terms} value={term} onChange={changeTerm} />
+          <div className="integrator-total-summary">
+            <div aria-live="polite">
+              <strong>{money(total)}</strong>
+              <small title={balanceAfterTransfer}>{balanceAfterTransfer}</small>
+            </div>
+            <Button size={32} disabled={!canTransfer} onClick={() => setConfirm(true)}>Пополнить</Button>
+          </div>
+        </section>
       </div>
-      <div className="integrator-toolbar integrator-toolbar-between">
-        <span className="integrator-muted">Всего клиентов · {clients.length}</span>
-        {clients.length > 0 && <Button appearance="text" pressable={false} className="integrator-link" type="button"
-          onClick={() => setSelection(clients.filter(client => daysLeft(client) <= 30).map(client => client.id), true)}>
-          Отметить всех, у кого ≤ 30 дней, и заблокированных
-        </Button>}
+      <div className="integrator-client-table-group">
+        <AnimatedBlock>
+          <IntegratorTable label="Список клиентов" className="integrator-client-table">
+            <thead>
+              <tr>
+                <th scope="col" className="integrator-client-select"><Choice size={20} aria-label="Выбрать всех в списке" checked={allSelected}
+                  indeterminate={!allSelected && selectedInList > 0} disabled={!rows.length}
+                  onChange={event => setSelection(rows.map(client => client.id), event.target.checked)} /></th>
+                <th scope="col">Клиент</th>
+                <SortHeader className="integrator-client-columns" icon="arrowup-outline" iconButtonLabel="Сортировать по балансу"
+                  direction={balanceOrder} onChange={setBalanceOrder}>Баланс</SortHeader>
+                <th scope="col" className="integrator-client-auto">
+                  <div className="integrator-client-auto-heading">
+                    Автопополнение
+                    <AutoTopUpSettings reserve={reserve}
+                      onChange={value => updateDemo(current => ({ ...current, reserve: value }))} />
+                  </div>
+                </th>
+                <th scope="col" className="integrator-table-action">Пополнить баланс</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(client => {
+                const checked = selected.has(client.id)
+                const balanceDetails = <div className="integrator-table-lines">
+                  <span className="integrator-table-primary">{money(client.balance)}</span>
+                  <small className="integrator-client-balance-period" data-low-days={filters.week.matches(client) || undefined}>
+                    <Remaining client={client} prefix="Хватит ещё на " />
+                  </small>
+                </div>
+                return <tr key={client.id} data-selectable data-selected={checked || undefined}
+                  onClick={event => {
+                    if (!event.target.closest('.vh-choice, input, button, a')) setSelection([client.id], !checked)
+                  }}>
+                  <td className="integrator-client-select"><Choice size={20} aria-label={`Выбрать ${client.id}`} checked={checked}
+                    onChange={event => setSelection([client.id], event.target.checked)} /></td>
+                  <th scope="row">
+                    <div className="integrator-table-lines">
+                      <Button appearance="text" pressable={false} className="integrator-link" onClick={() => setInspectedId(client.id)}>{client.id}</Button>
+                      <small>{client.tariff} · {client.billingPeriod === 'year' ? 'годовой' : 'месячный'}</small>
+                    </div>
+                    <div className="integrator-mobile-details integrator-muted">{balanceDetails}</div>
+                  </th>
+                  <td className="integrator-client-columns">{balanceDetails}</td>
+                  <td className="integrator-client-auto"><Choice kind="switch" aria-label={`Автопополнение для ${client.id}`} checked={client.automatic}
+                    onChange={event => setAutomatic(client.id, event.target.checked)} /></td>
+                  <td className="integrator-table-action">
+                    <Button variant="neutral-solid" size={36}
+                      aria-label={`Пополнить баланс клиента ${client.id}`} onClick={() => prepareTopUp(client.id)}>Пополнить баланс</Button>
+                  </td>
+                </tr>
+              })}
+              {!rows.length && <tr><td colSpan={compact ? 4 : 5}>Клиенты не найдены</td></tr>}
+            </tbody>
+          </IntegratorTable>
+        </AnimatedBlock>
       </div>
-      <div className="integrator-total" aria-label="Итог пополнения">
-        <div aria-live="polite"><strong>{money(total)}</strong>
-          <small>{total > balance ? `Не хватает ${money(total - balance)}` :
-            `${transfers.length ? `Клиентов: ${transfers.length}` : 'Отметьте клиентов'} · останется ${money(balance - total)}`}</small></div>
-        <Button disabled={!canTransfer} onClick={() => setConfirm(true)}>Пополнить</Button>
-      </div>
-      <IntegratorTable label="Клиенты для пополнения" className="integrator-client-table">
-        <thead><tr><th scope="col"><Choice aria-label="Выбрать всех на странице" checked={allSelected}
-          indeterminate={!allSelected && selected.size > 0} disabled={!clients.length}
-          onChange={event => setSelection(clients.map(client => client.id), event.target.checked)} /></th>
-          <th scope="col">Клиент</th>{sortHeaders}<th scope="col">Добавить, ₽</th><th className="integrator-client-columns" scope="col">Хватит на</th></tr></thead>
-        <tbody>
-          {rows.map(client => {
-            const checked = selected.has(client.id)
-            const amount = amountFor(client)
-            const projection = checked && Number(amount) > 0 ? daysLabel(daysLeft(client, Number(amount))) : null
-            return <tr key={client.id}>
-              <td><Choice aria-label={`Выбрать ${client.id}`} checked={checked} onChange={event => setSelection([client.id], event.target.checked)} /></td>
-              <th scope="row">{client.id}<small>{client.tariff} · {money(client.rate)} в день</small>
-                <small className="integrator-mobile-details">{money(client.balance)} · <Remaining client={client} /></small></th>
-              <td className="integrator-client-columns">{money(client.balance)}</td><td className="integrator-client-columns"><Remaining client={client} /></td>
-              <td><TextField className="integrator-amount" label={`Сколько добавить клиенту ${client.id}, ₽`} hideLabel
-                size={36} inputMode="numeric" placeholder="0" value={checked ? amount : ''} onChange={event => changeAmount(client.id, event.target.value)} />
-                {projection && <small className="integrator-mobile-details">На {projection}</small>}</td>
-              <td className="integrator-client-columns">{projection ?? '—'}</td>
-            </tr>
-          })}
-          {!rows.length && <tr><td colSpan={6}>Нет клиентов для пополнения</td></tr>}
-        </tbody>
-      </IntegratorTable>
-    </Surface>
-    <Surface as="section" elevation="card" className="integrator-card" aria-labelledby="integrator-auto">
-      <h2 id="integrator-auto">Автопополнение</h2>
-      <p>Каждую ночь пополняем счета клиентов с баланса для клиентов. Если средств не хватит, отправим письмо.</p>
-      <div className="integrator-stack"><strong>Держать запас на</strong>
-        <IntegratorChips label="Запас, дней" options={reserves} value={reserve}
-          onChange={value => updateDemo(current => ({ ...current, reserve: value }))} /></div>
-      <dl className="integrator-metrics">
-        <div><dt>Расход в месяц · {automatic.length} на автопополнении</dt><dd>{money(monthly)}</dd></div>
-        {monthly > 0 && <div><dt>Баланс для клиентов хватит на</dt><dd>{daysLabel(Math.floor(balance * 30 / monthly))}</dd></div>}
-      </dl>
-      <ul className="integrator-rows">
-        {clients.map(client => <li key={client.id}>
-          <div><strong>{client.id}</strong><small>{client.tariff} · {money(client.rate)} в день</small></div>
-          <Choice kind="switch" aria-label={`Автопополнение для ${client.id}`} checked={client.automatic}
-            onChange={event => {
-              const checked = event.target.checked
-              updateDemo(current => ({ ...current, clients: current.clients.map(row => row.id === client.id ? { ...row, automatic: checked } : row) }))
-            }} />
-        </li>)}
-        {!clients.length && <li>Нет клиентов для автопополнения</li>}
-      </ul>
-    </Surface>
-    <Dialog open={confirm} title="Подтвердите пополнение" description={`С баланса для клиентов спишется ${money(total)}.`}
+    </section>
+    <Dialog open={createOpen} title="Создать аккаунт" onClose={closeCreate}>
+      <form className="integrator-form" onSubmit={createClient}>
+        <TextField label="Логин" required pattern="[A-Za-z0-9\x2D]+" value={login}
+          error={duplicate ? 'Такой логин уже есть' : ''} onChange={event => setLogin(event.target.value)} />
+        <TextField label="Название" required value={name} onChange={event => setName(event.target.value)} />
+        <Button type="submit" disabled={duplicate}>Создать аккаунт</Button>
+      </form>
+    </Dialog>
+    <Dialog open={Boolean(inspected)} title={inspected?.id} description={inspected?.name} onClose={() => setInspectedId(null)}
+      actions={inspected && <Button onClick={() => prepareTopUp(inspected.id)}>Пополнить баланс</Button>}>
+      {inspected && <dl className="integrator-metrics"><div><dt>Тариф</dt><dd>{inspected.tariff}</dd></div>
+        <div><dt>Баланс</dt><dd>{money(inspected.balance)}</dd></div>
+        <div><dt>Осталось</dt><dd><Remaining client={inspected} /></dd></div></dl>}
+    </Dialog>
+    <Dialog open={customInput !== null} title="Своя сумма" onClose={() => setCustomInput(null)}>
+      <form className="integrator-form" onSubmit={event => {
+        event.preventDefault()
+        if (!(Number(customInput) > 0)) return
+        setDraft(current => ({ ...current, term: 'custom', customAmount: Number(customInput) }))
+        setCustomInput(null)
+      }}>
+        <TextField label="Сумма на каждого клиента, ₽" inputMode="numeric" required value={customInput ?? ''}
+          onChange={event => {
+            if (/^\d{0,9}$/.test(event.target.value)) setCustomInput(event.target.value)
+          }} />
+        <Button type="submit" disabled={!(Number(customInput) > 0)}>Применить</Button>
+      </form>
+    </Dialog>
+    <Dialog open={confirm} title="Подтвердите пополнение" description={`С баланса для клиентов спишется ${money(total)}. Получателей: ${transfers.length}.`}
       onClose={() => setConfirm(false)} actions={<><Button variant="neutral" onClick={() => setConfirm(false)}>Отмена</Button>
         <Button disabled={!canTransfer} onClick={transfer}>Пополнить</Button></>} />
   </>

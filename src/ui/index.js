@@ -1,6 +1,6 @@
 export { VHTheme } from './theme.jsx'
 export { AssetIcon, Icon, iconNames } from './Icon.jsx'
-export { Button, Checkbox, Choice, Chip, IconButton, Link, Radio, Range, SearchField, Select, Stepper, Switch, TextField, TextInput } from './controls.jsx'
+export { Button, Checkbox, Choice, Chip, IconButton, Link, MultiSelect, Radio, Range, SearchField, Select, Stepper, Switch, TextField, TextInput } from './controls.jsx'
 export { Dropdown, DropdownItems, MenuItem, MenuPanel, Pagination, PopoverMenu, SegmentedOptions, SortHeader, TabList } from './navigation.jsx'
 export { Alert, Badge, Dialog, FeatureHint, ModalClose, ModalFrame, PageAlert, Progress, ProgressBar, Spinner, StatusBadge, Toast, Tooltip, TooltipBubble } from './feedback.jsx'
 export { Calendar } from './Calendar.jsx'

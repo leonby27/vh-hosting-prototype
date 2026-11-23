@@ -1,9 +1,18 @@
 .dashboard {
   container: dashboard / inline-size;
   display: grid;
-  gap: 24px;
+  --dashboard-section-gap: 24px;
+  gap: var(--dashboard-section-gap);
   color: var(--hosting-title);
   font-weight: 400;
+}
+
+.dashboard > .network-attack-slot {
+  margin-block-end: calc(-1 * var(--dashboard-section-gap));
+}
+
+.dashboard .network-attack-notice {
+  padding-block-end: var(--dashboard-section-gap);
 }
 
 .dashboard :is(h2, h3, p, ul, dl, dd, figure) {
@@ -533,7 +542,7 @@
 
 .hosting-shell[data-compact="true"] {
   .dashboard {
-    gap: 20px;
+    --dashboard-section-gap: 20px;
   }
 
   .dashboard-billing,

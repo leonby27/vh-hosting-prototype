@@ -14,7 +14,7 @@ import { PendingChangesContext } from './pending-changes.jsx'
 import { vhThemes } from './ui/theme.jsx'
 import { designSystemSection } from './design-system-section.js'
 import { apiAgentsSection } from './api-agents-data.js'
-import { integratorKnowledge, integratorNews, integratorPages, integratorSection, integratorSettings, integratorSupport } from './integrator-data.js'
+import { integratorKnowledge, integratorNews, integratorPages, integratorProgramSections, integratorSection, integratorSettings, integratorSupport } from './integrator-data.js'
 import './hosting-shell.css'
 
 const icons = {
@@ -70,11 +70,17 @@ const mobileSections = [
   ['mobile-domains', 'Домены', 'Домены и SSL'],
 ]
 const integratorSidebarGroups = [
-  [['partner', integratorSection]],
+  [
+    ['partner', integratorSection],
+    ['logs', integratorPages.operations],
+    ['files', integratorPages.documents],
+    ['balance', integratorPages.details],
+    ['mail', integratorPages.notifications],
+  ],
   [['plan', integratorSettings, 'Настройки'], ['knowledge', integratorKnowledge, 'База знаний']],
 ]
 const integratorMobileSections = [
-  ['mobile-dashboard', 'Программа', integratorSection],
+  ['mobile-dashboard', integratorSection, integratorSection],
   ['plan', 'Настройки', integratorSettings],
   ['knowledge', 'База знаний', integratorKnowledge],
 ]
@@ -275,7 +281,7 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
           <li className="hosting-prototype-heading hosting-menu-divider">Панели</li>
           <li><MenuItem as="a" href="?integrator=program" icon={<Icon name="partner" />}
             aria-current={integrator ? 'page' : undefined}
-            onClick={event => followLink(event, integratorSection, 'clients')}>Панель интегратора</MenuItem></li>
+            onClick={event => followLink(event, integratorSection)}>Панель интегратора</MenuItem></li>
         </HeaderMenu>
         <SegmentedOptions name={previewViewName} label="Режим просмотра" className="hosting-preview-switch"
           options={previewViewOptions} value={previewView} onChange={selectPreviewView} onReselect={selectPreviewView} />
@@ -374,7 +380,7 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
 const toSidebarNavigation = groups => groups.map(group =>
   group.map(([icon, id, label = id]) => ({ id, label, icon: <Icon name={icon} /> })))
 const sidebarNavigation = toSidebarNavigation(sidebarGroups)
-const integratorSidebarNavigation = toSidebarNavigation(integratorSidebarGroups)
+const integratorSidebarNavigation = toSidebarNavigation([integratorSidebarGroups.flat()])
 
 function Sidebar({ selected, onSelect, integrator }) {
   return (
@@ -410,7 +416,7 @@ function MobileMore({ open, onSelect, integrator }) {
                   <span className="hosting-more-row">
                     <span>{label}</span>
                     <span className="hosting-more-details">
-                      {icon === 'files' && (
+                      {!integrator && icon === 'files' && (
                         <>
                           <span className="hosting-more-new">NEW</span>
                           <MoreIcon name="file-notice" size={16} />
@@ -432,7 +438,8 @@ function MobileMore({ open, onSelect, integrator }) {
 
 export default function HostingShell({
   children, renderSection, initialSection = 'Дашборд', initialScreenState = null,
-  onSectionChange, onScreenStateChange, getPageStates, isCurrentSection, getIntegratorBalance, onIntegratorDeposit,
+  onSectionChange, onScreenStateChange, getPageStates, keepScreenStateOnNavigation,
+  isCurrentSection, getIntegratorBalance, onIntegratorDeposit,
 }) {
   const [toast, setToast] = useState(null)
   const [selected, setSelected] = useState(initialSection)
@@ -482,10 +489,11 @@ export default function HostingShell({
     navigate(() => {
       if (moreOpen && document.activeElement?.closest('#hosting-more')) menuToggleRef.current?.focus({ preventScroll: true })
       const integratorNavigation = integrator && Object.values(integratorPages).includes(label)
-      if (label !== selected && !integratorNavigation) setScreenState(current => ({ ...current, id: null }))
+      const keepState = label === selected || integratorNavigation || keepScreenStateOnNavigation?.(screenState.id, label)
+      if (!keepState) setScreenState(current => ({ ...current, id: null }))
       setSelected(label)
       setMenuOpen(false)
-      onSectionChange?.(label, tab, label === selected || integratorNavigation)
+      onSectionChange?.(label, tab, keepState)
       window.scrollTo(0, 0)
     })
   }
@@ -532,7 +540,7 @@ export default function HostingShell({
         integratorBalance={integrator ? getIntegratorBalance?.(screenState.id) : undefined}
         onDeposit={() => {
           setMenuOpen(false)
-          if (selected !== integratorSection) selectSection(integratorSection)
+          if (!integratorProgramSections.includes(selected)) selectSection(integratorSection)
           onIntegratorDeposit?.()
         }}
       />

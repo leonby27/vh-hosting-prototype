@@ -12,7 +12,10 @@ import settingsIcon from './assets/tariff-settings/settings.svg'
 import closeIcon from './assets/checkout/close.svg'
 
 const pageSize = 20
-const statusTones = { protected: 'success', connecting: 'info', failed: 'danger', missing: 'warning', threat: 'critical' }
+const statusTones = {
+  protected: 'success', 'ssl-upload': 'success', 'ssl-timeweb': 'success', 'ssl-expired': 'success',
+  connecting: 'info', failed: 'danger', missing: 'warning', threat: 'critical',
+}
 
 export function protectionStatusTone(status, hasNote) {
   return statusTones[status] ?? (hasNote ? 'warning' : undefined)
@@ -112,7 +115,7 @@ export function SitesTable({
   domains, statuses, statusLabels, selected, hasProtection, selecting, filterSpace, onFilterSpaceChange,
   onSelection, compact, labels = domainLabels,
   headingId = 'sites-domains-title', matchesSearch = (domain, query) => domain.name.toLowerCase().includes(query),
-  isProtected = status => status === 'protected', renderDetails, renderNote, empty,
+  isProtected = status => status === 'protected', renderDetails, renderNameSuffix, renderNote, empty,
 }) {
   const [search, setSearch] = useState('')
   const [protectedOnly, setProtectedOnly] = useState(false)
@@ -234,7 +237,10 @@ export function SitesTable({
                       >
                         {selecting && <td role="cell" className="sites-domain-check"><DomainCheckbox label={`Выбрать ${domain.name}`} checked={checked} onChange={() => selectDomain(domain.name)} /></td>}
                         <th role="rowheader" scope="row" className="sites-domain-name">
-                          <span className="sites-domain-label" title={domain.name}>{domain.name}</span>
+                          <span className="sites-domain-name-line">
+                            <span className="sites-domain-label" title={domain.name}>{domain.name}</span>
+                            {renderNameSuffix?.(domain)}
+                          </span>
                           <div className="sites-mobile-dns">{renderDetails ? renderDetails(domain, true) : domain.dns}</div>
                           {note}
                         </th>

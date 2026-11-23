@@ -9,6 +9,7 @@ import { SegmentedOptions } from './ui/navigation.jsx'
 import { AssetIcon } from './ui/Icon.jsx'
 import { Surface } from './ui/layout.jsx'
 import { Badge, Tooltip } from './ui/feedback.jsx'
+import NetworkAttackNotice from './NetworkAttackNotice.jsx'
 import './dashboard.css'
 
 const assets = {
@@ -437,7 +438,7 @@ function TimmyPrompt() {
   )
 }
 
-export default function Dashboard({ onSelect, dark, compact, screenState }) {
+export default function Dashboard({ onSelect, dark, compact, screenState, attackNotice }) {
   const preset = topUpStates.find(state => state.id === screenState)
   const [topUpOpen, setTopUpOpen] = useState(Boolean(preset))
   const [balance, setBalance] = useState(2784)
@@ -455,6 +456,7 @@ export default function Dashboard({ onSelect, dark, compact, screenState }) {
 
   return (
     <div className="dashboard">
+      {attackNotice && <NetworkAttackNotice {...attackNotice} onConnect={() => onSelect('Сайты', 'network-protection')} />}
       <TimmyPrompt />
       <Billing onTariffSettings={() => onSelect('Настройки тарифа')} onTopUp={() => setTopUpOpen(true)} balance={balance} compact={compact} />
       <section className="dashboard-services" aria-labelledby="dashboard-services-title">

@@ -1,9 +1,9 @@
 import { ButtonExample } from './ButtonExample.jsx'
 import { Changelog } from './Changelog.jsx'
-import { CalendarExample, ChoiceExample, SearchExample, SelectExample, TextFieldExample } from './ControlsExamples.jsx'
+import { CalendarExample, ChipExample, ChoiceExample, SearchExample, SelectExample, TextFieldExample } from './ControlsExamples.jsx'
 import { AlertExample, HintExample, SpinnerExample, ToastExample, TooltipExample } from './FeedbackExamples.jsx'
 import { ColorsExample, IconsExample, ShadowsExample, TypographyExample } from './FoundationExamples.jsx'
-import { MenuExample, PaginationExample, TabsExample } from './NavigationExamples.jsx'
+import { MenuExample, PaginationExample, SortHeaderExample, TabsExample } from './NavigationExamples.jsx'
 
 export const catalogEntries = [
   { id: 'button', icon: 'cursor-click', title: 'Кнопки', Example: ButtonExample },
@@ -12,9 +12,11 @@ export const catalogEntries = [
   { id: 'select', icon: 'caret-circle-down', title: 'Селекты', Example: SelectExample },
   { id: 'menu', icon: 'list', title: 'Выпадающие списки', menuLabel: 'Дропдауны', Example: MenuExample },
   { id: 'choice', icon: 'check-square', title: 'Флажки и переключатели', menuLabel: 'Флажки и свитчи', Example: ChoiceExample },
+  { id: 'chip', icon: 'tag', title: 'Чипы', Example: ChipExample },
   { id: 'calendar', icon: 'calendar-blank', title: 'Календарь', Example: CalendarExample },
   { id: 'tabs', icon: 'tabs', title: 'Вкладки', Example: TabsExample },
   { id: 'pagination', icon: 'dots-three', title: 'Пагинация', Example: PaginationExample },
+  { id: 'sort', icon: 'list', title: 'Сортировка', Example: SortHeaderExample },
   { id: 'spinner', icon: 'spinner-gap', title: 'Индикаторы загрузки', menuLabel: 'Загрузка', Example: SpinnerExample },
   { id: 'alert', icon: 'warning', title: 'Алерты', Example: AlertExample },
   { id: 'toast', icon: 'bell', title: 'Всплывающие уведомления', menuLabel: 'Уведомления', Example: ToastExample },

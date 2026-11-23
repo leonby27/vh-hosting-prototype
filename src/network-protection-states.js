@@ -1,16 +1,17 @@
 export const networkProtectionMonthlyRate = 300
 
 export const networkProtectionStatusLabels = {
-  available: 'Не подключён',
+  available: 'Не подключен',
   protected: 'Под защитой',
   connecting: 'Подключаем',
   dns: 'Ждём DNS',
   'dns-aaaa': 'Ждём DNS',
   action: 'Требуется действие',
   cdn: 'Требуется действие',
-  'ssl-upload': 'Требуется действие',
-  'ssl-timeweb': 'Требуется действие',
-  'ssl-expired': 'Требуется действие',
+  'ssl-upload': 'Под защитой',
+  'ssl-timeweb': 'Под защитой',
+  'ssl-expired': 'Под защитой',
+  'ssl-renewal-failed': 'Требуется действие',
   failed: 'Ошибка',
 }
 
@@ -32,7 +33,9 @@ export const networkProtectionStates = [
   { id: 'protection-integrator', label: 'Обратитесь к интегратору', requiresPreset: true },
   { id: 'protection-connecting', label: 'Подключение защиты' },
   { id: 'protection-failed', label: 'Сбой подключения', requiresPreset: true },
-  { id: 'protection-attack', label: 'Обнаружена атака', requiresPreset: true },
+  { id: 'protection-attack', label: 'Атака на домен под защитой', requiresPreset: true },
+  { id: 'protection-attack-single', label: 'Атака на домен без защиты', requiresPreset: true },
+  { id: 'protection-attack-multiple', label: 'Атака на несколько доменов', requiresPreset: true },
   { id: 'protection-remove-domains', label: 'Отключение домена · Что изменится' },
   { id: 'protection-disable', label: 'Подтверждение отключения услуги' },
 ]
@@ -51,6 +54,7 @@ const statusExamples = [
   { name: 'ssl-external.example', dns: 'DNS Timeweb', status: 'ssl-upload' },
   { name: 'ssl-timeweb.example', dns: 'DNS Timeweb', status: 'ssl-timeweb' },
   { name: 'ssl-expired.example', dns: 'DNS Timeweb', status: 'ssl-expired' },
+  { name: 'ssl-renewal.example', dns: 'DNS Timeweb', status: 'ssl-renewal-failed' },
   { name: 'connection-error.example', dns: 'DNS Timeweb', status: 'failed' },
 ]
 const statusDomains = [...domains, ...statusExamples]
@@ -67,6 +71,14 @@ const activeStatuses = {
   'myreviews.ru': 'protected',
 }
 
+const attackDomains = [...domains, { name: 'shop.basketball-spb.ru', dns: 'DNS Timeweb' }]
+
+export const networkAttackStates = networkProtectionStates.filter(({ id }) =>
+  ['protection-attack', 'protection-attack-single', 'protection-attack-multiple'].includes(id))
+
+const protectedStatuses = new Set(['protected', 'ssl-upload', 'ssl-timeweb', 'ssl-expired'])
+export const isNetworkDomainProtected = status => protectedStatuses.has(status)
+
 const presets = {
   'protection-empty-selection': {},
   'protection-no-sites': { availability: 'no-sites', domains: [] },
@@ -75,11 +87,15 @@ const presets = {
   'protection-region': { availability: 'region' },
   'protection-plan': { availability: 'plan' },
   'protection-blocked': { availability: 'blocked' },
-  'protection-trial': { availability: 'trial' },
+  'protection-trial': { trial: true },
   'protection-integrator': { availability: 'integrator', dialog: 'integrator' },
   'protection-connecting': { statuses: { 'basketball-spb.ru': 'connecting' }, renew: true },
   'protection-failed': { statuses: { 'basketball-spb.ru': 'failed' }, renew: true },
-  'protection-attack': { statuses: activeStatuses, renew: true, attack: true },
+  'protection-attack': { statuses: activeStatuses, renew: true, attackedDomains: ['timeweb.ru'] },
+  'protection-attack-single': { attackedDomains: ['basketball-spb.ru'] },
+  'protection-attack-multiple': { domains: attackDomains, attackedDomains: [
+    'basketball-spb.ru', 'shop.basketball-spb.ru', 'timeweb.ru', 'coconote.ru', 'myreviews.ru',
+  ] },
   'protection-remove-domains': {
     statuses: activeStatuses, renew: true, editingDomains: true,
     removedDomain: 'myreviews.ru',

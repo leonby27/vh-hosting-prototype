@@ -229,7 +229,7 @@ function ConnectionInstructions({ secret, onCreate, initialMethod = 'http' }) {
 }
 
 function DataTable({ headings, label, className = '', hasActions = false, children }) {
-  return <TableFrame className={`api-table-scroll ${className}`.trim()} label={label}>
+  return <TableFrame appearance="surface" className={`api-table-scroll ${className}`.trim()} label={label}>
     <table role="table">
       <thead role="rowgroup"><tr role="row">
         {headings.map(heading => <th key={heading} scope="col" role="columnheader">{heading}</th>)}

@@ -5,7 +5,8 @@ import { AssetIcon, Icon } from './Icon.jsx'
 import plusIcon from '../assets/plan-changes/plus.svg'
 import minusIcon from '../assets/plan-changes/minus.svg'
 import { IconButton } from './Button.jsx'
-import { Dropdown } from './navigation.jsx'
+import { Badge, Tooltip } from './feedback.jsx'
+import { Dropdown, PopoverMenu } from './navigation.jsx'
 import { Checkbox, Radio } from './selection.jsx'
 export { Button, IconButton } from './Button.jsx'
 
@@ -40,7 +41,7 @@ export function TextInput({ multiline, size = 44, variant = 'default', className
   const Input = multiline ? 'textarea' : 'input'
   const input = <Input {...props} className={`vh-text-input vh-focus ${className}`.trim()}
     data-size={size} data-input-variant={variant} />
-  return multiline && variant === 'default' ? <div className="vh-textarea">{input}</div> : input
+  return multiline && variant === 'default' ? <div className="vh-textarea" data-size={size}>{input}</div> : input
 }
 
 export function TextField({ label, hideLabel, hint, error, multiline, size = 44, id, className, disabled, leading, trailing, caption, ...props }) {
@@ -49,7 +50,7 @@ export function TextField({ label, hideLabel, hint, error, multiline, size = 44,
     id={id ?? generatedId} className={className}>
     {fieldProps => {
       const input = <TextInput {...props} {...fieldProps} multiline={multiline} size={size} disabled={disabled} />
-      return <div className="vh-input-decoration" data-decorated={Boolean(leading || trailing || caption) || undefined}>
+      return <div className="vh-input-decoration" data-size={size} data-decorated={Boolean(leading || trailing || caption) || undefined}>
         {leading && <span className="vh-input-leading">{leading}</span>}
         {input}
         {(trailing || caption) && <span className="vh-input-trailing">{caption && <span>{caption}</span>}{trailing}</span>}
@@ -71,14 +72,48 @@ export function Select({ label, hideLabel, hint, error, value, options, onChange
           'aria-label': [label, current?.label ?? placeholder].join(', ') }}
         items={options.map(option => ({ ...option, selected: option.value === value }))}
         onSelect={onChange} />
-      {current && onClear && !disabled && <button type="button" className="vh-select-clear vh-focus"
-        aria-label={`Очистить поле «${label}»`}
-        onClick={event => {
-          event.currentTarget.parentElement.querySelector('.vh-select-trigger')?.focus()
-          onClear()
-        }}>
-        <Icon name="close-solid" size={16} />
-      </button>}
+      {current && onClear && !disabled && <SelectClear label={label} onClear={onClear} />}
+    </div>}
+  </Field>
+}
+
+function SelectClear({ label, onClear, multiple = false }) {
+  function renderButton(descriptionId) {
+    return <button type="button" className="vh-select-clear vh-focus" aria-label={`Очистить поле «${label}»`}
+      aria-describedby={descriptionId} onClick={event => {
+        event.currentTarget.closest('.vh-select')?.querySelector('.vh-select-trigger')?.focus()
+        onClear()
+      }}>
+      <Icon name="close-solid" size={multiple ? 20 : 16} />
+    </button>
+  }
+
+  return multiple ? (
+    <Tooltip className="vh-select-clear-tooltip" content="Сбросить" placement="top">{renderButton}</Tooltip>
+  ) : renderButton()
+}
+
+export function MultiSelect({
+  label, hideLabel, options, value, onChange, placeholder = 'Выберите',
+  variant = 'default', size = variant === 'surface' ? 40 : 44, formatSummary,
+}) {
+  const id = useId()
+  const selection = options.filter(option => value.includes(option.value))
+  const summary = selection.length
+    ? formatSummary?.(selection.length, options.length) ?? (selection.length === 1 ? selection[0].label : `Выбрано ${selection.length}`)
+    : placeholder
+
+  return <Field label={label} hideLabel={hideLabel} id={id}>
+    {fieldProps => <div className="vh-select" data-multiple data-clearable={selection.length > 0 || undefined}>
+      <PopoverMenu variant={variant} trigger={<span className="vh-select-value">{summary}</span>}
+        triggerProps={{ ...fieldProps, className: 'vh-select-trigger', 'data-size': size, 'aria-label': `${label}, ${summary}` }}>
+        {() => options.map(option => (
+          <Choice key={option.value} label={<span>{option.label}</span>} size={20} checked={value.includes(option.value)}
+            onChange={event => onChange(event.target.checked
+              ? [...value, option.value] : value.filter(selected => selected !== option.value))} />
+        ))}
+      </PopoverMenu>
+      {selection.length > 0 && <SelectClear label={label} multiple onClear={() => onChange([])} />}
     </div>}
   </Field>
 }
@@ -94,7 +129,7 @@ export function SearchField({ label, icon, className = '', variant = 'default', 
     field.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
-  return <div className={`sites-domain-search ${className}`.trim()} data-search-variant={variant}
+  return <div className={`sites-domain-search ${className}`.trim()} data-search-variant={variant} data-size={size}
     data-preview-state={previewState} style={{ '--vh-search-height': `${size}px` }}>
     <label className="vh-search-field">
       <span className="vh-search-icon" aria-hidden="true">
@@ -154,11 +189,21 @@ export function Range({ label, value, min = 0, max = 100, onChange, ...props }) 
   </div>
 }
 
-export function Chip({ selected, onSelect, onRemove, removeLabel, children }) {
-  return <span className="vh-chip" data-selected={selected || undefined}>
-    {onSelect ? <button type="button" className="vh-focus" onClick={onSelect} aria-pressed={Boolean(selected)}>{children}</button>
-      : <span>{children}</span>}
-    {onRemove && <button type="button" className="vh-focus vh-chip-remove" aria-label={removeLabel ?? `Удалить ${children}`} onClick={onRemove}>
+export function Chip({ selected, onSelect, onRemove, removeLabel, children, size = 32, icon, count, disabled = false, previewState }) {
+  const Label = onSelect ? 'button' : 'span'
+  const labelProps = onSelect
+    ? { type: 'button', onClick: onSelect, disabled, 'aria-pressed': Boolean(selected) }
+    : {}
+
+  return <span className="vh-chip" data-size={size} data-selected={selected || undefined}
+    data-disabled={disabled || undefined} data-interactive={Boolean(onSelect || onRemove) || undefined}
+    data-removable={Boolean(onRemove) || undefined} data-preview-state={previewState}>
+    <Label {...labelProps} className="vh-chip-label vh-focus" data-preview-state={onSelect ? previewState : undefined}>
+      {icon}{children}
+      {count != null && <Badge className="vh-chip-count">{count}</Badge>}
+    </Label>
+    {onRemove && <button type="button" className="vh-focus vh-chip-remove" disabled={disabled}
+      aria-label={removeLabel ?? `Удалить ${children}`} onClick={onRemove}>
       <Icon name="close-solid" size={20} />
     </button>}
   </span>

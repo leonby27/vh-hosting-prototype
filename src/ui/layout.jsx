@@ -45,8 +45,8 @@ export function SidebarNav({ items = [], groups = [items], value, onChange, labe
   </nav>
 }
 
-export function TableFrame({ label, className = '', scrollable = true, children }) {
-  return <div className={`vh-table-frame ${className}`.trim()} data-scrollable={scrollable || undefined}
+export function TableFrame({ label, className = '', scrollable = true, appearance, children }) {
+  return <div className={`vh-table-frame ${className}`.trim()} data-scrollable={scrollable || undefined} data-table-appearance={appearance}
     tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? label : undefined}>
     {children}
   </div>

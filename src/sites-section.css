@@ -10,7 +10,7 @@
 .sites-heading {
   display: grid;
   gap: 12px;
-  margin-block-end: 16px;
+  margin-block-end: var(--hosting-tab-content-gap);
 }
 
 .sites-heading h1,
@@ -31,18 +31,48 @@
   background: var(--hosting-icon-success);
 }
 
+.sites-my-sites .network-attack-notice {
+  padding-block-end: var(--hosting-section-gap);
+}
+
+.sites-page .sites-my-domain-list {
+  list-style: none;
+  padding: 0;
+}
+
+.sites-my-domain-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 52px;
+  padding-inline: 16px;
+  overflow-wrap: anywhere;
+}
+
+.sites-my-domain-list li + li {
+  border-block-start: 1px solid var(--hosting-line);
+}
+
+.sites-domain-name-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sites-attack-mark {
+  display: inline-flex;
+  flex: none;
+  color: var(--hosting-plan-danger);
+}
+
 .sites-protection:not([hidden]) {
   --sites-protection-gap: var(--hosting-section-gap);
   display: grid;
   gap: var(--sites-protection-gap);
 }
 
-.sites-connection-alert {
-  margin-block-start: calc(-1 * var(--sites-protection-gap));
-}
-
 .sites-connection-alert-content {
-  padding-block-start: var(--sites-protection-gap);
+  padding-block-end: var(--sites-protection-gap);
 }
 
 .sites-domains { --hosting-reveal-delay: 15ms; }
@@ -430,11 +460,9 @@
 
 .sites-domain-row[data-selectable] {
   --sites-domain-tinted-badge: color-mix(in srgb, var(--hosting-text) 12%, transparent);
-  cursor: pointer;
 }
 
 .sites-domain-row[data-selected] {
-  --sites-domain-row-background: color-mix(in srgb, var(--hosting-focus) 6%, var(--hosting-surface));
   --vh-badge-back: var(--sites-domain-tinted-badge);
 }
 
@@ -445,7 +473,6 @@
 
 @media (hover: hover) and (pointer: fine) {
   .sites-domain-row[data-selectable]:not([data-selected]):hover {
-    --sites-domain-row-background: var(--hosting-card-surface);
     --vh-badge-back: var(--sites-domain-tinted-badge);
   }
 }
@@ -847,10 +874,6 @@
 
   .sites-mobile-copy {
     display: inline;
-  }
-
-  .sites-heading {
-    margin-block-end: 20px;
   }
 
   .sites-tabs {

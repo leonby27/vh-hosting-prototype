@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { AnimatedBlock } from '../hosting-motion.jsx'
-import { Choice, DropdownItems, Icon, MenuPanel, Pagination, SearchField, Select, TabList } from '../ui/index.js'
+import { Choice, DropdownItems, Icon, MenuPanel, Pagination, SearchField, Select, SortHeader, TableFrame, TabList } from '../ui/index.js'
 import { defaultSegmentedSize, segmentedSizes } from '../ui/navigation.jsx'
 import { Example } from './Preview.jsx'
 import { OptionsSelect } from './OptionsSelect.jsx'
@@ -26,6 +26,30 @@ const tabViews = [
   { value: 'icons', label: 'С иконками' },
 ]
 const segmentedSizeOptions = segmentedSizes.map(value => ({ value, label: `${value} px` }))
+
+export function SortHeaderExample() {
+  const [sort, setSort] = useState({ column: 'balance', direction: 'none' })
+  const rows = [
+    { id: 'first', date: '14.11.2026', balance: '1 200 ₽' },
+    { id: 'second', date: '23.11.2026', balance: '3 210 ₽' },
+  ]
+  const visibleRows = sort.direction === 'descending' ? rows.toReversed() : rows
+
+  return <Example title="Сортируемые колонки">
+    <TableFrame appearance="surface" label="Пример сортируемой таблицы">
+      <table>
+        <thead><tr>
+          <SortHeader direction={sort.column === 'date' ? sort.direction : 'none'}
+            onChange={direction => setSort({ column: 'date', direction })}>Дата</SortHeader>
+          <SortHeader icon="arrowup-outline" iconButtonLabel="Сортировать по балансу"
+            direction={sort.column === 'balance' ? sort.direction : 'none'}
+            onChange={direction => setSort({ column: 'balance', direction })}>Баланс</SortHeader>
+        </tr></thead>
+        <tbody>{visibleRows.map(row => <tr key={row.id}><td>{row.date}</td><td>{row.balance}</td></tr>)}</tbody>
+      </table>
+    </TableFrame>
+  </Example>
+}
 
 function TabsSample({ title, tabs, variant = 'line', size, surface }) {
   const id = useId()

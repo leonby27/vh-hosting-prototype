@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { AnimatedBlock } from '../hosting-motion.jsx'
-import { Calendar, Choice, Icon, SearchField, Select, Stepper, TextField } from '../ui/index.js'
+import { Calendar, Chip, Choice, Icon, MultiSelect, SearchField, Select, Stepper, TextField } from '../ui/index.js'
 import { Example } from './Preview.jsx'
 import { OptionsSelect } from './OptionsSelect.jsx'
 
@@ -125,39 +125,46 @@ const selectStates = [
   { id: 'disabled', label: 'Недоступный', value: 'start', disabled: true },
 ]
 const selectVariants = [
-  { value: 'default', label: 'Стандартный' },
-  { value: 'toolbar', label: 'Скрытая рамка' },
-  { value: 'surface', label: 'На карточке' },
+  { value: 'default', label: 'С рамкой' },
+  { value: 'toolbar', label: 'Без рамки' },
+  { value: 'surface', label: 'С фоном карточки' },
 ]
 const selectStateOptions = selectStates.map(({ id, label }) => ({ value: id, label }))
 export function SelectExample() {
   const [state, setState] = useState('empty')
   const [size, setSize] = useState(44)
+  const [variant, setVariant] = useState('default')
   const [values, setValues] = useState({})
+  const [selectedPlans, setSelectedPlans] = useState([])
   const { value, disabled, hint, error, previewState } = selectStates.find(option => option.id === state)
+  const sampleKey = `${variant}-${state}`
 
-  function select(key, next) {
-    setValues(current => ({ ...current, [key]: next }))
+  function select(next) {
+    setValues(current => ({ ...current, [sampleKey]: next }))
   }
 
   return <div className="catalog-example-flow">
     <div className="catalog-toolbar" role="group" aria-label="Параметры примера селекта">
       <Select label="Состояние" options={selectStateOptions} value={state} onChange={setState} />
       <Select label="Высота поля" options={fieldSizes} value={size} onChange={setSize} />
+      <Select label="Оформление" options={selectVariants} value={variant} onChange={setVariant} />
     </div>
-    {selectVariants.map(({ value: variant, label }) => {
-      const key = `${variant}-${state}`
-      return <Example key={variant} title={label} contrast={variant === 'toolbar'}>
-        <AnimatedBlock>
-          <div className="catalog-field-sample">
-            <Select variant={variant} label="Тариф" size={size} options={plans}
-              value={values[key] ?? value} onChange={next => select(key, next)}
-              onClear={state === 'clear' ? () => select(key, '') : undefined}
-              disabled={disabled} hint={hint} error={error ?? ''} previewState={previewState} />
-          </div>
-        </AnimatedBlock>
-      </Example>
-    })}
+    <Example title="С чекбоксами">
+      <div className="catalog-field-sample">
+        <MultiSelect label="Тарифы" size={size} variant={variant} placeholder="Все тарифы" options={plans}
+          value={selectedPlans} onChange={setSelectedPlans} />
+      </div>
+    </Example>
+    <Example title="С одним вариантом" contrast={variant === 'toolbar'}>
+      <AnimatedBlock>
+        <div className="catalog-field-sample">
+          <Select key={sampleKey} variant={variant} label="Тариф" size={size} options={plans}
+            value={values[sampleKey] ?? value} onChange={select}
+            onClear={state === 'clear' ? () => select('') : undefined}
+            disabled={disabled} hint={hint} error={error ?? ''} previewState={previewState} />
+        </div>
+      </AnimatedBlock>
+    </Example>
   </div>
 }
 
@@ -190,6 +197,54 @@ export function ChoiceExample() {
         {choiceStates.radio.map(([label, props], index) => <Choice key={label}
           kind="radio" variant="button" label={label} name={`${id}-button-${index}`} {...props} />)}
       </div>
+    </Example>
+  </div>
+}
+
+const chipFilters = [
+  ['Все', 12, 'list-solid'],
+  ['Осталось меньше семи дней', 4, 'clock-solid'],
+  ['Заблокированы', 2, 'ban-outline'],
+  ['С автопополнением', 6, 'wallete-solid'],
+]
+const chipSizes = [28, 32, 36, 40, 44].map(value => ({ value, label: `${value} px` }))
+const chipContentOptions = [
+  { value: 'left', label: 'Иконка слева' },
+  { value: 'count', label: 'Цифра справа' },
+]
+const chipStates = [
+  { value: 'default', label: 'Default' },
+  { value: 'hover', label: 'Hover' },
+  { value: 'pressed', label: 'Pressed' },
+  { value: 'focus', label: 'Focus' },
+  { value: 'disabled', label: 'Disabled' },
+]
+
+export function ChipExample() {
+  const [selected, setSelected] = useState(chipFilters[0][0])
+  const [size, setSize] = useState(32)
+  const [content, setContent] = useState([])
+  const [state, setState] = useState('default')
+  const showIcon = content.includes('left')
+  const showCount = content.includes('count')
+
+  return <div className="catalog-example-flow">
+    <div className="catalog-toolbar" role="group" aria-label="Параметры примера чипов">
+      <Select label="Состояние" options={chipStates} value={state} onChange={setState} />
+      <Select label="Размер" options={chipSizes} value={size} onChange={setSize} />
+      <OptionsSelect label="Наполнение" emptyLabel="По умолчанию" options={chipContentOptions} value={content} onChange={setContent} />
+    </div>
+    <Example title="Быстрые фильтры">
+      <AnimatedBlock>
+        <div className="catalog-row catalog-centered" role="group" aria-label="Фильтры клиентов">
+          {chipFilters.map(([label, count, icon]) => <Chip key={label} selected={label === selected} onSelect={() => setSelected(label)}
+            size={size} icon={showIcon ? <Icon name={icon} size={16} /> : undefined}
+            count={showCount ? count : undefined}
+            previewState={state} disabled={state === 'disabled'}>
+            {label}
+          </Chip>)}
+        </div>
+      </AnimatedBlock>
     </Example>
   </div>
 }

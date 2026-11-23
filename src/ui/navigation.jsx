@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { DropdownPanel, TabIndicator } from '../hosting-motion.jsx'
 import caret from '../assets/hosting/caret.svg'
 import { Icon } from './Icon.jsx'
-import { Button } from './Button.jsx'
+import { Button, IconButton } from './Button.jsx'
 import { useMenuDisclosure } from './menu-disclosure.js'
 import { Radio } from './selection.jsx'
 
@@ -82,7 +82,7 @@ export function moveMenuFocus(event, panel, open = true, onOpen) {
   if (event.defaultPrevented || !panel || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
   if (!open && ['Home', 'End'].includes(event.key)) return
   const focusable = ':is(button, a[href]):not(:disabled, [aria-disabled="true"])'
-  const items = Array.from(panel.querySelectorAll(`.vh-list-item${focusable}`))
+  const items = Array.from(panel.querySelectorAll(`.vh-list-item${focusable}, .vh-choice > input[type="checkbox"]:enabled`))
   if (!items.length) items.push(...panel.querySelectorAll(focusable))
   if (!items.length) return
 
@@ -198,11 +198,20 @@ export function Pagination({ page, count, onChange, label = 'Страницы' }
   </nav>
 }
 
-export function SortHeader({ direction = 'none', onChange, children, ...props }) {
+export function SortHeader({ direction = 'none', icon = 'bold-arrow-up', iconButtonLabel, onChange, children, ...props }) {
   const next = { none: 'ascending', ascending: 'descending', descending: 'none' }[direction]
+  const arrow = <Icon name={icon} size={16} />
+  const sort = () => onChange(next)
+
   return <th {...props} scope="col" aria-sort={direction}>
-    <button className="vh-sort vh-focus" data-direction={direction} type="button" onClick={() => onChange(next)}>
-      {children}<Icon name="bold-arrow-up" size={16} />
-    </button>
+    {iconButtonLabel
+      ? <span className="vh-sort-heading">
+        {children}
+        <IconButton label={iconButtonLabel} icon={arrow} size={24} data-sort-direction={direction}
+          data-hover-as-pressed onClick={sort} />
+      </span>
+      : <button className="vh-sort vh-focus" data-sort-direction={direction} type="button" onClick={sort}>
+        {children}{arrow}
+      </button>}
   </th>
 }

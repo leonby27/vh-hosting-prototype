@@ -1,4 +1,4 @@
-export const integratorSection = 'Партнёрская программа'
+export const integratorSection = 'Мои клиенты'
 export const integratorSettings = 'Настройки интегратора'
 export const integratorKnowledge = 'База знаний интегратора'
 export const integratorSupport = 'Поддержка интегратора'
@@ -6,19 +6,20 @@ export const integratorNews = 'Новости для интеграторов'
 
 export const integratorPages = {
   program: integratorSection,
+  operations: 'Операции',
+  documents: 'Документы',
+  details: 'Реквизиты и выплаты',
+  notifications: 'Уведомления',
   settings: integratorSettings,
   knowledge: integratorKnowledge,
   support: integratorSupport,
   news: integratorNews,
 }
 
-export const integratorTabs = [
-  { id: 'clients', label: 'Клиенты' },
-  { id: 'topup', label: 'Пополнение' },
-  { id: 'operations', label: 'Операции' },
-  { id: 'documents', label: 'Документы' },
-  { id: 'details', label: 'Мои данные' },
+export const integratorProgramSections = [
+  integratorSection, integratorPages.operations, integratorPages.documents, integratorPages.details, integratorPages.notifications,
 ]
+
 export const integratorSettingsTabs = [
   { id: 'account', label: 'Аккаунт' },
   { id: 'users', label: 'Пользователи' },
@@ -34,6 +35,8 @@ export const integratorStates = [
 
 export const organization = 'ООО «Веб-студия Урал»'
 export const defaultBalance = 48600
+const dayMs = 86400000
+const demoDate = Date.now()
 export const demoClients = [
   ['vostok-auto', 'Восток Авто', 'Year', 10.4, 3210],
   ['cafe-lagom', 'Кафе Lagom', 'Optimo', 12.5, 96, true],
@@ -53,10 +56,17 @@ export const demoClients = [
   ['zoo-magazin', 'Зоомагазин', 'Optimo+', 15.8, 3480],
   ['bani-ural', 'Бани Урал', 'Year', 10.4, 74],
   ['print-center', 'Принт Центр', 'Optimo', 12.5, 1520],
-  ['info-mail', 'Инфо Почта', 'Почтовый', 6.2, 450],
-  ['mebel-art', 'Мебель Арт', 'Century', 21.9, 0],
-  ['psiholog-ann', 'Психолог Анна', 'Optimo', 12.5, 0],
-].map(([id, name, tariff, rate, balance, automatic = false]) => ({ id, name, tariff, rate, balance, automatic }))
+  ['info-mail', 'Инфо Почта', 'Почтовый', 6.2, 450, false, 18],
+  ['mebel-art', 'Мебель Арт', 'Century', 21.9, 0, false, 11],
+  ['psiholog-ann', 'Психолог Анна', 'Optimo', 12.5, 0, false, 5],
+].map(([id, name, tariff, rate, balance, automatic = false, ageInDays = 90]) => ({
+  id, name, tariff, rate, balance, automatic, billingPeriod: tariff === 'Year' ? 'year' : 'month',
+  createdAt: demoDate - ageInDays * dayMs,
+}))
+
+export function countRecentClients(clients, now = Date.now()) {
+  return clients.filter(client => client.createdAt >= now - 30 * dayMs && client.createdAt <= now).length
+}
 
 export const demoOperations = [
   { id: 'auto', date: '2026-09-27', type: 'Автопополнение', description: 'Автопополнение для 4 клиентов', amount: -640 },

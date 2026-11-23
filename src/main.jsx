@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useCallback, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { designSystemSection } from './design-system-section.js'
 import './styles.css'
@@ -12,9 +12,9 @@ import SitesSection from './SitesSection.jsx'
 import ApiAgents, { apiTabs } from './ApiAgents.jsx'
 import { apiAgentsSection, apiKeysPreset } from './api-agents-data.js'
 import { antivirusStates } from './antivirus-states.js'
-import { networkProtectionStates } from './network-protection-states.js'
+import { getNetworkProtectionPreset, isNetworkDomainProtected, networkAttackStates, networkProtectionStates } from './network-protection-states.js'
 import IntegratorPanel from './IntegratorPanel.jsx'
-import { getIntegratorDemo, integratorPages, integratorSection, integratorSettings, integratorSettingsTabs, integratorStates, integratorTabs, money } from './integrator-data.js'
+import { getIntegratorDemo, integratorPages, integratorSection, integratorSettings, integratorSettingsTabs, integratorStates, money } from './integrator-data.js'
 
 const DesignSystemCatalog = lazy(() => import('./DesignSystemCatalog.jsx'))
 const query = new URLSearchParams(window.location.search)
@@ -37,7 +37,7 @@ const tariffServiceStates = [
 
 function getPrototypeStates(section, tab) {
   if (Object.values(integratorPages).includes(section)) return integratorStates
-  if (section === 'Дашборд') return topUpStates
+  if (section === 'Дашборд') return [...topUpStates, ...networkAttackStates]
   if (section === planChangesSection) return planChangesStates
   if (section === tariffSection && (!tab || tab === 'services')) return tariffServiceStates
   if (section === apiAgentsSection && (!tab || tab === 'keys')) return [apiKeysPreset]
@@ -45,6 +45,7 @@ function getPrototypeStates(section, tab) {
     if (!tab) return [...antivirusStates, ...networkProtectionStates]
     if (tab === 'antivirus') return antivirusStates
     if (tab === 'network-protection') return networkProtectionStates
+    if (tab === 'mine') return networkAttackStates
   }
   return []
 }
@@ -71,8 +72,7 @@ function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
   const integratorPage = Object.keys(integratorPages).find(page => integratorPages[page] === section)
   if (integratorPage) url.searchParams.set('integrator', integratorPage)
   else url.searchParams.delete('integrator')
-  if (section === integratorSection && tab !== 'clients') url.searchParams.set('ptab', tab)
-  else url.searchParams.delete('ptab')
+  url.searchParams.delete('ptab')
   if (section === integratorSettings && tab !== 'account') url.searchParams.set('settings-tab', tab)
   else url.searchParams.delete('settings-tab')
   if (!keepState) url.searchParams.delete('state')
@@ -93,24 +93,38 @@ function HostingApp() {
   const requestedApiTab = query.get('api')
   const [apiTab, setApiTab] = useState(apiTabs.some(([id]) => id === requestedApiTab) ? requestedApiTab : 'connection')
   const [apiKeys, setApiKeys] = useState([])
-  const [integratorTab, setIntegratorTab] = useState(() => readTab(integratorTabs, query.get('ptab')))
   const [settingsTab, setSettingsTab] = useState(() => readTab(integratorSettingsTabs, query.get('settings-tab')))
   const [integratorDemos, setIntegratorDemos] = useState({})
   const [integratorPayment, setIntegratorPayment] = useState(null)
-  const initialSection = query.has('integrator') ? (Object.hasOwn(integratorPages, query.get('integrator')) ? integratorPages[query.get('integrator')] : integratorSection) :
+  const requestedIntegratorPage = query.get('integrator')
+  const legacyIntegratorTab = query.get('ptab')
+  const integratorPage = requestedIntegratorPage === 'program' && ['operations', 'documents', 'details'].includes(legacyIntegratorTab)
+    ? legacyIntegratorTab : requestedIntegratorPage
+  const initialSection = query.has('integrator') ? (Object.hasOwn(integratorPages, integratorPage) ? integratorPages[integratorPage] : integratorSection) :
     query.has('catalog') ? designSystemSection : query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection : query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : 'Дашборд'
   const requestedState = query.get('state')
   const initialScreenState = requestedState === 'initial' || getPrototypeStates(initialSection).some(state => state.id === requestedState)
     ? requestedState : null
+  const [incidentRun, setIncidentRun] = useState(() => ({
+    token: {}, statuses: getNetworkProtectionPreset(initialScreenState).statuses, dismissed: false,
+  }))
+  const incidentToken = incidentRun.token
+  const setIncidentStatuses = useCallback(update => {
+    setIncidentRun(current => current.token === incidentToken
+      ? { ...current, statuses: update(current.statuses) } : current)
+  }, [incidentToken])
+
+  function chooseScreenState(id, section) {
+    if (networkAttackStates.some(state => state.id === id)) {
+      setIncidentRun({ token: {}, statuses: getNetworkProtectionPreset(id).statuses, dismissed: false })
+    }
+    syncPrototypeState(id, section)
+  }
 
   function selectSection(section, tab = 'mine', keepState) {
     if (section === sitesSection) setSitesTab(tab)
     if (section === apiAgentsSection) setApiTab('connection')
     if (section === tariffSection) setTariffTab(tab === 'services' ? tab : 'tariff')
-    if (section === integratorSection) {
-      tab = readTab(integratorTabs, tab)
-      setIntegratorTab(tab)
-    }
     if (section === integratorSettings) {
       tab = readTab(integratorSettingsTabs, tab)
       setSettingsTab(tab)
@@ -134,10 +148,17 @@ function HostingApp() {
   }
 
   function renderSection(section, onSelect, dark, screenState, compact) {
+    const incident = networkAttackStates.some(state => state.id === screenState)
+      ? getNetworkProtectionPreset(screenState) : null
+    const attackNotice = incident && {
+      domains: incident.attackedDomains.filter(name => !isNetworkDomainProtected(incidentRun.statuses[name])),
+      dismissed: incidentRun.dismissed,
+      onDismiss: () => setIncidentRun(current => ({ ...current, dismissed: true })),
+    }
     if (Object.values(integratorPages).includes(section)) {
       const scenario = integratorScenario(screenState)
-      return <IntegratorPanel section={section} tab={section === integratorSettings ? settingsTab : integratorTab}
-        scenario={scenario} onTabChange={tab => selectSection(section, tab, true)}
+      return <IntegratorPanel section={section} compact={compact} tab={settingsTab}
+        scenario={scenario} onTabChange={tab => selectSection(section, tab, true)} onSelectSection={onSelect}
         payment={integratorPayment} setPayment={setIntegratorPayment}
         demo={integratorDemos[scenario] ?? getIntegratorDemo(scenario)}
         updateDemo={update => setIntegratorDemos(current => ({
@@ -157,7 +178,7 @@ function HostingApp() {
         syncPrototypeLocation(apiAgentsSection, tab)
       }} />
     }
-    if (section === 'Дашборд') return <Dashboard onSelect={onSelect} dark={dark} compact={compact} screenState={screenState} />
+    if (section === 'Дашборд') return <Dashboard onSelect={onSelect} dark={dark} compact={compact} screenState={screenState} attackNotice={attackNotice} />
     if (section === planChangesSection) {
       const scenario = planChangeScenarios.find(entry => screenState === `scenario-${entry.id}`)
       return <PlanChangesPreview startsWithSavedCard={screenState === 'saved-card'}
@@ -169,7 +190,8 @@ function HostingApp() {
         onTabChange={selectTariffTab} onSecurity={tab => onSelect(sitesSection, tab)} />
     }
     if (section === sitesSection) {
-      return <SitesSection tab={sitesTab} onTabChange={selectSitesTab} screenState={screenState} compact={compact} />
+      return <SitesSection tab={sitesTab} onTabChange={selectSitesTab} screenState={screenState} compact={compact}
+        attackNotice={attackNotice} incidentStatuses={incidentRun.statuses} setIncidentStatuses={setIncidentStatuses} />
     }
     return null
   }
@@ -179,12 +201,13 @@ function HostingApp() {
       initialSection={initialSection}
       initialScreenState={initialScreenState}
       onSectionChange={selectSection}
-      onScreenStateChange={syncPrototypeState}
+      onScreenStateChange={chooseScreenState}
+      keepScreenStateOnNavigation={(id, section) => (section === sitesSection || section === 'Дашборд') &&
+        networkAttackStates.some(state => state.id === id)}
       isCurrentSection={(section, tab) => section === sitesSection ? sitesTab === (tab ?? 'mine')
         : section === tariffSection ? tariffTab === (tab === 'services' ? tab : 'tariff')
           : section === apiAgentsSection ? !tab || apiTab === tab
-            : section === integratorSection ? integratorTab === readTab(integratorTabs, tab)
-              : section === integratorSettings ? settingsTab === readTab(integratorSettingsTabs, tab) : true}
+            : section === integratorSettings ? settingsTab === readTab(integratorSettingsTabs, tab) : true}
       getPageStates={getPageStates}
       renderSection={renderSection}
       onIntegratorDeposit={() => setIntegratorPayment('deposit')}

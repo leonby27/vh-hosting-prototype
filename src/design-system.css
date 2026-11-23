@@ -131,7 +131,7 @@
 .catalog-toolbar > :only-child { max-inline-size: 360px; }
 .catalog-icons-toolbar { grid-template-columns: minmax(0, 1fr) minmax(106px, 160px); align-items: center; }
 .catalog-shadow-samples > .vh-surface { min-block-size: 100px; box-sizing: border-box; }
-.catalog-field-sample { max-inline-size: 360px; margin-inline: auto; }
+.catalog-field-sample { inline-size: min(100%, 360px); margin-inline: auto; }
 .catalog-search-samples {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 168px), 1fr));

@@ -373,15 +373,10 @@
 .api-table-scroll {
   max-inline-size: 100%;
   overflow-x: auto;
-  border-radius: var(--hosting-radius);
-  background: var(--hosting-surface);
-  box-shadow: var(--hosting-shadow);
 }
 
 .api-table-scroll table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .api-table-scroll :is(th, td) { padding: 12px 16px; text-align: start; }
-.api-table-scroll thead { background: var(--hosting-surface-60); }
-.api-table-scroll thead th { color: var(--hosting-text); font-weight: 500; }
 .api-table-scroll tbody th { font-weight: 500; }
 .api-table-scroll tbody td { font-weight: 400; }
 .api-table-scroll tbody tr + tr { border-block-start: 1px solid var(--hosting-line); }

@@ -6,6 +6,7 @@
   --hosting-sidebar-width: 256px;
   --hosting-column-gap: 40px;
   --hosting-section-gap: 24px;
+  --hosting-tab-content-gap: 16px;
   --hosting-frame-width: 1216px;
   --hosting-desktop-header-height: 76px;
   --hosting-product-header-height: var(--hosting-desktop-header-height);
@@ -436,6 +437,7 @@ html:has(.hosting-scroll-spacer) {
 
 .hosting-header .hosting-prototype-menu .hosting-dropdown-list {
   inset-inline: 0 auto;
+  padding-block-start: 12px;
 }
 
 .hosting-prototype-heading {
@@ -673,6 +675,7 @@ html:has(.hosting-scroll-spacer) {
 
 .hosting-shell[data-compact="true"] {
   --hosting-section-gap: 20px;
+  --hosting-tab-content-gap: 20px;
   --hosting-product-header-height: 56px;
   --hosting-controls-color: var(--hosting-title);
   --hosting-controls-selected-color: var(--hosting-surface);

@@ -20,7 +20,7 @@ const iconPositions = [
   { value: 'only', label: 'Только иконка' },
 ]
 
-const sizes = [48, 40, 32, 24].map(value => ({ value, label: `${value} px` }))
+const sizes = [48, 44, 40, 36, 32, 24].map(value => ({ value, label: `${value} px` }))
 
 const colorVariants = [
   { variant: 'primary', label: 'Primary' },

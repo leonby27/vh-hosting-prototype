@@ -1,3 +1,10 @@
+.hosting-shell[data-integrator] .hosting-sidebar-links [data-menu-item-layout="sidebar"] > span:last-child {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .integrator-page,
 .integrator-tab-content {
   display: grid;
@@ -16,11 +23,13 @@
   scroll-margin-block-start: calc(var(--hosting-header-height) + 12px);
 }
 
-.integrator-page :is(h1, h2, strong) {
+.integrator-page :is(h1, strong) {
   color: var(--hosting-title);
 }
 
-.integrator-page h2 {
+.integrator-card > h2,
+.integrator-card > .vh-page-header h2 {
+  color: var(--hosting-title);
   margin: 0;
   font-size: 20px;
   line-height: 26px;
@@ -37,19 +46,29 @@
   background: var(--hosting-accent-light);
 }
 
-.integrator-balance,
 .integrator-card {
   padding: 24px;
 }
 
-.integrator-balance {
-  display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(100px, auto) auto auto;
-  gap: 16px 24px;
-  align-items: center;
+.integrator-summary {
+  container: integrator-summary / inline-size;
 }
 
-.integrator-balance-main,
+.integrator-summary-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+}
+
+.integrator-summary-column {
+  min-inline-size: 0;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: start;
+  gap: 16px;
+}
+
 .integrator-balance-stat,
 .integrator-stack,
 .integrator-form {
@@ -57,26 +76,58 @@
   gap: 6px;
 }
 
-.integrator-balance-main strong {
-  font-size: 28px;
-  line-height: 34px;
+.integrator-balance-stat {
+  align-content: start;
 }
 
-.integrator-balance-stat strong,
-.integrator-total strong {
-  font-size: 20px;
-  line-height: 26px;
+.integrator-balance-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  inline-size: 100%;
+}
+
+.integrator-balance-footer > button {
+  flex: none;
+}
+
+.integrator-balance-footer > .integrator-balance-bonus {
+  display: flex;
+  flex: 1 1 128px;
+  align-items: center;
+  gap: 6px;
+  color: var(--hosting-plan-credit);
+}
+
+.integrator-balance-stat strong {
+  font-size: clamp(26px, 4cqi, 30px);
+  line-height: 1.2;
+}
+
+.integrator-balance-stat > span {
+  color: var(--hosting-secondary);
+}
+
+.integrator-total-summary strong {
+  display: block;
+  font-size: 16px;
+  line-height: 18px;
 }
 
 .integrator-page small {
   display: block;
-  color: var(--hosting-secondary);
   font-size: 13px;
   line-height: 18px;
 }
 
-.integrator-muted {
+.integrator-page small,
+.integrator-muted,
+.integrator-table,
+.integrator-metrics dd,
+.integrator-metrics [role="status"] {
   color: var(--hosting-secondary);
+  font-weight: 400;
 }
 
 .integrator-card {
@@ -84,11 +135,6 @@
   gap: 16px;
 }
 
-.integrator-warning {
-  padding-block-end: 16px;
-}
-
-.integrator-toolbar,
 .integrator-chips {
   display: flex;
   flex-wrap: wrap;
@@ -96,13 +142,57 @@
   gap: 8px;
 }
 
-.integrator-toolbar .sites-domain-search {
-  flex: 1 1 220px;
+.integrator-client-list,
+.integrator-table-section {
+  display: grid;
+  gap: 16px;
   min-inline-size: 0;
 }
 
-.integrator-toolbar-between {
-  justify-content: space-between;
+.integrator-client-list {
+  margin-block-start: 12px;
+}
+
+.integrator-client-tools {
+  container-type: inline-size;
+  display: grid;
+}
+
+.integrator-client-tools > * {
+  grid-area: 1 / 1;
+  min-inline-size: 0;
+}
+
+.integrator-client-tools > [inert] {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.integrator-filter-toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 136px), 1fr));
+  gap: 12px;
+}
+
+.integrator-documents-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.integrator-documents-toolbar > .sites-domain-search {
+  flex: 1 1 180px;
+  max-inline-size: 320px;
+}
+
+.integrator-documents-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+  margin-inline-start: auto;
 }
 
 .integrator-link { text-align: start; }
@@ -119,57 +209,186 @@
 }
 
 .integrator-table {
+  --integrator-table-edge: 16px;
+  --integrator-table-gutter: 12px;
   inline-size: 100%;
+  min-inline-size: var(--integrator-table-min-width, 0px);
+  table-layout: fixed;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
   text-align: start;
 }
 
 .integrator-table :is(th, td) {
-  padding: 10px 12px;
+  padding-block: 10px;
+  padding-inline: var(--integrator-cell-start, var(--integrator-table-gutter)) var(--integrator-cell-end, var(--integrator-table-gutter));
   border-block-end: 1px solid var(--hosting-line);
   text-align: start;
+  vertical-align: middle;
   white-space: nowrap;
 }
 
-.integrator-table :is(th, td):first-child { padding-inline-start: 4px; }
-.integrator-table :is(th, td):last-child { padding-inline-end: 4px; }
-.integrator-table tbody tr:last-child > * { border-block-end: 0; }
-.integrator-table thead th { color: var(--hosting-text); }
-.integrator-table tbody th { color: var(--hosting-title); }
-.integrator-table small { margin-block-start: 2px; }
-
-.integrator-amount {
-  inline-size: 95px;
+.integrator-table :is(th, td):first-child { --integrator-cell-start: var(--integrator-table-edge); }
+.integrator-table :is(th, td):last-child { --integrator-cell-end: var(--integrator-table-edge); }
+.integrator-table tbody tr:last-child > * { border-block-end-color: transparent; }
+.integrator-table th { font-weight: 400; }
+.integrator-table thead th { height: 44px; padding-block: 6px; box-sizing: border-box; }
+.integrator-table :is(th[scope="row"], td.integrator-table-primary) {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
+.integrator-table .integrator-table-action { text-align: end; }
+
+.integrator-operations-table { --integrator-table-min-width: 410px; }
+.integrator-documents-table { --integrator-table-min-width: 600px; }
+.integrator-table thead .integrator-table-date { inline-size: 112px; }
+.integrator-table thead .integrator-table-amount { inline-size: 136px; }
+.integrator-table thead .integrator-table-status { inline-size: 108px; }
+.integrator-table thead .integrator-table-action { inline-size: 116px; }
+
+.integrator-client-table {
+  --integrator-select-width: 42px;
+  --integrator-payment-width: 235px;
+  --integrator-table-min-width: 743px;
+  --integrator-data-width: calc(max(100cqi, var(--integrator-table-min-width)) - var(--integrator-select-width) - var(--integrator-payment-width));
+}
+.integrator-client-select { --integrator-cell-end: 6px; }
+.integrator-client-table thead .integrator-client-select { inline-size: var(--integrator-select-width); }
+.integrator-client-table thead .integrator-client-select + th { inline-size: calc(var(--integrator-data-width) * .324); }
+.integrator-client-table thead .integrator-client-columns { inline-size: calc(var(--integrator-data-width) * .378); }
+.integrator-client-select + th { --integrator-cell-start: 4px; }
+.integrator-client-table td.integrator-client-columns {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.integrator-client-table :is(.integrator-client-select, .integrator-client-auto) > .vh-choice {
+  display: flex;
+}
+.integrator-client-auto > .vh-choice {
+  margin-inline: auto;
+  position: relative;
+  inset-inline-start: var(--integrator-auto-shift);
+}
+.integrator-client-table thead th:last-child { inline-size: var(--integrator-payment-width); }
+.integrator-client-table .integrator-client-auto {
+  --integrator-auto-shift: clamp(-36px, 64px - 50%, 0px);
+  text-align: center;
+}
+.integrator-client-auto-heading {
+  position: relative;
+  inset-inline-start: calc(var(--integrator-auto-shift) - 15px);
+  inline-size: max-content;
+  margin-inline: auto;
+}
+.integrator-auto-settings {
+  position: absolute;
+  inset-inline-start: calc(100% + 6px);
+  inset-block-start: calc(50% - 12px);
+}
+.integrator-auto-settings .vh-dropdown > .vh-button { color: inherit; }
+.integrator-auto-settings-icon { position: relative; inset-block-start: 1px; }
+.hosting-shell[data-compact="true"] .integrator-client-table .integrator-client-auto {
+  --integrator-auto-shift: 0px;
+}
+.hosting-shell[data-compact="true"] .integrator-client-auto-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  inset-inline-start: auto;
+}
+.hosting-shell[data-compact="true"] .integrator-auto-settings { position: static; }
+.integrator-auto-menu.vh-dropdown-panel {
+  position: fixed;
+  inset: var(--integrator-auto-menu-y) auto auto var(--integrator-auto-menu-x);
+  inline-size: max-content;
+  text-align: start;
+}
+.integrator-auto-settings[data-side="top"] { --hosting-menu-offset: 8px; }
 
 .integrator-page .integrator-mobile-details {
   display: none;
+}
+
+.integrator-table-primary {
+  color: var(--hosting-title);
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.integrator-table-lines {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
 }
 
 .integrator-blocked {
   color: var(--hosting-warning-text-emphasis);
 }
 
-.integrator-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 30px;
-  margin: 0;
-  padding-inline-start: 19px;
+.integrator-client-balance-period[data-low-days] {
+  color: var(--hosting-text-orange);
+}
+
+.integrator-client-table-group {
+  container-type: inline-size;
+  min-inline-size: 0;
 }
 
 .integrator-total {
-  position: sticky;
-  inset-block-start: 12px;
-  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 10px;
-  background: var(--hosting-card-surface);
+  gap: 8px 12px;
+}
+
+.integrator-total-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  max-inline-size: 100%;
+  gap: 16px;
+  margin-inline-start: auto;
+}
+
+.integrator-total > .integrator-chips {
+  flex-wrap: nowrap;
+  min-inline-size: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px;
+}
+
+.integrator-total > .integrator-chips > * {
+  flex: none;
+  white-space: nowrap;
+}
+
+.integrator-total-summary > div {
+  min-inline-size: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.integrator-total-summary small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.integrator-total-summary > button {
+  flex: none;
+}
+
+@container (width < 560px) {
+  .integrator-total {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  .integrator-total-summary {
+    gap: 8px;
+  }
 }
 
 .integrator-metrics,
@@ -192,18 +411,96 @@
 
 .integrator-metrics dd {
   margin: 0;
-  color: var(--hosting-title);
   overflow-wrap: anywhere;
   text-align: end;
 }
+
+.integrator-metrics dt { font-weight: 400; }
 
 .integrator-metrics > :last-child,
 .integrator-rows > :last-child {
   border-block-end: 0;
 }
 
-.integrator-metrics [role="status"] {
-  color: var(--hosting-secondary);
+.integrator-requisite {
+  box-sizing: border-box;
+  min-block-size: 52px;
+}
+
+.integrator-requisite > dd {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0;
+  gap: 8px;
+}
+
+.integrator-requisite-action {
+  position: relative;
+  display: flex;
+  flex: none;
+}
+
+.integrator-requisite-feedback {
+  position: absolute;
+  z-index: 3;
+  inset-block-end: calc(100% + 8px);
+  inset-inline-end: 0;
+  inline-size: max-content;
+  max-inline-size: none;
+  pointer-events: none;
+}
+
+.integrator-requisite-action:not([data-feedback]) .integrator-requisite-feedback {
+  opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .integrator-requisite:not(:hover, :focus-within) .integrator-requisite-action:not([data-feedback]) > .vh-button {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.integrator-notification-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.integrator-notification {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+
+.integrator-page .integrator-notification small {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.integrator-notification:has(input:focus-visible) {
+  background-color: var(--hosting-card-surface);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .integrator-notification:hover {
+    background-color: var(--hosting-card-surface);
+  }
+}
+
+.integrator-notification-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: 50%;
+  background: var(--hosting-link);
+  color: var(--vh-white);
 }
 
 .integrator-form {
@@ -215,9 +512,13 @@
   inline-size: 100%;
 }
 
-@media (max-width: 1000px) {
-  .integrator-balance {
-    grid-template-columns: minmax(130px, 1fr) 1fr;
+@container integrator-summary (max-width: 560px) {
+  .integrator-summary-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .integrator-summary-column {
+    padding: 16px;
   }
 }
 
@@ -226,46 +527,33 @@
   gap: 6px;
 }
 
-.hosting-shell[data-compact="true"] .integrator-balance,
 .hosting-shell[data-compact="true"] .integrator-card {
   padding: 16px;
 }
 
-.hosting-shell[data-compact="true"] .integrator-balance {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.hosting-shell[data-compact="true"] .integrator-table {
+  --integrator-table-edge: 12px;
+  --integrator-table-gutter: 8px;
 }
 
-.hosting-shell[data-compact="true"] .integrator-balance-main,
-.hosting-shell[data-compact="true"] .integrator-balance > button {
-  grid-column: 1 / -1;
+.hosting-shell[data-compact="true"] .integrator-client-table {
+  --integrator-select-width: 38px;
+  --integrator-payment-width: 208px;
+  --integrator-table-min-width: 468px;
 }
 
-.hosting-shell[data-compact="true"] .integrator-total {
-  inset-block-start: var(--hosting-header-height);
-  padding: 10px;
+.hosting-shell[data-compact="true"] .integrator-client-table thead .integrator-client-select + th {
+  inline-size: auto;
 }
 
-.hosting-shell[data-compact="true"] .integrator-card .integrator-steps {
-  flex-direction: column;
-}
-
-.hosting-shell[data-compact="true"] .integrator-table :is(th, td) {
-  padding-inline: 8px;
+.hosting-shell[data-compact="true"] .integrator-client-table thead .integrator-client-auto {
+  inline-size: 161px;
 }
 
 .hosting-shell[data-compact="true"] .integrator-client-columns {
   display: none;
 }
 
-.hosting-shell[data-compact="true"] .integrator-client-table th[scope="row"] {
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
 .hosting-shell[data-compact="true"] .integrator-mobile-details {
   display: block;
-}
-
-.hosting-shell[data-compact="true"] .integrator-amount {
-  inline-size: 76px;
 }
