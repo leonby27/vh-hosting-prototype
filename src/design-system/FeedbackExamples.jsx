@@ -105,7 +105,7 @@ export function TooltipExample() {
 }
 
 function TooltipSamples({ title, theme }) {
-  return <Example title={title}>
+  return <Example title={title} className={theme === 'dark' ? 'catalog-light-tooltip-preview' : undefined}>
     <VHTheme theme={theme} className="catalog-stack catalog-feedback-stack">
       <TooltipBubble>Доступно на тарифе «Плюс»</TooltipBubble>
       <TooltipBubble size="large">Резервная копия включает файлы сайта и базы данных.</TooltipBubble>

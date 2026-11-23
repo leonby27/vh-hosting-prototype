@@ -552,7 +552,7 @@
   margin-inline-start: var(--vh-tab-count-offset, 0px);
   padding: 1px 5px;
   border-radius: 6px;
-  background: var(--hosting-card-surface);
+  background: var(--hosting-surface-2);
   color: var(--hosting-text);
   font-size: 12px;
   line-height: 16px;

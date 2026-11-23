@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { AnimatedBlock } from './hosting-motion.jsx'
 import { Button, Icon, SidebarNav } from './ui/index.js'
-import { designSystemSection } from './design-system-section.js'
 import { catalogEntries } from './design-system/entries.js'
 import './design-system.css'
 
@@ -92,14 +91,11 @@ export default function DesignSystemCatalog({ compact = false }) {
   const { Example } = active
   return (
     <div className="catalog" data-compact={compact}>
-      <header className="catalog-header">
-        <h1>{designSystemSection}</h1>
-      </header>
       <div className="catalog-layout">
         <CatalogNavigation current={active.id} compact={compact} onNavigate={navigate} />
         <section className="catalog-entry" aria-labelledby="catalog-entry-title">
           <header className="catalog-entry-heading">
-            <h2 id="catalog-entry-title" ref={heading} tabIndex={-1}>{active.title}</h2>
+            <h1 id="catalog-entry-title" ref={heading} tabIndex={-1}>{active.title}</h1>
           </header>
           <AnimatedBlock><div className="catalog-entry-preview hosting-reveal" key={active.id}><Example /></div></AnimatedBlock>
         </section>

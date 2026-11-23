@@ -33,6 +33,7 @@ function themeTokens(modeId, dark = false) {
     '--hosting-switch-thumb': palette.get('Form Controls/Switcher/Inverse'),
     '--hosting-focus': palette.get('Base/Accent Bright'),
     '--hosting-top-up-year-border': palette.get('Mono/Green'),
+    '--hosting-surface-2': palette.get('Base/Surface 2'),
     '--hosting-surface-3': palette.get('Base/Surface 3'),
     '--hosting-card-surface': palette.get('Base/Surface'),
     '--hosting-surface-60': palette.get('Base/Surface 60%'),

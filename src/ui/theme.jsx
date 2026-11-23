@@ -20,6 +20,7 @@ const tokenPaths = {
   line: 'Base/Line/Default Line',
   'line-warning': 'Base/Line/Warning',
   white: 'Mono/White',
+  'mono-dark': 'Mono/Dark',
   header: 'Base/Header',
   'menu-hover': 'List/Item Hover',
   'menu-selected': 'List/Item Selected',
