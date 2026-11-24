@@ -34,6 +34,8 @@ const tokenPaths = {
   'progress-empty': 'Progress Line/Empty',
   'tooltip-bg': 'Tooltip/Back',
   'tooltip-text': 'Tooltip/Content',
+  'button-disabled-fill': 'Buttons/Disable/Back',
+  'button-disabled-content': 'Buttons/Disable/Content',
   'danger-text': 'Buttons/Outline Red/Content',
   'success-text': 'Buttons/Outline Green/Content',
 }

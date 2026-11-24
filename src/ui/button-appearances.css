@@ -16,6 +16,13 @@
   --vh-button-line-height: 16px;
 }
 
+.vh-button[data-appearance="dashboard"]:disabled:not([data-loading]) {
+  --vh-button-border-override: transparent;
+  --vh-button-disabled-back: var(--vh-button-disabled-fill);
+  --vh-button-disabled-text: var(--vh-button-disabled-content);
+  --vh-button-disabled-opacity: 1;
+}
+
 .vh-button[data-appearance="tariff"] {
   --vh-button-padding: 8px 19px;
   --vh-button-line-height: 18px;

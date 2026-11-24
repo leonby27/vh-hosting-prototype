@@ -685,9 +685,6 @@ html:has(.hosting-scroll-spacer) {
   }
 
   .hosting-header {
-    position: sticky;
-    z-index: 2;
-    inset-block-start: 0;
     background: transparent;
   }
 

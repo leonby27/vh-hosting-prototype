@@ -4,6 +4,7 @@ import { designSystemSection } from './design-system-section.js'
 import './styles.css'
 import HostingShell from './HostingShell.jsx'
 import Dashboard from './Dashboard.jsx'
+import { dashboardStates, typicalDashboard } from './dashboard-variants.js'
 import TariffSettings from './TariffSettings.jsx'
 import { topUpStates } from './balance-top-up-states.js'
 import PlanChangesPreview from './PlanChangesPreview.jsx'
@@ -35,9 +36,16 @@ const tariffServiceStates = [
   { id: 'services-connected', label: 'Подключены дополнительные услуги', serviceIds: ['backups', 'builder'] },
 ]
 
+const dashboardAttackStates = networkAttackStates.filter(({ id }) => id === 'protection-attack-multiple')
+
+function getAttackStates(section) {
+  if (section === 'Дашборд') return dashboardAttackStates
+  return section === sitesSection ? networkAttackStates : []
+}
+
 function getPrototypeStates(section, tab) {
   if (Object.values(integratorPages).includes(section)) return integratorStates
-  if (section === 'Дашборд') return [...topUpStates, ...networkAttackStates]
+  if (section === 'Дашборд') return [...dashboardStates, ...topUpStates, ...dashboardAttackStates]
   if (section === planChangesSection) return planChangesStates
   if (section === tariffSection && (!tab || tab === 'services')) return tariffServiceStates
   if (section === apiAgentsSection && (!tab || tab === 'keys')) return [apiKeysPreset]
@@ -81,7 +89,8 @@ function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
 
 function syncPrototypeState(id, section) {
   const url = new URL(window.location.href)
-  if (getPrototypeStates(section).length) url.searchParams.set('state', id)
+  const dashboardHome = section === 'Дашборд' && id === typicalDashboard.id
+  if (!dashboardHome && getPrototypeStates(section).length) url.searchParams.set('state', id)
   else url.searchParams.delete('state')
   replacePrototypeUrl(url)
 }
@@ -115,7 +124,7 @@ function HostingApp() {
   }, [incidentToken])
 
   function chooseScreenState(id, section) {
-    if (networkAttackStates.some(state => state.id === id)) {
+    if (getAttackStates(section).some(state => state.id === id)) {
       setIncidentRun({ token: {}, statuses: getNetworkProtectionPreset(id).statuses, dismissed: false })
     }
     syncPrototypeState(id, section)
@@ -147,8 +156,8 @@ function HostingApp() {
     return getPrototypeStates(section, tabs[section])
   }
 
-  function renderSection(section, onSelect, dark, screenState, compact) {
-    const incident = networkAttackStates.some(state => state.id === screenState)
+  function renderSection(section, onSelect, dark, screenState, compact, dashboardLoading) {
+    const incident = getAttackStates(section).some(state => state.id === screenState)
       ? getNetworkProtectionPreset(screenState) : null
     const attackNotice = incident && {
       domains: incident.attackedDomains.filter(name => !isNetworkDomainProtected(incidentRun.statuses[name])),
@@ -178,7 +187,8 @@ function HostingApp() {
         syncPrototypeLocation(apiAgentsSection, tab)
       }} />
     }
-    if (section === 'Дашборд') return <Dashboard onSelect={onSelect} dark={dark} compact={compact} screenState={screenState} attackNotice={attackNotice} />
+    if (section === 'Дашборд') return <Dashboard onSelect={onSelect} compact={compact} screenState={screenState}
+      attackNotice={attackNotice} refreshing={dashboardLoading} />
     if (section === planChangesSection) {
       const scenario = planChangeScenarios.find(entry => screenState === `scenario-${entry.id}`)
       return <PlanChangesPreview startsWithSavedCard={screenState === 'saved-card'}
@@ -202,8 +212,7 @@ function HostingApp() {
       initialScreenState={initialScreenState}
       onSectionChange={selectSection}
       onScreenStateChange={chooseScreenState}
-      keepScreenStateOnNavigation={(id, section) => (section === sitesSection || section === 'Дашборд') &&
-        networkAttackStates.some(state => state.id === id)}
+      keepScreenStateOnNavigation={(id, section) => getAttackStates(section).some(state => state.id === id)}
       isCurrentSection={(section, tab) => section === sitesSection ? sitesTab === (tab ?? 'mine')
         : section === tariffSection ? tariffTab === (tab === 'services' ? tab : 'tariff')
           : section === apiAgentsSection ? !tab || apiTab === tab

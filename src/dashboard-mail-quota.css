@@ -1,0 +1,101 @@
+.hosting-shell .dashboard-mail-quota {
+  inline-size: min(480px, calc(100% - 32px));
+  max-block-size: calc(100dvh - 32px);
+  padding: 40px;
+  overflow: auto;
+  border: 0;
+}
+
+.mail-quota-close {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+}
+
+.mail-quota-form,
+.mail-quota-body,
+.mail-quota-heading,
+.mail-quota-auto-copy {
+  display: grid;
+}
+
+.mail-quota-form { gap: 24px; }
+.mail-quota-body { gap: 16px; }
+.mail-quota-heading { gap: 8px; text-align: center; }
+
+.mail-quota-description {
+  margin: 0;
+  color: var(--hosting-secondary);
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.mail-quota-entry,
+.mail-quota-controls,
+.mail-quota-steps {
+  display: flex;
+  align-items: flex-start;
+}
+
+.mail-quota-entry {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.mail-quota-controls { gap: 8px; }
+.mail-quota-field { inline-size: 112px; }
+.mail-quota-field .vh-input-decoration { padding-inline-end: 16px; }
+
+.mail-quota-steps .vh-button { --vh-button-radius: 12px 0 0 12px; }
+
+.mail-quota-steps .vh-button + .vh-button {
+  margin-inline-start: -1px;
+  --vh-button-radius: 0 12px 12px 0;
+}
+
+.mail-quota-steps .vh-button:focus-visible { z-index: 1; }
+
+.mail-quota-price {
+  margin-inline-start: auto;
+  padding-block: 12px;
+  color: var(--hosting-text-primary-light);
+  font-size: 14px;
+  line-height: 16px;
+  text-align: end;
+  overflow-wrap: anywhere;
+}
+
+.hosting-shell .mail-quota-auto {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-block-size: 56px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--hosting-card-surface);
+  color: var(--hosting-title);
+  font: 500 14px / 16px var(--hosting-font);
+  text-align: start;
+  cursor: pointer;
+}
+
+.mail-quota-auto-copy { gap: 2px; }
+
+.mail-quota-auto-copy > :last-child {
+  color: var(--hosting-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 14px;
+}
+
+.mail-quota-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hosting-shell[data-compact="true"] .dashboard-mail-quota {
+  padding: 40px 20px 24px;
+}

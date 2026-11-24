@@ -57,6 +57,7 @@ function themeTokens(modeId, dark = false) {
     '--hosting-warning-light': palette.get('Base/Warning Light'),
     '--hosting-warning-text': palette.get('Text/Warning'),
     '--hosting-text-orange': palette.get('Text/Orange'),
+    '--hosting-orange-back': palette.get('Base/Orange Back 7'),
     '--hosting-warning-text-emphasis': palette.get(dark ? 'Text/Warning Hover' : 'Text/Warning'),
     '--hosting-plan-warning': palette.get('Text/Orange Hover'),
     '--hosting-plan-credit': palette.get(dark ? 'Text/Green Hover' : 'Text/Green'),

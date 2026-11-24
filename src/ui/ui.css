@@ -474,7 +474,7 @@
   border: 1px solid var(--hosting-line);
   border-radius: 16px;
 }
-.vh-modal::backdrop { background: rgb(0 0 0 / 50%); }
+.vh-modal::backdrop { background: rgb(0 0 0 / 56%); }
 .vh-modal .hosting-dialog-title { margin: 0; font: 700 24px / 32px var(--hosting-font, Stem, system-ui, sans-serif); }
 .vh-dialog { max-block-size: calc(100% - 32px); overflow: auto; }
 .vh-dialog > .hosting-dialog-title { margin: 0 32px 8px 0; }

@@ -13,6 +13,7 @@ import LeaveCheckoutDialog from './LeaveCheckoutDialog.jsx'
 import { PendingChangesContext } from './pending-changes.jsx'
 import { vhThemes } from './ui/theme.jsx'
 import { designSystemSection } from './design-system-section.js'
+import { richDashboard, typicalDashboard } from './dashboard-variants.js'
 import { apiAgentsSection } from './api-agents-data.js'
 import { integratorKnowledge, integratorNews, integratorPages, integratorProgramSections, integratorSection, integratorSettings, integratorSupport } from './integrator-data.js'
 import './hosting-shell.css'
@@ -113,6 +114,7 @@ const darkBannerTokens = {
 const themeStorageKey = 'vh-hosting-theme'
 const viewStorageKey = 'vh-hosting-preview-view'
 const compactViewport = '(max-width: 700px)'
+const dashboardLayoutIds = [null, typicalDashboard.id, richDashboard.id]
 const previewViews = [
   ['mobile', 'Mobile'],
   ['desktop', 'Desktop'],
@@ -185,10 +187,10 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
     onSelect(label, tab)
   }
 
-  function followLink(event, label, tab) {
+  function followLink(event, navigate) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
-    select(label, tab)
+    navigate()
   }
 
   function changeDropdown(name, open) {
@@ -258,30 +260,30 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
         >
           <li className="hosting-prototype-heading">Страницы</li>
           <li><MenuItem as="a" href="./" icon={<Icon name="dashboard" />}
-            onClick={event => followLink(event, 'Дашборд')}>Дашборд</MenuItem></li>
+            onClick={event => followLink(event, () => onSelect('Дашборд'))}>Дашборд</MenuItem></li>
           <li><MenuItem as="a" href="?sites=antivirus" icon={<Icon name="domains" />}
-            onClick={event => followLink(event, 'Сайты', 'antivirus')}>Антивирус</MenuItem></li>
+            onClick={event => followLink(event, () => onSelect('Сайты', 'antivirus'))}>Антивирус</MenuItem></li>
           <li><MenuItem as="a" href="?sites=network-protection" icon={<Icon name="vps" />}
-            onClick={event => followLink(event, 'Сайты', 'network-protection')}>Сетевая защита</MenuItem></li>
+            onClick={event => followLink(event, () => onSelect('Сайты', 'network-protection'))}>Сетевая защита</MenuItem></li>
           <li><MenuItem as="a" href="?tariff=services" icon={<Icon name="plan" />}
-            onClick={event => followLink(event, 'Настройки тарифа', 'services')}>Другие сервисы</MenuItem></li>
+            onClick={event => followLink(event, () => onSelect('Настройки тарифа', 'services'))}>Другие сервисы</MenuItem></li>
           <li><MenuItem as="a" href="?api=connection" icon={<Icon name="api" />}
             aria-current={selected === apiAgentsSection ? 'page' : undefined}
-            onClick={event => followLink(event, apiAgentsSection, 'connection')}>{apiAgentsSection}</MenuItem></li>
+            onClick={event => followLink(event, () => onSelect(apiAgentsSection, 'connection'))}>{apiAgentsSection}</MenuItem></li>
           <li className="hosting-prototype-heading hosting-menu-divider">Компоненты</li>
           <li><MenuItem as="a" href="?changes" icon={<Icon name="logs" />}
-            onClick={event => followLink(event, 'Что изменится')}>Что изменится</MenuItem></li>
+            onClick={event => followLink(event, () => onSelect('Что изменится'))}>Что изменится</MenuItem></li>
           <li>
             <MenuItem as="a" href="?catalog" icon={<Icon name="plan" />}
               aria-current={selected === designSystemSection ? 'page' : undefined}
-              onClick={event => followLink(event, designSystemSection)}>
+              onClick={event => followLink(event, () => onSelect(designSystemSection))}>
               {designSystemSection}
             </MenuItem>
           </li>
           <li className="hosting-prototype-heading hosting-menu-divider">Панели</li>
           <li><MenuItem as="a" href="?integrator=program" icon={<Icon name="partner" />}
             aria-current={integrator ? 'page' : undefined}
-            onClick={event => followLink(event, integratorSection)}>Панель интегратора</MenuItem></li>
+            onClick={event => followLink(event, () => onSelect(integratorSection))}>Панель интегратора</MenuItem></li>
         </HeaderMenu>
         <SegmentedOptions name={previewViewName} label="Режим просмотра" className="hosting-preview-switch"
           options={previewViewOptions} value={previewView} onChange={selectPreviewView} onReselect={selectPreviewView} />
@@ -290,7 +292,7 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
         <div className="hosting-frame hosting-header-inner">
           <div className="hosting-brand">
             <a href={integrator ? '?integrator=program' : './'} aria-label="Timeweb Hosting"
-              onClick={event => followLink(event, integrator ? integratorSection : 'Дашборд')}>
+              onClick={event => followLink(event, () => select(integrator ? integratorSection : 'Дашборд'))}>
               {compact ? <img src={mobileLogo} width="96" height="20" alt="Timeweb" />
                 : <img src={dark ? darkLogo : logo} width="186" height="26" alt="timeweb hosting" />}
             </a>
@@ -333,12 +335,9 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
         onOpenChange={open => changeDropdown('states', open)}
         trigger={<Icon name="menu" />}
       >
-        {close => [{ id: 'initial', label: 'Исходное состояние' }, ...states].map(state => (
+        {states.map(state => (
           <li key={state.id}>
-            <MenuItem selected={activeState === state.id} onClick={() => {
-              if (integrator) close()
-              onChooseState(state.id)
-            }}>
+            <MenuItem selected={activeState === state.id} onClick={() => onChooseState(state.id)}>
               {state.label}
             </MenuItem>
           </li>
@@ -348,7 +347,7 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
         <nav className="hosting-mobile-nav" aria-label={integrator ? 'Разделы панели интегратора' : 'Разделы хостинга'}>
           {(integrator ? integratorMobileSections : mobileSections).map(([icon, label, section]) => (
             <Button appearance="nav-action" pressable={false} type="button" key={icon} aria-current={!menuOpen && selected === section ? 'page' : undefined} onClick={() => {
-              if (selected !== section) {
+              if (selected !== section || (section === 'Дашборд' && !menuOpen)) {
                 select(section)
               } else if (menuOpen) onToggleMenu()
             }}>
@@ -446,6 +445,7 @@ export default function HostingShell({
   const [menuOpen, setMenuOpen] = useState(false)
   const [dark, setDark] = useState(readDarkTheme)
   const [screenState, setScreenState] = useState({ id: initialScreenState, version: 0 })
+  const [dashboardLoad, setDashboardLoad] = useState(() => initialSection === 'Дашборд' ? {} : null)
   const [previewView, setPreviewView] = useState(readPreviewView)
   const [narrowViewport, setNarrowViewport] = useState(() => window.matchMedia(compactViewport).matches)
   const menuToggleRef = useRef(null)
@@ -454,6 +454,12 @@ export default function HostingShell({
   const compact = previewView === 'mobile' || narrowViewport
   const moreOpen = compact && menuOpen
   const integrator = Object.values(integratorPages).includes(selected)
+
+  useEffect(() => {
+    if (!dashboardLoad) return
+    const timer = window.setTimeout(() => setDashboardLoad(current => current === dashboardLoad ? null : current), 1000)
+    return () => window.clearTimeout(timer)
+  }, [dashboardLoad])
 
   useEffect(() => {
     const media = window.matchMedia(compactViewport)
@@ -482,15 +488,20 @@ export default function HostingShell({
   }
 
   function selectSection(label, tab) {
-    if (label === selected && (isCurrentSection?.(label, tab) ?? true)) {
+    const opensDashboard = label === 'Дашборд'
+    if (!opensDashboard && label === selected && (isCurrentSection?.(label, tab) ?? true)) {
       setMenuOpen(false)
       return
     }
     navigate(() => {
       if (moreOpen && document.activeElement?.closest('#hosting-more')) menuToggleRef.current?.focus({ preventScroll: true })
       const integratorNavigation = integrator && Object.values(integratorPages).includes(label)
-      const keepState = label === selected || integratorNavigation || keepScreenStateOnNavigation?.(screenState.id, label)
-      if (!keepState) setScreenState(current => ({ ...current, id: null }))
+      const keepState = !opensDashboard && (label === selected || integratorNavigation || keepScreenStateOnNavigation?.(screenState.id, label))
+      if (!keepState) {
+        const returningFromScenario = opensDashboard && label === selected && !dashboardLayoutIds.includes(screenState.id)
+        setScreenState(current => ({ id: null, version: returningFromScenario ? current.version + 1 : current.version }))
+      }
+      setDashboardLoad(opensDashboard ? {} : null)
       setSelected(label)
       setMenuOpen(false)
       onSectionChange?.(label, tab, keepState)
@@ -508,15 +519,17 @@ export default function HostingShell({
     }
   }
 
-  // The scenario menu is reserved for states that need data or events the page cannot produce.
-  const states = moreOpen ? [] : (getPageStates?.(selected) ?? []).filter(state => state.requiresPreset)
-  const activeState = states.some(state => state.id === screenState.id) ? screenState.id : 'initial'
-  const content = renderSection ? renderSection(selected, selectSection, dark, screenState.id, compact) : children
+  const initialState = selected === 'Дашборд' && !moreOpen ? typicalDashboard : { id: 'initial', label: 'Исходное состояние' }
+  const presets = moreOpen ? [] : (getPageStates?.(selected) ?? []).filter(state => state.requiresPreset && state.id !== initialState.id)
+  const states = [initialState, ...presets]
+  const activeState = presets.some(state => state.id === screenState.id) ? screenState.id : initialState.id
+  const content = renderSection ? renderSection(selected, selectSection, dark, screenState.id, compact, Boolean(dashboardLoad)) : children
 
   return (
     <div className="hosting-shell" data-theme={dark ? 'dark' : 'light'} data-view={previewView} data-compact={compact}
       data-integrator={integrator || undefined}
       style={{ ...vhThemes[dark ? 'dark' : 'light'], ...darkBannerTokens }}>
+      <div data-dashboard-header-notice="" />
       <HostingHeader
         compact={compact}
         menuOpen={moreOpen}
@@ -529,10 +542,12 @@ export default function HostingShell({
         states={states}
         activeState={activeState}
         onChooseState={id => {
+          const switchingLayout = selected === 'Дашборд' && !moreOpen && dashboardLayoutIds.includes(id) && dashboardLayoutIds.includes(screenState.id)
           setMenuOpen(false)
-          setScreenState(current => ({ id, version: current.version + 1 }))
+          setDashboardLoad(null)
+          setScreenState(current => ({ id, version: switchingLayout ? current.version : current.version + 1 }))
           onScreenStateChange?.(id, selected)
-          window.scrollTo(0, 0)
+          if (!switchingLayout) window.scrollTo(0, 0)
         }}
         previewView={previewView}
         onPreviewChange={changePreview}
