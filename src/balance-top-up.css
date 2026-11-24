@@ -291,6 +291,25 @@
   border-radius: 0;
 }
 
+.hosting-shell[data-compact="true"] dialog.top-up-dialog.hosting-dialog--sheet {
+  inset-block: auto 0;
+  inset-inline: 0;
+  block-size: auto;
+  max-block-size: calc(100dvh - 16px);
+  margin-block: 0;
+  border-radius: 16px 16px 0 0;
+}
+
+.hosting-shell[data-compact="true"] .top-up-dialog.hosting-dialog--sheet .top-up-header {
+  padding-block-start: 40px;
+}
+
+.hosting-shell[data-compact="true"] .top-up-dialog.hosting-dialog--sheet .top-up-close {
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  --vh-button-radius: 50%;
+}
+
 .hosting-shell[data-compact="true"] .top-up-form {
   block-size: 100%;
 }

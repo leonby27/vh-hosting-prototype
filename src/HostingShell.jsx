@@ -457,7 +457,7 @@ export default function HostingShell({
 
   useEffect(() => {
     if (!dashboardLoad) return
-    const timer = window.setTimeout(() => setDashboardLoad(current => current === dashboardLoad ? null : current), 1000)
+    const timer = window.setTimeout(() => setDashboardLoad(current => current === dashboardLoad ? null : current), 500)
     return () => window.clearTimeout(timer)
   }, [dashboardLoad])
 

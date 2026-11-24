@@ -40,6 +40,8 @@
   content: '';
 }
 
+.dashboard-migration-art { display: contents; }
+
 .dashboard-migration-illustration {
   position: absolute;
   inset: 50% auto auto 10px;
@@ -171,7 +173,7 @@
 
 .hosting-shell[data-compact="true"] .dashboard-trial-notice {
   position: sticky;
-  inset-block-start: 0;
+  inset-block-start: calc(var(--hosting-header-height) + 16px);
   z-index: 4;
   align-items: flex-start;
   flex-direction: column;
@@ -855,6 +857,51 @@
     --dashboard-section-gap: 20px;
   }
 
+  .dashboard-migration {
+    grid-template-columns: 56px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    padding: 17px min(60px, 16cqi) 17px 17px;
+    background: linear-gradient(90deg, #040c2a 22.283%, #0c324f);
+  }
+
+  .dashboard-migration-art {
+    position: relative;
+    display: block;
+    grid-row: 1 / span 2;
+    block-size: 56px;
+    overflow: clip;
+  }
+
+  .dashboard-migration-illustration {
+    inset: -39.03% auto auto -9.28%;
+    inline-size: 195.9%;
+    max-inline-size: none;
+    translate: none;
+    mask-image: none;
+  }
+
+  .dashboard .dashboard-migration p {
+    color: rgb(255 255 255 / 60%);
+    line-height: 16px;
+  }
+
+  .dashboard-migration .dashboard-migration-action {
+    --vh-button-padding: 0 14px;
+    --vh-button-radius: 10px;
+    --vh-button-line-height: 16px;
+    grid-column: 2;
+    justify-self: start;
+    max-inline-size: 100%;
+    white-space: normal;
+  }
+
+  .dashboard-migration .dashboard-migration-close {
+    --vh-button-radius: 0 0 0 24px;
+    inline-size: 44px;
+    min-block-size: 44px;
+  }
+
   .dashboard-billing,
   .dashboard-balance,
   .dashboard-service-grid,
@@ -876,6 +923,23 @@
   .dashboard-billing-cell {
     min-height: 80px;
     padding: 16px;
+  }
+
+  .dashboard-plan-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-inline-end: 20px;
+  }
+
+  .dashboard-plan-card > div { min-inline-size: 0; flex: 1; }
+  .dashboard-plan-services {
+    color: var(--hosting-text);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 20px;
   }
 
   .dashboard-balance .dashboard-billing-cell {
@@ -944,7 +1008,6 @@
 
   .dashboard-ftp-details dd {
     gap: 8px;
-    min-block-size: 24px;
   }
 
   .dashboard .dashboard-ftp-note {

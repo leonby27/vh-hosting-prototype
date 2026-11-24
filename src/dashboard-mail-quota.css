@@ -96,6 +96,24 @@
   gap: 12px;
 }
 
-.hosting-shell[data-compact="true"] .dashboard-mail-quota {
-  padding: 40px 20px 24px;
+.hosting-shell[data-compact="true"] dialog.dashboard-mail-quota {
+  inset-block: auto 0;
+  inset-inline: 0;
+  inline-size: min(100%, var(--hosting-preview-width));
+  max-inline-size: none;
+  max-block-size: calc(100dvh - 16px);
+  margin-block: 0;
+  padding: 40px 20px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 16px 16px 0 0;
+}
+
+.hosting-shell[data-compact="true"] .mail-quota-close {
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  --vh-button-back-override: var(--hosting-card-surface);
+  --vh-button-radius: 50%;
+}
+
+.hosting-shell[data-compact="true"] .mail-quota-auto {
+  gap: 6px;
 }

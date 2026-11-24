@@ -685,7 +685,12 @@ html:has(.hosting-scroll-spacer) {
   }
 
   .hosting-header {
-    background: transparent;
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background:
+      linear-gradient(var(--hosting-background), var(--hosting-background))
+        center top / min(100%, var(--hosting-preview-width)) var(--hosting-toolbar-height) no-repeat;
   }
 
   .hosting-header::before {

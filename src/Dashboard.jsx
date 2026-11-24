@@ -7,7 +7,7 @@ import DashboardMetricPlot from './DashboardMetricPlot.jsx'
 import { formatTopUpAmount, topUpStates } from './balance-top-up-states.js'
 import { HostingToastContext } from './hosting-toast.jsx'
 import { Dropdown, SegmentedOptions } from './ui/navigation.jsx'
-import { AssetIcon } from './ui/Icon.jsx'
+import { AssetIcon, Icon } from './ui/Icon.jsx'
 import { Surface } from './ui/layout.jsx'
 import { Badge, Tooltip } from './ui/feedback.jsx'
 import NetworkAttackNotice from './NetworkAttackNotice.jsx'
@@ -166,6 +166,8 @@ function Billing({ onTopUp, onTariffSettings, credit, compact, state, loading })
   const debitNote = debit.note ?? 'Автоплатёж включён'
   const showDebit = !unavailable && mode !== 'parking'
   const planNoteAtBottom = !compact && !unavailable && mode !== 'parking' && !debit.planServices
+  const canOpenPlan = !unavailable && mode !== 'parking'
+  const mobilePlanServices = mode == null || mode === 'rich' ? '2 услуги' : null
 
   return (
     <div className="dashboard-billing" data-blocked={unavailable || undefined}>
@@ -209,21 +211,25 @@ function Billing({ onTopUp, onTariffSettings, credit, compact, state, loading })
           {showDebit && <p className="dashboard-label" data-tone={debit.tone}>{loading ? <Skeleton width="114px" /> : debitNote}</p>}
         </div>
       </Surface>
-      <Surface as="section" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-billing-cell hosting-reveal" aria-labelledby="dashboard-plan">
+      <Surface as="section" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-billing-cell dashboard-plan-card hosting-reveal" aria-labelledby="dashboard-plan">
         <div>
           <h2 className="dashboard-label" id="dashboard-plan">Тариф</h2>
           {loading ? <>
             <p className="dashboard-amount">
               <Skeleton width="114px" />
-              {compact && !debit.planServices && <Skeleton width="194px" />}
+              {compact && <Skeleton width="194px" />}
             </p>
-            {!planNoteAtBottom && (!compact || debit.planServices) && <p className="dashboard-note"><Skeleton width="194px" /></p>}
-          </> : unavailable || mode === 'parking' ?
+            {!planNoteAtBottom && !compact && <p className="dashboard-note"><Skeleton width="194px" /></p>}
+          </> : !canOpenPlan ?
             <p className="dashboard-amount" data-tone={unavailable ? 'muted' : undefined}>{debit.plan}</p> :
-            <Button appearance="nav-action" pressable={false} className="dashboard-amount dashboard-plan-link"
-              onClick={onTariffSettings} aria-label="Настройки тарифа Optimo">Optimo</Button>}
-          {!loading && debit.planServices && <p className="dashboard-note">{debit.planServices}</p>}
+            compact ? <p className="dashboard-amount">Optimo{mobilePlanServices && <span className="dashboard-plan-services"> · {mobilePlanServices}</span>}</p> :
+              <Button appearance="nav-action" pressable={false} className="dashboard-amount dashboard-plan-link"
+                onClick={onTariffSettings} aria-label="Настройки тарифа Optimo">Optimo</Button>}
+          {!loading && !compact && debit.planServices && <p className="dashboard-note">{debit.planServices}</p>}
         </div>
+        {compact && canOpenPlan && <DashboardButton iconOnly label="Настройки тарифа Optimo" onClick={onTariffSettings}>
+          <Icon name="adjust2-outline" size={20} />
+        </DashboardButton>}
         {planNoteAtBottom && <p className="dashboard-note">
           {loading ? <Skeleton width="194px" /> : debit.planNote ?? 'Оплачен до 30.09, ещё 16 дней'}
         </p>}
@@ -407,7 +413,7 @@ function FtpStatus({ compact, loading, initialSsh, smtpDown }) {
                 <dt>{label}</dt>
                 <dd>
                   {loading ? <Skeleton width="100px" /> : <><span>{ftpDetails[label]}</span>
-                  <IconButton className="dashboard-ftp-copy" size={compact ? 24 : 20} label={`Скопировать ${label}`}
+                  <IconButton className="dashboard-ftp-copy" size={20} label={`Скопировать ${label}`}
                     onClick={() => copyDetail(ftpDetails[label])}>
                     <TintedArtwork name="copy" />
                   </IconButton></>}
@@ -489,7 +495,7 @@ export default function Dashboard({ onSelect, compact, screenState, attackNotice
       {attackNotice && <NetworkAttackNotice {...attackNotice} summarizeDomains onConnect={() => onSelect('Сайты', 'network-protection')} />}
       {loading && <span className="dashboard-sr-only" role="status">Дашборд загружается</span>}
       <div>
-        <DashboardMigrationBanner visible={Boolean(state.migration)} onMigrate={() => onSelect('Перенести к нам')} />
+        <DashboardMigrationBanner visible={Boolean(state.migration)} compact={compact} onMigrate={() => onSelect('Перенести к нам')} />
         <AnimatedBlock>
           <Billing onTariffSettings={openTariff} onTopUp={openTopUp} credit={creditCents / 100} compact={compact} state={state} loading={loading} />
         </AnimatedBlock>
@@ -510,6 +516,7 @@ export default function Dashboard({ onSelect, compact, screenState, attackNotice
         <BalanceTopUp
           preset={preset}
           compact={compact}
+          mobileSheet
           savedMethods={savedMethods}
           onUnlink={id => setSavedMethods(current => current.filter(method => method.id !== id))}
           onPay={completeTopUp}

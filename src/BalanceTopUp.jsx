@@ -60,7 +60,7 @@ function PeriodOptions({ annualPlan, selected, highlightYear, onSelect }) {
 
 export default function BalanceTopUp({
   preset, compact, savedMethods, onUnlink, onPay, onClose, forClients = false, description, amountPresets,
-  describeCredit, availableBalance, onCreateInvoice,
+  describeCredit, availableBalance, onCreateInvoice, mobileSheet = false,
 }) {
   const id = useId()
   const dialog = useRef(null)
@@ -217,7 +217,7 @@ export default function BalanceTopUp({
   return (
     <ModalFrame
       ref={dialog}
-      className="hosting-dialog top-up-dialog"
+      className={`hosting-dialog top-up-dialog${mobileSheet ? ' hosting-dialog--sheet' : ''}`}
       aria-labelledby={`${id}-title`}
       onClose={event => { if (event.target === event.currentTarget) onClose() }}
       onCancel={event => {

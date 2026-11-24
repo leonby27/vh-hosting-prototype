@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Button, IconButton, PopoverMenu, Surface } from './ui/index.js'
 import { AnimatedBlock } from './hosting-motion.jsx'
 import migrationIllustration from './assets/dashboard/migration-illustration.png'
+import mobileMigrationIllustration from './assets/dashboard/mobile-migration-illustration.png'
 import migrationClose from './assets/dashboard/migration-close.svg'
 import trialCard from './assets/dashboard/trial-card.svg'
 import trialCheck from './assets/dashboard/trial-check.svg'
@@ -78,19 +79,21 @@ export function DashboardTrialNotice({ onPay, compact }) {
   )
 }
 
-export function DashboardMigrationBanner({ visible, onMigrate }) {
+export function DashboardMigrationBanner({ visible, onMigrate, compact }) {
   const [open, setOpen] = useState(true)
 
   return (
     <AnimatedBlock open={visible && open}>
       <div className="dashboard-migration-slot">
         <Surface as="section" appearance="card" padding="none" className="dashboard-migration hosting-reveal" aria-label="Перенос на хостинг">
-          <img className="dashboard-migration-illustration" src={migrationIllustration} alt="" />
+          <span className="dashboard-migration-art">
+            <img className="dashboard-migration-illustration" src={compact ? mobileMigrationIllustration : migrationIllustration} alt="" />
+          </span>
           <div className="dashboard-migration-copy">
             <h2>Переносите сайты, домены и почту к нам</h2>
             <p>Переносим бесплатно, домены продлеваем по своей цене</p>
           </div>
-          <Button className="dashboard-migration-action" variant="neutral" size={40} onClick={onMigrate}>Перенести к нам</Button>
+          <Button className="dashboard-migration-action" variant="neutral" size={compact ? 32 : 40} onClick={onMigrate}>Перенести к нам</Button>
           <IconButton className="dashboard-migration-close" size={32} appearance="icon-on-dark"
             label="Закрыть баннер переноса" icon={<img src={migrationClose} alt="" />} onClick={() => setOpen(false)} />
         </Surface>
