@@ -40,8 +40,8 @@ const services = [
 
 const siteDescription = 'Разместите новый или перенесите существующий сайт, DNS уже настроен.'
 const populatedSites = [
+  { name: 'timeweb-test', detail: 'Не привязан', tone: 'warning' },
   { name: 'twsite', detail: 'coconote.ru' },
-  { name: 'timeweb-test', detail: 'Не привязан', tone: 'unlinked' },
   { name: 'notes', detail: 'coconote.ru' },
 ]
 
@@ -62,6 +62,7 @@ const serviceStates = {
     mail: {
       description: 'Создание почты недоступно на тестовом периоде. Оплатите тариф.',
       action: 'Оплатить тариф', actionSection: 'Настройки тарифа', mailUsage: 0,
+      sectionUnavailableReason: 'Раздел станет доступен после оплаты тарифа',
     },
   },
   parking: {
@@ -74,7 +75,7 @@ const serviceStates = {
 }
 
 const debitStates = {
-  rich: { extra: 'Продление 10 доменов', shortfall: 4296, note: 'Не забудьте пополнить счёт', tone: 'warning' },
+  rich: { extra: 'Продление 10 доменов', shortfall: 4296, note: 'Автоплатёж выключен', tone: 'warning' },
   overdue: { title: 'Заблокировано', extra: 'и ещё 3 сервиса', shortfall: 4296, note: 'Пополните счёт для разблокировки', tone: 'error' },
   blocked: { title: 'Заблокировано', plan: 'Недоступен', tone: 'error' },
   parking: { title: 'Отсутствует', plan: 'Парковка', shortfall: 399 },
@@ -134,8 +135,8 @@ function Artwork({ name }) {
   return <img src={assets[`./assets/dashboard/${name}.svg`]} alt="" />
 }
 
-function TintedArtwork({ name, tone, label, className = '' }) {
-  return <AssetIcon src={assets[`./assets/dashboard/${name}.svg`]} monochrome intrinsic tone={tone}
+function TintedArtwork({ name, tone, label, size, className = '' }) {
+  return <AssetIcon src={assets[`./assets/dashboard/${name}.svg`]} monochrome intrinsic={size == null} size={size} tone={tone}
     label={label} className={`dashboard-tinted-art ${className}`.trim()} />
 }
 
@@ -143,12 +144,26 @@ function DashboardButton({ children, onClick, label, primary = false, ...props }
   return <Button appearance="dashboard" className="dashboard-button" variant={primary ? 'primary' : 'neutral'} aria-label={label} onClick={onClick} {...props}>{children}</Button>
 }
 
-function OpenSection({ section, onSelect }) {
+function DisabledActionTooltip({ label, content, children }) {
   return (
-    <DashboardButton iconOnly label={`Открыть раздел «${section}»`} onClick={() => onSelect(section)}>
-      <TintedArtwork name="arrow-out" tone="icon-primary" />
+    <Tooltip className="dashboard-action-tooltip" content={content} pressable>
+      {id => <span className="dashboard-disabled-action vh-focus" tabIndex={0} role="group" aria-label={label} aria-describedby={id}>
+        {children}
+      </span>}
+    </Tooltip>
+  )
+}
+
+function OpenSection({ section, onSelect, tooltip, unavailableReason, size = 40 }) {
+  const label = `Открыть раздел «${section}»`
+  const disabled = Boolean(unavailableReason)
+  const renderButton = id => (
+    <DashboardButton iconOnly size={size} disabled={disabled} label={label} aria-describedby={id} onClick={() => onSelect(section)}>
+      <TintedArtwork name="arrow-out" size={size < 40 ? 16 : undefined} tone={disabled ? undefined : 'icon-primary'} />
     </DashboardButton>
   )
+  if (disabled) return <DisabledActionTooltip label={label} content={unavailableReason}>{renderButton()}</DisabledActionTooltip>
+  return tooltip ? <Tooltip className="dashboard-section-tooltip" content={tooltip}>{renderButton}</Tooltip> : renderButton()
 }
 
 function Skeleton({ width }) {
@@ -163,7 +178,7 @@ function DebitLine({ label, amount }) {
   </div>
 }
 
-function Billing({ onTopUp, credit, compact, state, loading }) {
+function Billing({ onTopUp, onOpenTariff, credit, compact, state, loading }) {
   const { mode } = state
   const debit = debitStates[mode] ?? {}
   const unavailable = mode === 'blocked'
@@ -219,15 +234,18 @@ function Billing({ onTopUp, credit, compact, state, loading }) {
       </Surface>
       <Surface as="section" appearance="card" elevation="card" padding="none"
         className="dashboard-card dashboard-billing-cell dashboard-plan-card hosting-reveal"
-        data-usage={showDebit || undefined} aria-label={showDebit ? 'Использование ресурсов тарифа' : undefined}
-        aria-labelledby={showDebit ? undefined : 'dashboard-plan'}>
-        {showDebit ? (
-          loading ? <div className="dashboard-plan-usage" aria-hidden="true">
+        data-usage={showDebit || undefined} aria-labelledby="dashboard-plan">
+        {showDebit ? <>
+          <header className="dashboard-plan-heading">
+            <h2 id="dashboard-plan">Тариф Optimo</h2>
+            <OpenSection section="Настройки тарифа" tooltip="Перейти в настройки тарифа" onSelect={onOpenTariff} size={28} />
+          </header>
+          {loading ? <div className="dashboard-plan-usage" aria-hidden="true">
             <Skeleton width="68%" />
             <Skeleton width="84%" />
             <Skeleton width="76%" />
-          </div> : <TariffUsage className="dashboard-plan-usage" dashboard diskWarning={mode === 'rich'} />
-        ) : <div>
+          </div> : <TariffUsage className="dashboard-plan-usage" dashboard diskWarning={mode === 'rich'} />}
+        </> : <div>
           <h2 className="dashboard-label" id="dashboard-plan">Тариф</h2>
           <p className="dashboard-amount" data-tone={unavailable ? 'muted' : undefined}>
             {loading ? <Skeleton width="114px" /> : debit.plan}
@@ -254,7 +272,9 @@ function ServiceCard({ service, onSelect, compact, state, mailQuota, onEditMailQ
   const { title, icon, section, action, actionSection, mailUsage, rows, description, price, more, warning, actionTone, blocked, limit } = { ...service, ...example }
   const [firstBar, secondBar, thirdBar, actionBar] = serviceSkeletonWidths[icon]
   const actionLabel = compact && !example?.action ? service.mobileAction ?? action : action
-  const singleAction = Boolean(price || actionSection)
+  const singleAction = Boolean(price)
+  const sectionUnavailableReason = example?.sectionUnavailableReason
+  const quotaDisabled = Boolean(sectionUnavailableReason)
   const openSection = () => onSelect(actionSection ?? section)
   return (
     <Surface as="article" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-service hosting-reveal"
@@ -263,8 +283,10 @@ function ServiceCard({ service, onSelect, compact, state, mailQuota, onEditMailQ
         <span className="dashboard-service-icon"><Artwork name={icon} /></span>
         <h3>{title}</h3>
         {!loading && mailUsage != null && (
-          <Button className="dashboard-mail-badge-trigger" appearance="text" pressable={false} aria-haspopup="dialog"
-            aria-label={`Изменить почтовую квоту, ${mailUsage} из ${mailQuota} Гб`} onClick={() => onEditMailQuota(mailUsage)}>
+          <Button className="dashboard-mail-badge-trigger" appearance="text" pressable={false} disabled={quotaDisabled}
+            aria-haspopup={quotaDisabled ? undefined : 'dialog'}
+            aria-label={`${quotaDisabled ? 'Почтовая квота' : 'Изменить почтовую квоту'}, ${mailUsage} из ${mailQuota} Гб`}
+            onClick={() => onEditMailQuota(mailUsage)}>
             <Badge className="dashboard-badge" tone={mailUsage / mailQuota >= 0.95 ? 'danger' : 'info'}>{mailUsage} из {mailQuota} Гб</Badge>
           </Button>
         )}
@@ -305,12 +327,11 @@ function ServiceCard({ service, onSelect, compact, state, mailQuota, onEditMailQ
             {loading ? icon === 'site' ? <Skeleton width={`${actionBar}px`} /> :
               <span className="dashboard-skeleton-action" style={{ '--dashboard-skeleton-action-width': `${actionBar + 22}px` }}>
                 <Skeleton width={`${actionBar}px`} />
-              </span> : limit ? <Tooltip content="Достигнут лимит по тарифу" placement="top" pressable>
-              {id => <span className="dashboard-limit-trigger vh-focus" tabIndex={0} role="group" aria-label={actionLabel} aria-describedby={id}>
-                <DashboardButton disabled>{actionLabel}</DashboardButton>
-              </span>}
-            </Tooltip> : <DashboardButton primary={singleAction || Boolean(actionTone)} tone={actionTone} onClick={openSection}>{actionLabel}</DashboardButton>}
-            {!singleAction && <OpenSection section={section} onSelect={onSelect} />}
+              </span> : limit ? <DisabledActionTooltip label={actionLabel} content="Достигнут лимит по тарифу">
+              <DashboardButton disabled>{actionLabel}</DashboardButton>
+            </DisabledActionTooltip> : <DashboardButton primary={singleAction || Boolean(actionTone)} tone={actionTone} onClick={openSection}>{actionLabel}</DashboardButton>}
+            {!singleAction && <OpenSection section={section} tooltip={`Перейти в раздел «${title}»`}
+              onSelect={onSelect} unavailableReason={sectionUnavailableReason} />}
           </div>
         </div>
       </>}
@@ -461,7 +482,7 @@ function Monitoring({ onSelect, state, loading, metrics }) {
           <TintedArtwork name="chart-ok" tone="icon-success" />
           Ни один сайт не перегружает сервер
         </p>}
-        <OpenSection section="Мониторинг нагрузки" onSelect={onSelect} />
+        <OpenSection section="Мониторинг нагрузки" onSelect={onSelect} tooltip="Перейти в мониторинг нагрузки" />
       </div></>}
     </Surface>
   )
@@ -582,7 +603,7 @@ export default function Dashboard({ onSelect, compact, screenState, attackNotice
       <div>
         <DashboardMigrationBanner visible={Boolean(state.migration)} compact={compact} onMigrate={() => onSelect('Перенести к нам')} />
         <AnimatedBlock>
-          <Billing onTopUp={openTopUp} credit={creditCents / 100} compact={compact} state={state} loading={loading} />
+          <Billing onTopUp={openTopUp} onOpenTariff={openTariff} credit={creditCents / 100} compact={compact} state={state} loading={loading} />
         </AnimatedBlock>
       </div>
       <section className="dashboard-services" aria-labelledby="dashboard-services-title">

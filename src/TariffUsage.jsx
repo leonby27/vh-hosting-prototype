@@ -7,7 +7,7 @@ const dashboardDisk = { ...disk, used: 14 }
 const fullDashboardDisk = { ...disk, used: 28, tone: 'warning' }
 const dashboardOtherUsage = [
   { ...sites, label: 'Сайты', used: 3 },
-  { label: 'Базы данных', used: 2, limit: 3 },
+  { label: 'БД', used: 2, limit: 3 },
 ]
 
 export default function TariffUsage({ className, dashboard = false, diskWarning = false }) {
