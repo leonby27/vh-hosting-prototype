@@ -18,7 +18,7 @@ export function AppHeader({ brand, children, actions }) {
   </header>
 }
 
-export function SidebarNav({ items = [], groups = [items], value, onChange, label = 'Боковое меню' }) {
+export function SidebarNav({ items = [], groups = [items], value, onChange, label = 'Боковое меню', iconOnly = false }) {
   return <nav aria-label={label}>
     {groups.map(group => {
       const { title, items: entries } = Array.isArray(group) ? { items: group } : group
@@ -28,18 +28,19 @@ export function SidebarNav({ items = [], groups = [items], value, onChange, labe
           {entries.map(item => {
             const isLink = item.href && !item.disabled
             return <li key={item.id}>
-              <MenuItem as={isLink ? 'a' : 'button'} layout="sidebar"
+              <MenuItem as={isLink ? 'a' : 'button'} layout="sidebar" title={iconOnly ? item.label : undefined}
                 {...(isLink ? {
                   href: item.href,
                   target: item.target,
                   rel: item.target === '_blank' ? 'noopener noreferrer' : undefined,
                 } : { disabled: item.disabled })}
                 aria-current={item.id === value ? 'page' : undefined}
+                aria-label={iconOnly ? item.label : undefined}
                 onClick={event => {
                   if (isLink && (item.target === '_blank' || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
                   onChange?.(item.id)
                 }}>
-                {item.icon}<span>{item.label}</span>
+                {item.icon}<span hidden={iconOnly}>{item.label}</span>
               </MenuItem>
             </li>
           })}

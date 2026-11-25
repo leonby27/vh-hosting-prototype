@@ -10,6 +10,10 @@
   --vh-button-line-height: 18px;
 }
 
+.vh-button[data-appearance="dashboard"][data-button-icon-only] {
+  min-inline-size: var(--vh-button-size);
+}
+
 .vh-button[data-appearance="dashboard"][data-variant="primary"] {
   --vh-button-padding: 0 20px;
   --vh-button-font-size: 14px;
@@ -221,11 +225,12 @@
 
 .vh-button[data-appearance="toolbar-icon"] {
   --vh-button-padding: 0;
-  --vh-button-back-override: transparent;
-  --vh-button-hover-override: color-mix(in srgb, var(--hosting-controls-color) 14%, transparent);
+  --vh-button-back-override: color-mix(in srgb, var(--hosting-controls-color) 14%, transparent);
+  --vh-button-hover-override: color-mix(in srgb, var(--hosting-controls-color) 20%, transparent);
   --vh-button-text-override: currentColor;
   border-width: 0;
   inline-size: 36px;
+  transition: background-color var(--hosting-motion-color) ease;
   -webkit-tap-highlight-color: transparent;
 }
 .vh-button[data-appearance="toolbar-icon"][aria-expanded="true"] {

@@ -76,7 +76,7 @@ function BenefitDescription({ title, summary, description }) {
   return (
     <div className="tariff-benefit-summary">
       <span>{summary}</span>
-      <Tooltip content={description} size="large" variant="surface" pressable
+      <Tooltip content={description} size="large" variant="surface" placement="bottom" pressable
         className="tariff-benefit-tooltip" contentClassName="tariff-benefit-details">
         {id => <IconButton size={20} className="tariff-benefit-info"
           aria-label={`Подробнее: ${title}`} aria-describedby={id}>

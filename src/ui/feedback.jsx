@@ -80,10 +80,43 @@ export function TooltipBubble({ children, size = 'small', variant = 'default', c
   return <span {...props} className={`vh-tooltip-bubble ${className}`.trim()} data-size={size} data-variant={variant}>{children}</span>
 }
 
-export function Tooltip({ children, content, size, variant, placement = 'bottom', className = '', contentClassName = '', pressable = false }) {
+export function Tooltip({ children, content, size, variant, placement = 'top', className = '', contentClassName = '', pressable = false }) {
   const id = useId()
   const root = useRef(null)
+  const bubble = useRef(null)
   const [open, setOpen] = useState(false)
+
+  useLayoutEffect(() => {
+    if (!open || placement !== 'top') return
+    const trigger = root.current
+    const panel = bubble.current
+
+    function positionTooltip() {
+      const { left, top, bottom, width } = trigger.getBoundingClientRect()
+      const { width: panelWidth, height: panelHeight } = panel.getBoundingClientRect()
+      const { clientWidth, clientHeight } = document.documentElement
+      const edge = 8
+      const centeredLeft = left + (width - panelWidth) / 2
+      const fittedLeft = Math.max(edge, Math.min(centeredLeft, clientWidth - panelWidth - edge))
+      const spaceBelow = clientHeight - bottom
+      const placeBelow = top < panelHeight + 2 * edge && spaceBelow > top
+
+      panel.style.setProperty('--vh-tooltip-offset', `${fittedLeft - centeredLeft}px`)
+      panel.toggleAttribute('data-below', placeBelow)
+    }
+
+    positionTooltip()
+    const observer = new ResizeObserver(positionTooltip)
+    observer.observe(trigger)
+    observer.observe(panel)
+    window.addEventListener('resize', positionTooltip)
+    window.addEventListener('scroll', positionTooltip, true)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', positionTooltip)
+      window.removeEventListener('scroll', positionTooltip, true)
+    }
+  }, [open, placement])
 
   useEffect(() => {
     if (!open || !pressable) return
@@ -111,7 +144,7 @@ export function Tooltip({ children, content, size, variant, placement = 'bottom'
       }
     }}>
     {children(id)}
-    <TooltipBubble className={`vh-tooltip-content ${contentClassName}`.trim()} id={id} role="tooltip"
+    <TooltipBubble ref={bubble} className={`vh-tooltip-content ${contentClassName}`.trim()} id={id} role="tooltip"
       aria-hidden={!open} size={size} variant={variant}>{content}</TooltipBubble>
   </span>
 }
