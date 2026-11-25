@@ -1,13 +1,19 @@
 import { Fragment, useEffect, useId, useRef, useState } from 'react'
-import { Button, Switch } from './ui/controls.jsx'
+import { Button, IconButton, Switch } from './ui/controls.jsx'
 import { darkTokens } from './ui/hosting-theme.js'
 import { AssetIcon } from './ui/Icon.jsx'
+import { Tooltip } from './ui/feedback.jsx'
 import { SidebarNav } from './ui/layout.jsx'
 import { MenuItem, PopoverMenu, SegmentedOptions } from './ui/navigation.jsx'
 import logo from './assets/hosting/logo.svg'
 import darkLogo from './assets/hosting/logo-dark.svg'
 import mobileLogo from './assets/hosting/mobile-logo.svg?no-inline'
 import mobileBalanceAdd from './assets/hosting/mobile-balance-add.svg?no-inline'
+import vkLogo from './assets/hosting/social-vk.svg'
+import vkMonochrome from './assets/hosting/social-vk-monochrome.svg'
+import maxLogo from './assets/hosting/social-max.svg'
+import telegramLogo from './assets/hosting/social-telegram.svg'
+import telegramMonochrome from './assets/hosting/social-telegram-monochrome.svg'
 import { HostingToast, HostingToastContext } from './hosting-toast.jsx'
 import LeaveCheckoutDialog from './LeaveCheckoutDialog.jsx'
 import { PendingChangesContext } from './pending-changes.jsx'
@@ -40,6 +46,7 @@ const sidebarGroups = [
     ['ide', 'IDE'],
     ['api', apiAgentsSection],
     ['ssh', 'SSH-консоль'],
+    ['phpmyadmin', 'phpMyAdmin', 'PHPMyAdmin', 'https://vh354.timeweb.ru/pma/'],
     ['monitoring', 'Мониторинг нагрузки'],
     ['logs', 'Логи'],
     ['users', 'Пользователи ПУ/FTP'],
@@ -60,7 +67,7 @@ const sidebarGroups = [
 const quickLinks = [['Новости', 3, 'news'], ['Есть идея', 100, 'idea'], ['Пригласи друга', null, 'invite']]
 const moreGroups = [
   sidebarGroups[0].slice(3),
-  sidebarGroups[1].filter(([icon]) => icon !== 'ssh'),
+  sidebarGroups[1].filter(([icon]) => icon !== 'ssh' && icon !== 'phpmyadmin'),
   sidebarGroups[2],
   sidebarGroups[3],
   quickLinks.map(([label, , icon]) => [icon, label]),
@@ -377,9 +384,16 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
 }
 
 const toSidebarNavigation = groups => groups.map(group =>
-  group.map(([icon, id, label = id]) => ({ id, label, icon: <Icon name={icon} /> })))
+  group.map(([icon, id, label = id, href]) => ({ id, label, href, target: href ? '_blank' : undefined, icon: <Icon name={icon} /> })))
 const sidebarNavigation = toSidebarNavigation(sidebarGroups)
 const integratorSidebarNavigation = toSidebarNavigation([integratorSidebarGroups.flat()])
+
+const sidebarSocialIconSize = 20
+const socialLinks = [
+  { label: 'ВКонтакте', tooltip: 'Подписывайтесь на\u00A0группу ВКонтакте', href: 'https://vk.ru/hosting_timeweb', logo: vkLogo, monochrome: vkMonochrome },
+  { label: 'MAX', tooltip: 'Подписывайтесь на\u00A0канал в\u00A0MAX', href: 'https://max.ru/id7810353960_biz', logo: maxLogo },
+  { label: 'Telegram', tooltip: 'Подписывайтесь на\u00A0канал в\u00A0Telegram', href: 'https://t.me/twhosting', logo: telegramLogo, monochrome: telegramMonochrome },
+]
 
 function Sidebar({ selected, onSelect, integrator }) {
   return (
@@ -388,6 +402,21 @@ function Sidebar({ selected, onSelect, integrator }) {
         {!integrator && <div className="hosting-mobile-links"><QuickLinks selected={selected} onSelect={onSelect} /></div>}
         <SidebarNav label={integrator ? 'Панель интегратора' : 'Боковое меню хостинга'}
           groups={integrator ? integratorSidebarNavigation : sidebarNavigation} value={selected} onChange={onSelect} />
+        {!integrator && <nav className="hosting-sidebar-social-links" aria-label="Социальные сети">
+          {socialLinks.map(({ label, tooltip, href, logo, monochrome = logo }) => (
+            <Tooltip key={label} content={tooltip} placement="top">
+              {tooltipId => (
+                <IconButton as="a" href={href} target="_blank" rel="noopener noreferrer"
+                  aria-describedby={tooltipId} appearance="icon-solid" iconOnly label={label} icon={
+                    <span className="hosting-sidebar-social-icon">
+                      <AssetIcon src={monochrome} monochrome tone="icon-info" size={sidebarSocialIconSize} />
+                      <AssetIcon src={logo} size={sidebarSocialIconSize} />
+                    </span>
+                  } />
+              )}
+            </Tooltip>
+          ))}
+        </nav>}
       </div>
     </aside>
   )
@@ -430,6 +459,12 @@ function MobileMore({ open, onSelect, integrator }) {
             ))}
           </ul>
         ))}
+        {!integrator && <div className="hosting-more-social-links" role="group" aria-label="Социальные сети">
+          {socialLinks.map(({ label, href, logo }) => (
+            <IconButton key={label} as="a" href={href} target="_blank" rel="noopener noreferrer"
+              appearance="icon-solid" size={44} iconOnly label={label} icon={<AssetIcon src={logo} size={22} />} />
+          ))}
+        </div>}
       </nav>
     </main>
   )

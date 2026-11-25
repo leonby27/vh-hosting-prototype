@@ -4,15 +4,16 @@ import { createPortal } from 'react-dom'
 import BalanceTopUp from './BalanceTopUp.jsx'
 import DashboardMailQuota, { mailQuotaStorageKey, readMailQuota } from './DashboardMailQuota.jsx'
 import DashboardMetricPlot from './DashboardMetricPlot.jsx'
+import TariffUsage from './TariffUsage.jsx'
 import { formatTopUpAmount, topUpStates } from './balance-top-up-states.js'
 import { HostingToastContext } from './hosting-toast.jsx'
-import { Dropdown, SegmentedOptions } from './ui/navigation.jsx'
-import { AssetIcon, Icon } from './ui/Icon.jsx'
+import { Dropdown, TabList } from './ui/navigation.jsx'
+import { AssetIcon } from './ui/Icon.jsx'
 import { Surface } from './ui/layout.jsx'
 import { Badge, Tooltip } from './ui/feedback.jsx'
 import NetworkAttackNotice from './NetworkAttackNotice.jsx'
 import { AnimatedBlock } from './hosting-motion.jsx'
-import { getDashboardState } from './dashboard-variants.js'
+import { getDashboardState, typicalDashboard } from './dashboard-variants.js'
 import { DashboardMigrationBanner, DashboardTrialNotice } from './DashboardNotices.jsx'
 import './dashboard.css'
 
@@ -25,13 +26,11 @@ const services = [
   {
     title: 'Сайты', icon: 'site', section: 'Сайты', action: 'Добавить сайт',
     rows: [{ name: 'twsite', detail: 'timeweb.ru' }, { name: 'twsitelongname', detail: 'timeweblongname.ru' }],
-    mobileRows: [{ name: 'twsite', detail: 'timeweb.ru' }],
   },
   {
     title: 'Домены', icon: 'globe', section: 'Домены и SSL', action: 'Купить домен',
     rows: [{ name: 'myreviews.ru' }, { name: 'myreviews.ru', info: true }],
     mobileAction: 'Добавить домен',
-    mobileRows: [{ name: 'timeweb.ru', detail: 'до 12.10.2028' }, { name: 'myreviews.ru', detail: 'до 10.04.2027' }],
   },
   {
     title: 'Почта', icon: 'mail', section: 'Почта', action: 'Добавить ящик', mailUsage: 16.4,
@@ -60,7 +59,10 @@ const serviceStates = {
   },
   trial: {
     site: { description: siteDescription },
-    mail: { description: 'Добавьте первый почтовый ящик на вашем домене.', mailUsage: 0 },
+    mail: {
+      description: 'Создание почты недоступно на тестовом периоде. Оплатите тариф.',
+      action: 'Оплатить тариф', actionSection: 'Настройки тарифа', mailUsage: 0,
+    },
   },
   parking: {
     globe: { description: 'Выберите домен для будущего сайта и почты, всё остальное подключается к нему.', price: 'от 200 ₽ / год', action: 'Подобрать домен' },
@@ -72,11 +74,11 @@ const serviceStates = {
 }
 
 const debitStates = {
-  rich: { extra: 'Продление 10 доменов', shortfall: 4296, note: 'Не забудьте пополнить счёт', tone: 'warning', planServices: '2 сервиса' },
+  rich: { extra: 'Продление 10 доменов', shortfall: 4296, note: 'Не забудьте пополнить счёт', tone: 'warning' },
   overdue: { title: 'Заблокировано', extra: 'и ещё 3 сервиса', shortfall: 4296, note: 'Пополните счёт для разблокировки', tone: 'error' },
   blocked: { title: 'Заблокировано', plan: 'Недоступен', tone: 'error' },
   parking: { title: 'Отсутствует', plan: 'Парковка', shortfall: 399 },
-  trial: { shortfall: 4716, note: 'Автоплатёж включён', planNote: 'Тестовый период до 12 сент. 2026' },
+  trial: { shortfall: 4716, note: 'Автоплатёж включён' },
 }
 
 const serviceSkeletonWidths = {
@@ -85,8 +87,11 @@ const serviceSkeletonWidths = {
   mail: [154, 233, 108, 128],
 }
 
-const ftpDetails = { IP: '192.0.2.15', Хост: 'vh354.example', Логин: 'demo001' }
-const mobileFtpFields = ['IP', 'Логин', 'Хост']
+const ftpDetails = [
+  { label: 'IP', value: '192.0.2.15', leader: 'ftp-ip-leader' },
+  { label: 'Логин', value: 'demo001', leader: 'ftp-login-leader' },
+  { label: 'Хост', value: 'vh354.example', leader: 'ftp-host-leader' },
+]
 
 const serviceStatuses = [
   ['web', 'Web'],
@@ -99,26 +104,31 @@ const serviceStatuses = [
 
 const serviceStatusLabels = { up: 'Работает', down: 'Недоступен' }
 
-const percentages = ['100%', '80%', '60%', '40%', '20%', '0']
-const mobilePercentages = ['50%', '40%', '30%', '20%', '10%', '0']
-const cpuSeconds = ['80', '64', '48', '32', '16', '0']
-const monitoringUnits = [{ value: '%', label: '%' }, { value: 'CP', label: 'CP' }]
-const unavailableMonitoringUnits = monitoringUnits.map(option => ({ ...option, disabled: true }))
 const dates = ['01.01', '03.01', '05.01', '07.01', '09.01', '11.01', '13.01']
+const yearlyDebitAmount = '4 716 ₽'
+const cpuUnits = ['%', 'CP']
 
 const monitoringMetrics = [
-  { value: 'CPU', label: 'CPU, %', description: 'Процессор' },
-  { value: 'MySQL', label: 'MySQL, сек', description: 'База данных', unit: 'сек', limit: 300,
+  { value: 'CPU', description: 'Нагрузка на\u00A0процессор', limit: 80 },
+  { value: 'MySQL', unit: 'сек', description: 'Нагрузка на\u00A0базы данных', limit: 300,
     values: [47, 60, 57, 65, 71, 62, 54, 76, 88, 106, 104, 94, 88, 102, 115, 124, 110, 118, 143, 129] },
-  { value: 'RAM', label: 'RAM, Мб', description: 'Объём доступной памяти', unit: 'Мб', limit: 1000,
-    values: [220, 280, 320, 360, 340, 390, 350, 330, 310, 280, 375, 460, 510, 490, 420, 450, 460, 440, 510, 480] },
-  { value: 'IO', label: 'IO, Мб/сек', description: 'Ограничение скорости', unit: 'Мб/сек', limit: 10,
+  { value: 'RAM', unit: 'МБ', description: 'Объём используемой памяти', limit: 1000, warningThreshold: 800,
+    values: [220, 280, 320, 360, 340, 390, 350, 330, 310, 280, 375, 460, 510, 610, 750, 860, 920, 770, 840, 910] },
+  { value: 'I/O', unit: 'МБ/с', description: 'Ограничение скорости чтения и записи на\u00A0диск', limit: 10,
     values: [2, 1.5, 2.4, 1, 2.8, 3.1, 6, 4.8, 4.5, 4, 3.8, 5.3, 5, 4.6, 3.7, 3, 3.8, 3.2, 5, 4] },
-  { value: 'IOPS', label: 'IOPS', description: 'Кол-во операций ввода-вывода в сек.', unit: 'оп/сек', limit: 500,
+  { value: 'IOPS', unit: 'оп/с', description: 'Количество операций ввода-вывода', limit: 500,
     values: [120, 110, 130, 90, 130, 180, 220, 210, 160, 190, 180, 150, 160, 150, 180, 190, 210, 190, 240, 210] },
-  { value: 'nPROC', label: 'nPROC', description: 'Макс. одновременно работающих процессов', unit: 'проц.', limit: 50,
+  { value: 'Nginx', unit: 'шт.', description: 'Максимум одновременно работающих процессов', limit: 50,
     values: [12, 13, 12, 15, 17, 16, 18, 17, 15, 11, 15, 20, 23, 21, 19, 15, 16, 14, 19, 17] },
 ]
+
+const typicalMonitoringMetrics = monitoringMetrics.map(metric => metric.value === 'RAM' ? {
+  ...metric,
+  warningThreshold: undefined,
+  values: [220, 280, 320, 360, 340, 390, 350, 330, 310, 280, 375, 460, 510, 490, 420, 450, 460, 440, 510, 480],
+} : metric)
+
+const metricWarningDot = <span className="dashboard-metric-warning" aria-hidden="true" />
 
 function Artwork({ name }) {
   return <img src={assets[`./assets/dashboard/${name}.svg`]} alt="" />
@@ -153,21 +163,17 @@ function DebitLine({ label, amount }) {
   </div>
 }
 
-function Billing({ onTopUp, onTariffSettings, credit, compact, state, loading }) {
+function Billing({ onTopUp, credit, compact, state, loading }) {
   const { mode } = state
   const debit = debitStates[mode] ?? {}
   const unavailable = mode === 'blocked'
-  const mobileTrial = mode === 'trial' && compact
-  const balance = (mobileTrial ? 2784 : state.balance ?? 2784) + credit
-  const initialShortfall = mobileTrial ? 4296 : debit.shortfall ?? (compact ? 4296 : 0)
+  const balance = (state.balance ?? 2784) + credit
+  const initialShortfall = debit.shortfall ?? 0
   const shortfall = Math.max(0, initialShortfall - credit)
   const balanceNote = shortfall ? `Не хватает ${formatTopUpAmount(shortfall)} ₽` : 'Баланса хватает до списания'
   const debitTitle = debit.title ?? (compact ? '12 сентября' : '12 сентября 2028')
   const debitNote = debit.note ?? 'Автоплатёж включён'
   const showDebit = !unavailable && mode !== 'parking'
-  const planNoteAtBottom = !compact && !unavailable && mode !== 'parking' && !debit.planServices
-  const canOpenPlan = !unavailable && mode !== 'parking'
-  const mobilePlanServices = mode == null || mode === 'rich' ? '2 услуги' : null
 
   return (
     <div className="dashboard-billing" data-blocked={unavailable || undefined}>
@@ -197,13 +203,13 @@ function Billing({ onTopUp, onTariffSettings, credit, compact, state, loading })
               <div className="dashboard-mobile-debit">
                 <time className="dashboard-amount" dateTime="2028-09-12">{debitTitle}</time>
                 <TintedArtwork name="mobile-balance-leader" tone="plan-branch-line" />
-                <strong className="dashboard-amount">4 716 ₽</strong>
+                <strong className="dashboard-amount">{yearlyDebitAmount}</strong>
               </div>
               <p className="dashboard-note">Тариф Year, год</p>
             </> : <>
               <p className="dashboard-amount" data-tone={debit.title ? debit.tone : undefined}>{debitTitle}</p>
               {showDebit && <div className="dashboard-renewals">
-                <DebitLine label="Тариф Year, годовой" amount="4 716 ₽" />
+                <DebitLine label="Тариф Year, годовой" amount={yearlyDebitAmount} />
                 {debit.extra && <DebitLine label={debit.extra} amount="400 ₽" />}
               </div>}
             </>}
@@ -211,28 +217,22 @@ function Billing({ onTopUp, onTariffSettings, credit, compact, state, loading })
           {showDebit && <p className="dashboard-label" data-tone={debit.tone}>{loading ? <Skeleton width="114px" /> : debitNote}</p>}
         </div>
       </Surface>
-      <Surface as="section" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-billing-cell dashboard-plan-card hosting-reveal" aria-labelledby="dashboard-plan">
-        <div>
+      <Surface as="section" appearance="card" elevation="card" padding="none"
+        className="dashboard-card dashboard-billing-cell dashboard-plan-card hosting-reveal"
+        data-usage={showDebit || undefined} aria-label={showDebit ? 'Использование ресурсов тарифа' : undefined}
+        aria-labelledby={showDebit ? undefined : 'dashboard-plan'}>
+        {showDebit ? (
+          loading ? <div className="dashboard-plan-usage" aria-hidden="true">
+            <Skeleton width="68%" />
+            <Skeleton width="84%" />
+            <Skeleton width="76%" />
+          </div> : <TariffUsage className="dashboard-plan-usage" dashboard diskWarning={mode === 'rich'} />
+        ) : <div>
           <h2 className="dashboard-label" id="dashboard-plan">Тариф</h2>
-          {loading ? <>
-            <p className="dashboard-amount">
-              <Skeleton width="114px" />
-              {compact && <Skeleton width="194px" />}
-            </p>
-            {!planNoteAtBottom && !compact && <p className="dashboard-note"><Skeleton width="194px" /></p>}
-          </> : !canOpenPlan ?
-            <p className="dashboard-amount" data-tone={unavailable ? 'muted' : undefined}>{debit.plan}</p> :
-            compact ? <p className="dashboard-amount">Optimo{mobilePlanServices && <span className="dashboard-plan-services"> · {mobilePlanServices}</span>}</p> :
-              <Button appearance="nav-action" pressable={false} className="dashboard-amount dashboard-plan-link"
-                onClick={onTariffSettings} aria-label="Настройки тарифа Optimo">Optimo</Button>}
-          {!loading && !compact && debit.planServices && <p className="dashboard-note">{debit.planServices}</p>}
-        </div>
-        {compact && canOpenPlan && <DashboardButton iconOnly label="Настройки тарифа Optimo" onClick={onTariffSettings}>
-          <Icon name="adjust2-outline" size={20} />
-        </DashboardButton>}
-        {planNoteAtBottom && <p className="dashboard-note">
-          {loading ? <Skeleton width="194px" /> : debit.planNote ?? 'Оплачен до 30.09, ещё 16 дней'}
-        </p>}
+          <p className="dashboard-amount" data-tone={unavailable ? 'muted' : undefined}>
+            {loading ? <Skeleton width="114px" /> : debit.plan}
+          </p>
+        </div>}
       </Surface>
     </div>
   )
@@ -251,11 +251,11 @@ function DomainName({ value, className, ...props }) {
 
 function ServiceCard({ service, onSelect, compact, state, mailQuota, onEditMailQuota, loading }) {
   const example = serviceStates[state]?.[service.icon]
-  const { title, icon, section, action, mailUsage, rows, description, price, more, warning, actionTone, blocked, limit } = { ...service, ...example }
+  const { title, icon, section, action, actionSection, mailUsage, rows, description, price, more, warning, actionTone, blocked, limit } = { ...service, ...example }
   const [firstBar, secondBar, thirdBar, actionBar] = serviceSkeletonWidths[icon]
-  const visibleRows = compact && !example?.rows && service.mobileRows ? service.mobileRows : rows
   const actionLabel = compact && !example?.action ? service.mobileAction ?? action : action
-  const openSection = () => onSelect(section)
+  const singleAction = Boolean(price || actionSection)
+  const openSection = () => onSelect(actionSection ?? section)
   return (
     <Surface as="article" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-service hosting-reveal"
       data-muted={Boolean(blocked || price)} data-expanded={Boolean(more) || undefined}>
@@ -280,7 +280,7 @@ function ServiceCard({ service, onSelect, compact, state, mailQuota, onEditMailQ
                 {price && <p className="dashboard-service-price">{price}</p>}
               </div> :
               <ul className="dashboard-service-rows">
-                {visibleRows.map(({ name, detail, info, tone }, index) => (
+                {rows.map(({ name, detail, info, tone }, index) => (
                   <li key={index} data-row-tone={tone}>
                     {icon === 'site' ? <span className="dashboard-ellipsis">{name}</span> : <DomainName value={name} />}
                     {detail && (icon === 'site'
@@ -301,7 +301,7 @@ function ServiceCard({ service, onSelect, compact, state, mailQuota, onEditMailQ
           {warning && <AnimatedBlock open={!loading}>
             <p className="dashboard-service-summary dashboard-service-warning" data-tone="warning">{warning}</p>
           </AnimatedBlock>}
-          <div className="dashboard-service-actions" data-price={Boolean(price)}>
+          <div className="dashboard-service-actions" data-single-action={singleAction || undefined}>
             {loading ? icon === 'site' ? <Skeleton width={`${actionBar}px`} /> :
               <span className="dashboard-skeleton-action" style={{ '--dashboard-skeleton-action-width': `${actionBar + 22}px` }}>
                 <Skeleton width={`${actionBar}px`} />
@@ -309,8 +309,8 @@ function ServiceCard({ service, onSelect, compact, state, mailQuota, onEditMailQ
               {id => <span className="dashboard-limit-trigger vh-focus" tabIndex={0} role="group" aria-label={actionLabel} aria-describedby={id}>
                 <DashboardButton disabled>{actionLabel}</DashboardButton>
               </span>}
-            </Tooltip> : <DashboardButton primary={Boolean(price || actionTone)} tone={actionTone} onClick={openSection}>{actionLabel}</DashboardButton>}
-            {!price && <OpenSection section={section} onSelect={onSelect} />}
+            </Tooltip> : <DashboardButton primary={singleAction || Boolean(actionTone)} tone={actionTone} onClick={openSection}>{actionLabel}</DashboardButton>}
+            {!singleAction && <OpenSection section={section} onSelect={onSelect} />}
           </div>
         </div>
       </>}
@@ -318,78 +318,156 @@ function ServiceCard({ service, onSelect, compact, state, mailQuota, onEditMailQ
   )
 }
 
-function Monitoring({ onSelect, compact, state, loading }) {
-  const unitName = useId()
+function MonitoringMetricSelector({ metrics, value, onChange, cpuUnit, cpuWarning }) {
+  const id = useId()
+  const barRef = useRef(null)
+  const measureRef = useRef(null)
+  const [visibleCount, setVisibleCount] = useState(metrics.length)
+  const metricSegments = metrics.map(metric => {
+    const overloaded = metric.warningThreshold || (cpuWarning && metric.value === 'CPU')
+    return {
+      id: metric.value,
+      label: metric.value,
+      menuLabel: `${metric.value},\u00A0${metric.unit ?? cpuUnit}`,
+      description: metric.description,
+      suffix: overloaded ? metricWarningDot : undefined,
+      accessibleLabel: overloaded ? `${metric.value}, перегрузка` : undefined,
+    }
+  })
+
+  useLayoutEffect(() => {
+    const bar = barRef.current
+    const measure = measureRef.current
+
+    function fit() {
+      const style = getComputedStyle(measure)
+      const gap = parseFloat(style.columnGap)
+      const available = bar.clientWidth
+      const widths = Array.from(measure.children, child => child.getBoundingClientRect().width)
+      const moreWidth = widths.pop()
+      const fullWidth = widths.reduce((sum, width) => sum + width, 0) + gap * (widths.length - 1)
+      if (fullWidth <= available) {
+        setVisibleCount(widths.length)
+        return
+      }
+
+      let used = moreWidth
+      let count = 0
+      for (const width of widths) {
+        used += gap + width
+        if (used > available) break
+        count += 1
+      }
+      setVisibleCount(count)
+    }
+
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(bar)
+    observer.observe(measure)
+    return () => observer.disconnect()
+  }, [cpuWarning, metrics])
+
+  const overflow = metricSegments.slice(visibleCount)
+  const selectedOverflow = overflow.some(option => option.id === value)
+
+  const moreLabel = <>Ещё <TintedArtwork name="arrow-down" /></>
+
+  return (
+    <div className="dashboard-metric-bar" ref={barRef}>
+      <div className="dashboard-metric-switcher">
+        {visibleCount > 0 && <TabList idPrefix={id} label="Метрика нагрузки"
+          className="dashboard-metric-tabs" tabs={metricSegments.slice(0, visibleCount)}
+          value={value} onChange={onChange} controls={false} allowUnselected />}
+        {overflow.length > 0 && <Dropdown className="dashboard-metric-dropdown" panelClassName="dashboard-metric-panel"
+          panelLabel="Другие метрики нагрузки" optionSize={40} selection
+          items={overflow.map(option => ({
+            value: option.id,
+            selected: option.id === value,
+            label: <>{option.menuLabel}{option.suffix && <>
+              {option.suffix}<span className="dashboard-sr-only">, перегрузка</span>
+            </>} <span className="dashboard-metric-description">· {option.description}</span></>,
+          }))} onSelect={onChange}
+          renderTrigger={props => <div className="sites-tabs">
+            <button {...props} className="dashboard-metric-more" data-active={selectedOverflow || undefined}
+              aria-label={selectedOverflow ? `Ещё метрики, выбрана ${value}` : 'Ещё метрики'}>{moreLabel}</button>
+          </div>} />}
+      </div>
+      <div className="dashboard-metric-measure" aria-hidden="true" inert>
+        <div className="sites-tabs" ref={measureRef}>
+          {metricSegments.map(option => <button key={option.id} type="button">
+            {option.label}{option.suffix}
+          </button>)}
+          <button type="button" className="dashboard-metric-more">{moreLabel}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Monitoring({ onSelect, state, loading, metrics }) {
   const [metricName, setMetricName] = useState('CPU')
-  const [unit, setUnit] = useState('CP')
-  const [showSeconds, setShowSeconds] = useState(false)
-  const metric = monitoringMetrics.find(option => option.value === metricName)
+  const [cpuUnit, setCpuUnit] = useState('CP')
+  const metric = metrics.find(option => option.value === metricName)
   const isCpu = metricName === 'CPU'
-  const marks = isCpu ? showSeconds ? cpuSeconds : compact ? mobilePercentages : percentages :
-    Array.from({ length: 6 }, (_, index) => metric.limit * (5 - index) / 5)
+  const inPercent = isCpu && cpuUnit === '%'
+  const axisLimit = inPercent ? 100 : metric.limit
+  const marks = Array.from({ length: 6 }, (_, index) => {
+    const mark = axisLimit * (5 - index) / 5
+    return inPercent && mark > 0 ? `${mark}%` : mark
+  })
   const unavailable = state === 'blocked'
   const highLoad = state === 'high'
-  const heading = compact && !unavailable ? 'Нагрузка:' : 'Мониторинг'
-  const today = isCpu ? '60 сек из 80 сек' : `${metric.values.at(-1)} ${metric.unit} из ${metric.limit} ${metric.unit}`
-  const metricOptions = monitoringMetrics.map(option => ({
-    value: option.value,
-    selected: option.value === metricName,
-    label: <>{option.label} <span className="dashboard-metric-description">· {option.description}</span></>,
-  }))
-
-  function selectUnit(value) {
-    setUnit(value)
-    setShowSeconds(value === 'CP')
-  }
+  const cpuOverload = isCpu && highLoad
+  const overloadPercent = metric.warningThreshold
+    ? Math.round(Math.max(...metric.values) / metric.limit * 100)
+    : cpuOverload ? 85 : null
 
   return (
     <Surface as="section" appearance="card" elevation="card" padding="none" className="dashboard-card dashboard-monitor hosting-reveal"
-      data-unavailable={unavailable || undefined} aria-labelledby="dashboard-monitor-title">
-      <div className="dashboard-monitor-top">
-        <div>
-          {unavailable ? <h3 id="dashboard-monitor-title">{heading}</h3> :
-            <Dropdown className="dashboard-metric-dropdown" panelClassName="dashboard-metric-panel" panelLabel="Метрики нагрузки"
-              optionSize={40} selection items={metricOptions} onSelect={setMetricName}
-              renderTrigger={props => <h3 id="dashboard-monitor-title">
-                {heading} <Button {...props} appearance="text" pressable={false} className="dashboard-metric" aria-label={`Метрика нагрузки: ${metricName}`}>
-                  {metricName} <TintedArtwork name="arrow-down" tone="link-text" />
-                </Button>
-              </h3>} />}
-          <p>{loading ? <Skeleton width="237px" /> : unavailable ? 'Сегодня: нет данных' : `Сегодня: ${today}`}</p>
+      data-unavailable={unavailable || undefined} aria-label="Мониторинг">
+      {!unavailable && <div className="dashboard-monitor-top">
+        <MonitoringMetricSelector metrics={metrics} value={metricName} onChange={setMetricName} cpuUnit={cpuUnit} cpuWarning={highLoad} />
+        <div className="dashboard-metric-caption">
+          <p aria-live="polite">{isCpu ? `${metric.description},` : `${metric.description},\u00A0${metric.unit}`}</p>
+          {isCpu && <Dropdown className="dashboard-unit-dropdown" panelClassName="dashboard-unit-panel" panelLabel="Единицы нагрузки CPU"
+            optionSize={40} selection onSelect={setCpuUnit}
+            items={cpuUnits.map(unit => ({ value: unit, label: unit, selected: unit === cpuUnit }))}
+            renderTrigger={props => <Button {...props} appearance="text" pressable={false} className="dashboard-monitor-unit"
+              aria-label={`Единицы нагрузки CPU: ${cpuUnit}`}>{cpuUnit}<TintedArtwork name="arrow-down" /></Button>} />}
         </div>
-        {isCpu && <SegmentedOptions name={unitName} label="Единицы нагрузки" options={unavailable ? unavailableMonitoringUnits : monitoringUnits}
-          value={unit} onChange={selectUnit} onReselect={selectUnit} />}
-      </div>
+      </div>}
       {unavailable ? <p className="dashboard-unavailable">Раздел недоступен</p> : <>
-      <figure className="dashboard-chart" aria-label={loading ? 'График загружается' : `График нагрузки ${metricName} с 1 по ${compact ? 11 : 13} января`}>
+      <figure className="dashboard-chart" aria-label={loading ? 'График загружается' : `График нагрузки ${metricName} с 1 по 13 января`}>
         <div className="dashboard-chart-y" aria-hidden="true">
           {marks.map(mark => <span key={mark}>{mark}</span>)}
         </div>
         <div className="dashboard-chart-plot" data-loading={loading} aria-hidden="true">
-          {!loading && <DashboardMetricPlot metric={metric} compact={compact} highLoad={highLoad} />}
+          {!loading && <DashboardMetricPlot metric={metric} highLoad={highLoad} />}
         </div>
         <div className="dashboard-chart-x" aria-hidden="true">
-          {(compact ? dates.slice(0, -1) : dates).map(date => <span key={date}>{date}</span>)}
+          {dates.map(date => <span key={date}>{date}</span>)}
         </div>
       </figure>
       <div className="dashboard-monitor-footer">
-        {!compact && <TintedArtwork name="chart-divider" tone="line" className="dashboard-monitor-divider" />}
-        {loading ? <Skeleton width="160px" /> : !isCpu ? <p>Нагрузка в пределах лимита</p> : compact || highLoad ? <>
+        {loading ? <Skeleton width="160px" /> : overloadPercent !== null ? <>
           <p className="dashboard-load-sites">
-            <DomainName value="exampleweblongname.ru" />
-            <Badge className="dashboard-load-count" tone="danger">+4 сайта</Badge>
+            <DomainName value={cpuOverload ? 'exampleweblongname.ru' : 'timeweb.ru'} />
+            {cpuOverload && <Badge className="dashboard-load-count" tone="danger">+4 сайта</Badge>}
           </p>
-          <TintedArtwork name={compact ? 'mobile-chart-leader' : 'chart-high-leader'} tone="warning-text"
-            className="dashboard-load-leader" />
-          <span className="dashboard-load-percent" data-tone="error">85%</span>
-        </> : <p><TintedArtwork name="chart-ok" tone="icon-success" /> Ни один сайт не перегружает сервер</p>}
+          <span className="dashboard-load-leader" aria-hidden="true" />
+          <span className="dashboard-load-percent" data-tone="error">{overloadPercent}%</span>
+        </> : <p>
+          <TintedArtwork name="chart-ok" tone="icon-success" />
+          Ни один сайт не перегружает сервер
+        </p>}
         <OpenSection section="Мониторинг нагрузки" onSelect={onSelect} />
       </div></>}
     </Surface>
   )
 }
 
-function FtpStatus({ compact, loading, initialSsh, smtpDown }) {
+function FtpStatus({ loading, initialSsh, smtpDown }) {
   const showToast = useContext(HostingToastContext)
   const [sshEnabled, setSshEnabled] = useState(initialSsh)
 
@@ -408,15 +486,19 @@ function FtpStatus({ compact, loading, initialSsh, smtpDown }) {
       <div className="dashboard-ftp-panels">
         <div className="dashboard-ftp-details">
           <dl>
-            {(compact ? mobileFtpFields : Object.keys(ftpDetails)).map(label => (
+            {ftpDetails.map(({ label, value, leader }) => (
               <div key={label}>
                 <dt>{label}</dt>
                 <dd>
-                  {loading ? <Skeleton width="100px" /> : <><span>{ftpDetails[label]}</span>
-                  <IconButton className="dashboard-ftp-copy" size={20} label={`Скопировать ${label}`}
-                    onClick={() => copyDetail(ftpDetails[label])}>
-                    <TintedArtwork name="copy" />
-                  </IconButton></>}
+                  <AssetIcon src={assets[`./assets/dashboard/${leader}.svg`]} monochrome size={2}
+                    tone="plan-branch-line" className="dashboard-ftp-leader" />
+                  {loading ? <Skeleton width="100px" /> : <>
+                    <span>{value}</span>
+                    <IconButton className="dashboard-ftp-copy" size={20} label={`Скопировать ${label}`}
+                      onClick={() => copyDetail(value)}>
+                      <TintedArtwork name="copy" />
+                    </IconButton>
+                  </>}
                 </dd>
               </div>
             ))}
@@ -429,12 +511,14 @@ function FtpStatus({ compact, loading, initialSsh, smtpDown }) {
 
             return (
               <li key={icon}>
-                <span className="dashboard-status-icon"><TintedArtwork name={compact && icon === 'web' ? 'mobile-web' : icon} tone="icon-primary" /></span>
+                <TintedArtwork name={icon} tone="icon-primary" />
                 <span>{label}</span>
                 {icon === 'ssh'
                   ? <Switch className="dashboard-ssh" aria-label="SSH" disabled={loading} checked={sshEnabled} onClick={() => setSshEnabled(value => !value)} />
                   : <span className="dashboard-service-status" data-status={status} role={loading ? undefined : 'img'}
-                    aria-label={serviceStatusLabels[status]} aria-hidden={loading || undefined} />}
+                    aria-label={serviceStatusLabels[status]} aria-hidden={loading || undefined}>
+                    <TintedArtwork name="service-status-dot" />
+                  </span>}
               </li>
             )
           })}
@@ -482,11 +566,12 @@ export default function Dashboard({ onSelect, compact, screenState, attackNotice
     }
   }
 
-  const monitoring = <Monitoring key="monitoring" onSelect={onSelect} compact={compact} state={state.monitoring} loading={loading} />
-  const ftp = <FtpStatus key={rich ? 'ftp-rich' : 'ftp'} compact={compact} loading={loading} initialSsh={!rich} smtpDown={rich} />
+  const monitoring = <Monitoring key="monitoring" onSelect={onSelect} state={state.monitoring}
+    loading={loading} metrics={state.id === typicalDashboard.id ? typicalMonitoringMetrics : monitoringMetrics} />
+  const ftp = <FtpStatus key={rich ? 'ftp-rich' : 'ftp'} loading={loading} initialSsh={!rich} smtpDown={rich} />
   const trialNotice = trial && <DashboardTrialNotice onPay={openTariff} compact={compact} />
   const visibleServices = parking ? [services[1], services[0], services[2]] : services
-  const serviceState = attackNotice ? 'rich' : trial && compact ? undefined : state.services
+  const serviceState = attackNotice ? 'rich' : state.services
 
   return (
     <div ref={dashboard} className="dashboard" data-mode={loading ? 'loading' : state.mode}>
@@ -497,7 +582,7 @@ export default function Dashboard({ onSelect, compact, screenState, attackNotice
       <div>
         <DashboardMigrationBanner visible={Boolean(state.migration)} compact={compact} onMigrate={() => onSelect('Перенести к нам')} />
         <AnimatedBlock>
-          <Billing onTariffSettings={openTariff} onTopUp={openTopUp} credit={creditCents / 100} compact={compact} state={state} loading={loading} />
+          <Billing onTopUp={openTopUp} credit={creditCents / 100} compact={compact} state={state} loading={loading} />
         </AnimatedBlock>
       </div>
       <section className="dashboard-services" aria-labelledby="dashboard-services-title">
@@ -505,7 +590,8 @@ export default function Dashboard({ onSelect, compact, screenState, attackNotice
         <AnimatedBlock>
           <div className="dashboard-service-grid">
             {visibleServices.map(service => <ServiceCard key={service.icon} service={service} onSelect={onSelect} compact={compact}
-              state={serviceState} mailQuota={mailQuota.amount} onEditMailQuota={setMailQuotaUsage} loading={loading} />)}
+              state={serviceState}
+              mailQuota={mailQuota.amount} onEditMailQuota={setMailQuotaUsage} loading={loading} />)}
           </div>
         </AnimatedBlock>
         {!parking && <div className="dashboard-detail-grid">{compact ? [ftp, monitoring] : [monitoring, ftp]}</div>}

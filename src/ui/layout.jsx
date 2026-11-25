@@ -29,10 +29,14 @@ export function SidebarNav({ items = [], groups = [items], value, onChange, labe
             const isLink = item.href && !item.disabled
             return <li key={item.id}>
               <MenuItem as={isLink ? 'a' : 'button'} layout="sidebar"
-                {...(isLink ? { href: item.href } : { disabled: item.disabled })}
+                {...(isLink ? {
+                  href: item.href,
+                  target: item.target,
+                  rel: item.target === '_blank' ? 'noopener noreferrer' : undefined,
+                } : { disabled: item.disabled })}
                 aria-current={item.id === value ? 'page' : undefined}
                 onClick={event => {
-                  if (isLink && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
+                  if (isLink && (item.target === '_blank' || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return
                   onChange?.(item.id)
                 }}>
                 {item.icon}<span>{item.label}</span>

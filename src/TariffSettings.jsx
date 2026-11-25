@@ -1,5 +1,6 @@
 import { PopoverMenu, TabList, MenuItem } from './ui/navigation.jsx'
-import { Badge, ProgressBar } from './ui/feedback.jsx'
+import { Badge } from './ui/feedback.jsx'
+import TariffUsage from './TariffUsage.jsx'
 import { useContext, useEffect, useId, useRef, useState } from 'react'
 import { Button as SharedButton, IconButton, Stepper } from './ui/controls.jsx'
 import { Surface } from './ui/layout.jsx'
@@ -50,7 +51,6 @@ const faqs = [
   ['Чем отличаются тарифы?', 'У тарифов разные лимиты на сайты, дисковое пространство и нагрузку. Сравните их перед сменой тарифа.'],
 ]
 const tariffPaymentMethods = ['saved-card', 'new-card', 'bank', 'sbp', 'foreign', 'yoomoney']
-const usage = [['Сайтов', 14, 20, ''], ['Диск', 4, 30, ' ГБ'], ['Нагрузка на CPU', 0, 1200, '']]
 const tabs = [['tariff', 'Тариф'], ['services', 'Другие сервисы']]
 
 function Art({ name, className }) {
@@ -462,14 +462,7 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
             <div><p>Тариф</p><strong>{plan}</strong><p>{period === 'year' ? 'годовая' : 'помесячная'} оплата, {currentPackage ? `с пакетом «${currentPackage.title}»` : 'без пакета'}</p></div>
             <Choices label={compact ? 'Сменить' : 'Сменить тариф'} title="Сменить тариф" variant="primary" value={plan} options={['Optimo', 'Year'].map(name => [name, name])} onSelect={confirmPlan} />
           </div>
-          <div className="tariff-usage tariff-overview-cell">
-            {usage.map(([label, used, limit, unit]) => (
-              <div key={label}>
-                <div><span>{label}</span><b>{used} из {limit}{unit}</b></div>
-                <ProgressBar label={label} value={used} max={limit} />
-              </div>
-            ))}
-          </div>
+          <TariffUsage className="tariff-usage tariff-overview-cell" />
           <div className="tariff-overview-cell">
             <div><p>Оплачен до</p><strong>12 сентября</strong><p>Это ещё 16 дней</p></div>
             <Choices label="Изменить период" value={period} options={[['month', 'Месяц'], ['year', 'Год']]} onSelect={confirmPeriod} />

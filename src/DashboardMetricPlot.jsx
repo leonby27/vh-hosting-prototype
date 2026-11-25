@@ -13,33 +13,28 @@ const cpuPoints = [
   [273, 67], [292, 86], [311, 60], [330, 12], [350, 28], [369, 6],
 ]
 
-const mobileCpuCrop = 64
-const mobileCpuTop = 70
-const mobilePlotHeight = 193
-
-function getPlot(metric, compact, highLoad) {
+function getPlot(metric, highLoad) {
+  const cpuThreshold = 46
   if (metric.value === 'CPU') {
-    const points = compact ? cpuPoints.slice(3).map(([x, y]) => [
-      Math.max(markerInset, (x - mobileCpuCrop) * plotWidth / (plotWidth - mobileCpuCrop)),
-      (y + mobileCpuTop) * plotHeight / mobilePlotHeight,
-    ]) : cpuPoints
-
-    return { points, warning: compact || highLoad ? 1 : 0 }
+    return { points: cpuPoints, threshold: cpuThreshold, warning: Number(highLoad) }
   }
 
-  const values = compact ? metric.values.slice(0, 17) : metric.values
+  const { values } = metric
+  const valueToY = value => plotHeight - markerInset - (plotHeight - 2 * markerInset) * value / metric.limit
+  const hasThreshold = metric.warningThreshold !== undefined
   return {
     points: values.map((value, index) => [
       markerInset + (plotWidth - 2 * markerInset) * index / (values.length - 1),
-      plotHeight - markerInset - (plotHeight - 2 * markerInset) * value / metric.limit,
+      valueToY(value),
     ]),
-    warning: 0,
+    threshold: hasThreshold ? valueToY(metric.warningThreshold) : cpuThreshold,
+    warning: Number(hasThreshold),
   }
 }
 
-export default function DashboardMetricPlot({ metric, compact, highLoad }) {
+export default function DashboardMetricPlot({ metric, highLoad }) {
   const id = useId()
-  const target = useMemo(() => getPlot(metric, compact, highLoad), [metric, compact, highLoad])
+  const target = useMemo(() => getPlot(metric, highLoad), [metric, highLoad])
   const [frame, setFrame] = useState(target)
   const current = useRef(target)
 
@@ -80,6 +75,7 @@ export default function DashboardMetricPlot({ metric, compact, highLoad }) {
           const [nextX, nextY] = target.points[index]
           return [x + (nextX - x) * eased, y + (nextY - y) * eased]
         }),
+        threshold: start.threshold + (target.threshold - start.threshold) * eased,
         warning: start.warning + (target.warning - start.warning) * eased,
       })
       animation = requestAnimationFrame(tick)
@@ -97,9 +93,8 @@ export default function DashboardMetricPlot({ metric, compact, highLoad }) {
     }
   }, [target])
 
-  const threshold = compact ? (mobileCpuTop + 46) * plotHeight / mobilePlotHeight : 46
+  const { points, threshold, warning } = frame
   const thresholdOffset = threshold / plotHeight
-  const { points, warning } = frame
   const line = points.map(point => point.join(',')).join(' ')
   const area = `${points[0][0]},${plotHeight} ${line} ${points.at(-1)[0]},${plotHeight}`
   const warningColor = `color-mix(in srgb, var(--hosting-warning-text) ${warning * 100}%, currentColor)`
@@ -120,8 +115,8 @@ export default function DashboardMetricPlot({ metric, compact, highLoad }) {
       </defs>
       <polygon points={area} fill={`url(#${id}-fill)`} />
       <polyline points={line} fill="none" stroke={`url(#${id}-stroke)`} strokeWidth="2" vectorEffect="non-scaling-stroke" />
-      {!compact && <line x1={markerInset} x2={plotWidth - markerInset} y1={threshold} y2={threshold}
-        stroke="var(--hosting-warning-text)" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" opacity={warning} />}
+      <line x1={markerInset} x2={plotWidth - markerInset} y1={threshold} y2={threshold}
+        stroke="var(--hosting-warning-text)" strokeDasharray="2 2" vectorEffect="non-scaling-stroke" opacity={warning} />
     </svg>
     <svg className="dashboard-metric-points" fill="var(--hosting-surface)" strokeWidth="2">
       {points.map(([x, y], index) => <circle key={index} cx={`${100 * x / plotWidth}%`} cy={`${100 * y / plotHeight}%`}

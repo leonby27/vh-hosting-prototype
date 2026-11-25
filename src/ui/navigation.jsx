@@ -20,12 +20,12 @@ function NavigationItemContent({ icon, label, count, suffix }) {
 export function TabList({
   tabs, value, onChange, idPrefix, label, variant = 'line',
   className = '', indicator = true, size = variant === 'segmented' ? defaultSegmentedSize : undefined, surface, controls = true,
-  ref, navigate, preventScroll = false,
+  ref, navigate, preventScroll = false, allowUnselected = false,
 }) {
   const segmented = variant === 'segmented'
   const track = segmented ? 'hosting-segmented' : 'sites-tabs'
   const enabled = tabs.filter(tab => !tab.disabled)
-  const active = enabled.find(tab => tab.id === value)?.id ?? enabled[0]?.id
+  const active = enabled.find(tab => tab.id === value)?.id ?? (allowUnselected ? undefined : enabled[0]?.id)
 
   function select(id, focus) {
     function change() {
@@ -58,7 +58,7 @@ export function TabList({
     {tabs.map(tab => <button key={tab.id} id={tab.elementId ?? `${idPrefix}-tab-${tab.id}`} type="button" role="tab" disabled={tab.disabled}
       data-decorated={Boolean(tab.icon || tab.count != null || tab.suffix) || undefined}
       aria-label={tab.accessibleLabel} aria-selected={tab.id === active} aria-controls={!controls || tab.disabled ? undefined : (tab.panelId ?? `${idPrefix}-panel-${tab.id}`)}
-      tabIndex={tab.id === active ? 0 : -1} onClick={() => { if (tab.id !== active) select(tab.id) }}>
+      tabIndex={tab.id === (active ?? enabled[0]?.id) ? 0 : -1} onClick={() => { if (tab.id !== active) select(tab.id) }}>
       <NavigationItemContent icon={tab.icon} label={tab.label} count={tab.count} suffix={tab.suffix} />
     </button>)}
   </div>
