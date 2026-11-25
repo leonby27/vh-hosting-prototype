@@ -822,17 +822,13 @@
   margin-block-start: var(--dashboard-detail-heading-gap);
 }
 
-.dashboard-ftp-details,
-.dashboard-status-list {
+.dashboard-ftp-details {
   min-inline-size: 0;
+  min-block-size: 166px;
   box-sizing: border-box;
+  padding: 20px;
   border-radius: 12px;
   background: var(--hosting-card-surface);
-}
-
-.dashboard-ftp-details {
-  min-block-size: 166px;
-  padding: 20px;
 }
 
 .dashboard-ftp-details dl {
@@ -898,10 +894,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(3, minmax(36px, auto));
   grid-auto-flow: column;
-  align-content: start;
   gap: 4px;
-  min-block-size: 158px;
-  padding: 20px;
 }
 
 .dashboard-status-list li {
@@ -911,7 +904,7 @@
   gap: 6px;
   padding: 6px 8px;
   border-radius: 10px;
-  background: var(--hosting-on-surface);
+  background: var(--hosting-card-surface);
   font-size: 15px;
   line-height: 18px;
   font-weight: 500;
@@ -979,8 +972,7 @@
 }
 
 @container dashboard (max-width: 365px) {
-  .dashboard-ftp-details,
-  .dashboard ul.dashboard-status-list {
+  .dashboard-ftp-details {
     padding-inline: 12px;
   }
 
