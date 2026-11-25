@@ -1,3 +1,10 @@
+export const dashboardConceptSection = 'Концепт дашборда'
+export const dashboardConceptHref = '?concept=dashboard'
+
+export function isDashboardSection(section) {
+  return section === 'Дашборд' || section === dashboardConceptSection
+}
+
 export const typicalDashboard = { id: 'dashboard-typical', label: 'Типичный вариант' }
 export const richDashboard = {
   id: 'initial', label: 'Насыщенный вариант', mode: 'rich', migration: true, monitoring: 'high', services: 'rich',

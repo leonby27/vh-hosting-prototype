@@ -19,7 +19,7 @@ import LeaveCheckoutDialog from './LeaveCheckoutDialog.jsx'
 import { PendingChangesContext } from './pending-changes.jsx'
 import { vhThemes } from './ui/theme.jsx'
 import { designSystemSection } from './design-system-section.js'
-import { richDashboard, typicalDashboard } from './dashboard-variants.js'
+import { dashboardConceptHref, dashboardConceptSection, isDashboardSection, richDashboard, typicalDashboard } from './dashboard-variants.js'
 import { apiAgentsSection } from './api-agents-data.js'
 import { integratorKnowledge, integratorNews, integratorPages, integratorProgramSections, integratorSection, integratorSettings, integratorSupport } from './integrator-data.js'
 import './hosting-shell.css'
@@ -77,6 +77,8 @@ const mobileSections = [
   ['mobile-sites', 'Сайты', 'Сайты'],
   ['mobile-domains', 'Домены', 'Домены и SSL'],
 ]
+const conceptMobileSections = mobileSections.map(([icon, label, section]) =>
+  [icon, label, section === 'Дашборд' ? dashboardConceptSection : section])
 const integratorSidebarGroups = [
   [
     ['partner', integratorSection],
@@ -123,8 +125,8 @@ const viewStorageKey = 'vh-hosting-preview-view'
 const compactViewport = '(max-width: 700px)'
 const dashboardLayoutIds = [null, typicalDashboard.id, richDashboard.id]
 const previewViews = [
-  ['mobile', 'Mobile'],
-  ['desktop', 'Desktop'],
+  ['mobile', 'Мобильный экран'],
+  ['desktop', 'Обычный экран'],
   ['desktop-wide', 'Широкий экран'],
 ]
 const previewViewOptions = previewViews.map(([value, accessibleLabel]) => ({ value, accessibleLabel, icon: <Icon name={value} /> }))
@@ -152,26 +154,32 @@ function Icon({ name }) {
     className={`hosting-icon hosting-icon--${name}`} />
 }
 
-function QuickLinks({ selected, onSelect }) {
+function followLink(event, navigate) {
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  event.preventDefault()
+  navigate()
+}
+
+function QuickLinks({ selected, onSelect, iconOnly = false }) {
   return (
     <nav className="hosting-quick-links" aria-label="Ссылки в шапке">
-      {quickLinks.map(([label, count]) => (
-        <Button appearance="nav-action" pressable={false} type="button" key={label} aria-current={selected === label ? 'page' : undefined} onClick={() => onSelect(label)}>
-          {label}
-          {count && <span className="hosting-count">{count}</span>}
+      {quickLinks.map(([label, count, icon]) => (
+        <Button appearance="nav-action" pressable={false} type="button" key={label} aria-current={selected === label ? 'page' : undefined}
+          aria-label={iconOnly ? (count ? `${label}, ${count}` : label) : undefined}
+          title={iconOnly ? label : undefined} onClick={() => onSelect(label)}>
+          {iconOnly ? <MoreIcon name={icon} /> : <>{label}{count && <span className="hosting-count">{count}</span>}</>}
         </Button>
       ))}
     </nav>
   )
 }
 
-function HeaderMenu({ label, icon, open, onOpenChange, trigger, children, className = '', listLabel, placement }) {
-  const toolbar = icon === 'prototype' || icon === 'page-states'
+function HeaderMenu({ label, icon, open, onOpenChange, trigger, children, className = '', placement, toolbar = false, active = false }) {
   return (
     <PopoverMenu className={`hosting-dropdown ${className}`.trim()} open={open} onOpenChange={onOpenChange}
-      placement={placement} panelAs="ul" panelLabel={listLabel} panelClassName="hosting-dropdown-list"
-      optionSize={44} triggerProps={{ 'aria-label': label }}
-      renderTrigger={props => <Button appearance={toolbar ? 'toolbar-icon' : 'nav-action'} size={toolbar ? 36 : undefined}
+      placement={placement} panelAs="ul" panelClassName="hosting-dropdown-list"
+      optionSize={44} triggerProps={{ 'aria-label': label, 'data-active': active || undefined }}
+      renderTrigger={props => <Button appearance={toolbar ? 'toolbar-icon' : 'nav-action'} size={toolbar ? 24 : undefined}
         pressable={false} {...props} className="hosting-menu-trigger">
         {trigger ?? <>
           {icon === 'support' && <Icon name={icon} />}
@@ -185,19 +193,103 @@ function HeaderMenu({ label, icon, open, onOpenChange, trigger, children, classN
   )
 }
 
-function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selected, onSelect, dark, onToggleTheme, states, activeState, onChooseState, previewView, onPreviewChange, integrator, integratorBalance, onDeposit }) {
+const prototypePages = {
+  label: 'Страницы',
+  items: [
+    { label: 'Дашборд', href: './', icon: 'dashboard' },
+    { label: 'Антивирус', href: '?sites=antivirus', icon: 'domains', section: 'Сайты', tab: 'antivirus' },
+    { label: 'Сетевая защита', href: '?sites=network-protection', icon: 'vps', section: 'Сайты', tab: 'network-protection' },
+    { label: 'Другие сервисы', href: '?tariff=services', icon: 'plan', section: 'Настройки тарифа', tab: 'services' },
+    { label: apiAgentsSection, href: '?api=connection', icon: 'api', tab: 'connection' },
+  ],
+}
+
+const prototypeGroups = [
+  { label: 'Компоненты', items: [
+    { label: 'Что изменится', href: '?changes', icon: 'logs' },
+    { label: designSystemSection, href: '?catalog', icon: 'plan' },
+  ] },
+  { label: 'Панели', items: [
+    { label: 'Панель интегратора', href: '?integrator=program', icon: 'partner', section: integratorSection },
+  ] },
+  { label: 'Концепты', items: [
+    { label: 'Дашборд', href: dashboardConceptHref, icon: 'dashboard', section: dashboardConceptSection },
+  ] },
+]
+
+function PrototypeToolbar({ selected, integrator, isCurrentSection, onSelect, states, activeState, onChooseState, previewView, onPreviewChange }) {
+  const [dropdown, setDropdown] = useState(null)
+  const previewViewName = useId()
+
+  function changeDropdown(name, open) {
+    setDropdown(current => open ? name : current === name ? null : current)
+  }
+
+  function selectView(view) {
+    setDropdown(null)
+    onPreviewChange(view)
+  }
+
+  function isCurrentPage(section, tab) {
+    if (section === integratorSection) return integrator
+    return section === selected && (!tab || (isCurrentSection?.(section, tab) ?? true))
+  }
+
+  const activeGroup = prototypeGroups.find(({ items }) =>
+    items.some(({ label, section = label }) => isCurrentPage(section))) ?? prototypePages
+
+  function renderGroup({ label, items }) {
+    return (
+      <HeaderMenu key={label} label={label} toolbar placement="top"
+        active={label === activeGroup.label}
+        open={dropdown === label} onOpenChange={open => changeDropdown(label, open)}
+        trigger={<><span>{label}</span><Icon name="caret" /></>}>
+        {items.map(({ label, href, icon, section = label, tab }) => (
+          <li key={href}><MenuItem as="a" href={href} icon={<Icon name={icon} />}
+            aria-current={isCurrentPage(section, tab) ? 'page' : undefined}
+            onClick={event => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault()
+              onSelect(section, tab)
+            }}>{label}</MenuItem></li>
+        ))}
+      </HeaderMenu>
+    )
+  }
+
+  return (
+    <nav className="hosting-prototype-toolbar" aria-label="Управление прототипом">
+      <div className="hosting-prototype-actions">
+        <SegmentedOptions name={previewViewName} label="Режим просмотра" className="hosting-preview-switch"
+          options={previewViewOptions} value={previewView} onChange={selectView} onReselect={selectView} />
+        {renderGroup(prototypePages)}
+        <HeaderMenu label="Сценарии" toolbar placement="top" className="hosting-scenarios-menu"
+          active={activeState !== states[0].id}
+          open={dropdown === 'states'} onOpenChange={open => changeDropdown('states', open)}
+          trigger={<><span>Сценарии</span><Icon name="caret" /></>}>
+          {states.map(state => (
+            <li key={state.id}><MenuItem selected={activeState === state.id} onClick={() => onChooseState(state.id)}>
+              {state.label}
+            </MenuItem></li>
+          ))}
+        </HeaderMenu>
+      </div>
+      <div className="hosting-prototype-links">
+        {prototypeGroups.map(renderGroup)}
+      </div>
+    </nav>
+  )
+}
+
+function HostingHeader({ compact, conceptLayout, menuOpen, onToggleMenu, menuToggleRef, selected, onSelect, dark, onToggleTheme, integrator, integratorBalance, onDeposit }) {
   const [dropdown, setDropdown] = useState(null)
   const [account, setAccount] = useState('demo001')
+  const productNavigation = integrator ? integratorMobileSections
+    : selected === dashboardConceptSection ? conceptMobileSections : mobileSections
 
   function select(label, tab) {
     setDropdown(null)
     onSelect(label, tab)
-  }
-
-  function followLink(event, navigate) {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-    event.preventDefault()
-    navigate()
   }
 
   function changeDropdown(name, open) {
@@ -213,11 +305,6 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
     onDeposit()
   }
 
-  const previewViewName = useId()
-  function selectPreviewView(view) {
-    setDropdown(null)
-    onPreviewChange(view)
-  }
   const accountMenu = (
     <HeaderMenu
       label={compact ? 'Профиль' : integrator ? 'cu203223' : account}
@@ -255,55 +342,15 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
 
   return (
     <header className="hosting-header">
-      <div className="hosting-preview-controls">
-        <HeaderMenu
-          label="Навигация прототипа"
-          icon="prototype"
-          className="hosting-prototype-menu"
-          listLabel="Экраны прототипа"
-          open={dropdown === 'prototype'}
-          onOpenChange={open => changeDropdown('prototype', open)}
-          trigger={<Icon name="menu" />}
-        >
-          <li className="hosting-prototype-heading">Страницы</li>
-          <li><MenuItem as="a" href="./" icon={<Icon name="dashboard" />}
-            onClick={event => followLink(event, () => onSelect('Дашборд'))}>Дашборд</MenuItem></li>
-          <li><MenuItem as="a" href="?sites=antivirus" icon={<Icon name="domains" />}
-            onClick={event => followLink(event, () => onSelect('Сайты', 'antivirus'))}>Антивирус</MenuItem></li>
-          <li><MenuItem as="a" href="?sites=network-protection" icon={<Icon name="vps" />}
-            onClick={event => followLink(event, () => onSelect('Сайты', 'network-protection'))}>Сетевая защита</MenuItem></li>
-          <li><MenuItem as="a" href="?tariff=services" icon={<Icon name="plan" />}
-            onClick={event => followLink(event, () => onSelect('Настройки тарифа', 'services'))}>Другие сервисы</MenuItem></li>
-          <li><MenuItem as="a" href="?api=connection" icon={<Icon name="api" />}
-            aria-current={selected === apiAgentsSection ? 'page' : undefined}
-            onClick={event => followLink(event, () => onSelect(apiAgentsSection, 'connection'))}>{apiAgentsSection}</MenuItem></li>
-          <li className="hosting-prototype-heading hosting-menu-divider">Компоненты</li>
-          <li><MenuItem as="a" href="?changes" icon={<Icon name="logs" />}
-            onClick={event => followLink(event, () => onSelect('Что изменится'))}>Что изменится</MenuItem></li>
-          <li>
-            <MenuItem as="a" href="?catalog" icon={<Icon name="plan" />}
-              aria-current={selected === designSystemSection ? 'page' : undefined}
-              onClick={event => followLink(event, () => onSelect(designSystemSection))}>
-              {designSystemSection}
-            </MenuItem>
-          </li>
-          <li className="hosting-prototype-heading hosting-menu-divider">Панели</li>
-          <li><MenuItem as="a" href="?integrator=program" icon={<Icon name="partner" />}
-            aria-current={integrator ? 'page' : undefined}
-            onClick={event => followLink(event, () => onSelect(integratorSection))}>Панель интегратора</MenuItem></li>
-        </HeaderMenu>
-        <SegmentedOptions name={previewViewName} label="Режим просмотра" className="hosting-preview-switch"
-          options={previewViewOptions} value={previewView} onChange={selectPreviewView} onReselect={selectPreviewView} />
-      </div>
       <div className="hosting-product-header">
         <div className="hosting-frame hosting-header-inner">
-          <div className="hosting-brand">
+          {!conceptLayout && <div className="hosting-brand">
             <a href={integrator ? '?integrator=program' : './'} aria-label="Timeweb Hosting"
               onClick={event => followLink(event, () => select(integrator ? integratorSection : 'Дашборд'))}>
               {compact ? <img src={mobileLogo} width="96" height="20" alt="Timeweb" />
                 : <img src={dark ? darkLogo : logo} width="186" height="26" alt="timeweb hosting" />}
             </a>
-          </div>
+          </div>}
           {compact ? (
             <Button appearance="nav-action" pressable={false} type="button" className="hosting-mobile-balance" aria-label={`Пополнить баланс, ${integrator ? integratorBalance : '2 784 ₽'}`}
               onClick={openBalance}>
@@ -333,28 +380,11 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
           </>}
         </div>
       </div>
-      <HeaderMenu
-        label="Состояния страницы"
-        icon="page-states"
-        className="hosting-state-menu"
-        listLabel="Состояния страницы"
-        open={dropdown === 'states'}
-        onOpenChange={open => changeDropdown('states', open)}
-        trigger={<Icon name="menu" />}
-      >
-        {states.map(state => (
-          <li key={state.id}>
-            <MenuItem selected={activeState === state.id} onClick={() => onChooseState(state.id)}>
-              {state.label}
-            </MenuItem>
-          </li>
-        ))}
-      </HeaderMenu>
       {compact && (
         <nav className="hosting-mobile-nav" aria-label={integrator ? 'Разделы панели интегратора' : 'Разделы хостинга'}>
-          {(integrator ? integratorMobileSections : mobileSections).map(([icon, label, section]) => (
+          {productNavigation.map(([icon, label, section]) => (
             <Button appearance="nav-action" pressable={false} type="button" key={icon} aria-current={!menuOpen && selected === section ? 'page' : undefined} onClick={() => {
-              if (selected !== section || (section === 'Дашборд' && !menuOpen)) {
+              if (selected !== section || (isDashboardSection(section) && !menuOpen)) {
                 select(section)
               } else if (menuOpen) onToggleMenu()
             }}>
@@ -386,6 +416,8 @@ function HostingHeader({ compact, menuOpen, onToggleMenu, menuToggleRef, selecte
 const toSidebarNavigation = groups => groups.map(group =>
   group.map(([icon, id, label = id, href]) => ({ id, label, href, target: href ? '_blank' : undefined, icon: <Icon name={icon} /> })))
 const sidebarNavigation = toSidebarNavigation(sidebarGroups)
+const conceptSidebarNavigation = sidebarNavigation.map(group => group.map(item =>
+  item.id === 'Дашборд' ? { ...item, id: dashboardConceptSection } : item))
 const integratorSidebarNavigation = toSidebarNavigation([integratorSidebarGroups.flat()])
 
 const sidebarSocialIconSize = 20
@@ -395,27 +427,44 @@ const socialLinks = [
   { label: 'Telegram', tooltip: 'Подписывайтесь на\u00A0канал в\u00A0Telegram', href: 'https://t.me/twhosting', logo: telegramLogo, monochrome: telegramMonochrome },
 ]
 
-function Sidebar({ selected, onSelect, integrator }) {
+function Sidebar({ selected, onSelect, integrator, dark, collapsed = false, onToggle }) {
+  const concept = Boolean(onToggle)
+  const navigationId = useId()
+  const toggleLabel = collapsed ? 'Развернуть боковое меню' : 'Свернуть боковое меню'
+  const groups = integrator ? integratorSidebarNavigation
+    : selected === dashboardConceptSection ? conceptSidebarNavigation : sidebarNavigation
   return (
     <aside className="hosting-sidebar">
-      <div className="hosting-sidebar-inner">
-        {!integrator && <div className="hosting-mobile-links"><QuickLinks selected={selected} onSelect={onSelect} /></div>}
+      {concept && <div className="hosting-concept-sidebar-header">
+        <div className="hosting-brand" inert={collapsed || undefined}>
+          <a href={dashboardConceptHref} aria-label="Timeweb Hosting"
+            onClick={event => followLink(event, () => onSelect(dashboardConceptSection))}>
+            <img src={dark ? darkLogo : logo} width="152" height="21" alt="" />
+          </a>
+        </div>
+        <IconButton className="hosting-concept-sidebar-toggle" label={toggleLabel} title={toggleLabel}
+          iconOnly size={32} aria-expanded={!collapsed} aria-controls={navigationId} onClick={onToggle}
+          icon={<AssetIcon src={icons['./assets/hosting/caret.svg']} monochrome size={16} />} />
+      </div>}
+      <div className="hosting-sidebar-inner" id={concept ? navigationId : undefined}>
+        {!integrator && <div className="hosting-mobile-links"><QuickLinks selected={selected} onSelect={onSelect} iconOnly={collapsed} /></div>}
         <SidebarNav label={integrator ? 'Панель интегратора' : 'Боковое меню хостинга'}
-          groups={integrator ? integratorSidebarNavigation : sidebarNavigation} value={selected} onChange={onSelect} />
+          groups={groups} value={selected} onChange={onSelect} iconOnly={collapsed} />
         {!integrator && <nav className="hosting-sidebar-social-links" aria-label="Социальные сети">
-          {socialLinks.map(({ label, tooltip, href, logo, monochrome = logo }) => (
-            <Tooltip key={label} content={tooltip} placement="top">
-              {tooltipId => (
-                <IconButton as="a" href={href} target="_blank" rel="noopener noreferrer"
-                  aria-describedby={tooltipId} appearance="icon-solid" iconOnly label={label} icon={
-                    <span className="hosting-sidebar-social-icon">
-                      <AssetIcon src={monochrome} monochrome tone="icon-info" size={sidebarSocialIconSize} />
-                      <AssetIcon src={logo} size={sidebarSocialIconSize} />
-                    </span>
-                  } />
-              )}
-            </Tooltip>
-          ))}
+          {socialLinks.map(({ label, tooltip, href, logo, monochrome = logo }) => {
+            const renderLink = tooltipId => (
+              <IconButton as="a" href={href} target="_blank" rel="noopener noreferrer"
+                aria-describedby={tooltipId} title={concept ? tooltip : undefined}
+                appearance="icon-solid" iconOnly label={label} icon={
+                  <span className="hosting-sidebar-social-icon">
+                    <AssetIcon src={monochrome} monochrome tone="icon-info" size={sidebarSocialIconSize} />
+                    <AssetIcon src={logo} size={sidebarSocialIconSize} />
+                  </span>
+                } />
+            )
+            return concept ? <Fragment key={label}>{renderLink()}</Fragment>
+              : <Tooltip key={label} content={tooltip} placement="top">{renderLink}</Tooltip>
+          })}
         </nav>}
       </div>
     </aside>
@@ -478,17 +527,20 @@ export default function HostingShell({
   const [toast, setToast] = useState(null)
   const [selected, setSelected] = useState(initialSection)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [conceptSidebarCollapsed, setConceptSidebarCollapsed] = useState(false)
   const [dark, setDark] = useState(readDarkTheme)
   const [screenState, setScreenState] = useState({ id: initialScreenState, version: 0 })
-  const [dashboardLoad, setDashboardLoad] = useState(() => initialSection === 'Дашборд' ? {} : null)
+  const [dashboardLoad, setDashboardLoad] = useState(() => isDashboardSection(initialSection) ? {} : null)
   const [previewView, setPreviewView] = useState(readPreviewView)
   const [narrowViewport, setNarrowViewport] = useState(() => window.matchMedia(compactViewport).matches)
   const menuToggleRef = useRef(null)
   const pending = useRef(null)
   const [leaveDialog, setLeaveDialog] = useState(null)
   const compact = previewView === 'mobile' || narrowViewport
+  const conceptLayout = !compact && selected === dashboardConceptSection
   const moreOpen = compact && menuOpen
   const integrator = Object.values(integratorPages).includes(selected)
+  const dashboardSelected = isDashboardSection(selected)
 
   useEffect(() => {
     if (!dashboardLoad) return
@@ -523,7 +575,7 @@ export default function HostingShell({
   }
 
   function selectSection(label, tab) {
-    const opensDashboard = label === 'Дашборд'
+    const opensDashboard = isDashboardSection(label)
     if (!opensDashboard && label === selected && (isCurrentSection?.(label, tab) ?? true)) {
       setMenuOpen(false)
       return
@@ -554,7 +606,7 @@ export default function HostingShell({
     }
   }
 
-  const initialState = selected === 'Дашборд' && !moreOpen ? typicalDashboard : { id: 'initial', label: 'Исходное состояние' }
+  const initialState = dashboardSelected && !moreOpen ? typicalDashboard : { id: 'initial', label: 'Исходное состояние' }
   const presets = moreOpen ? [] : (getPageStates?.(selected) ?? []).filter(state => state.requiresPreset && state.id !== initialState.id)
   const states = [initialState, ...presets]
   const activeState = presets.some(state => state.id === screenState.id) ? screenState.id : initialState.id
@@ -562,11 +614,15 @@ export default function HostingShell({
 
   return (
     <div className="hosting-shell" data-theme={dark ? 'dark' : 'light'} data-view={previewView} data-compact={compact}
-      data-integrator={integrator || undefined}
+      data-integrator={integrator || undefined} data-dashboard-concept-layout={conceptLayout || undefined}
+      data-concept-sidebar-collapsed={conceptLayout && conceptSidebarCollapsed || undefined}
       style={{ ...vhThemes[dark ? 'dark' : 'light'], ...darkBannerTokens }}>
+      {conceptLayout && <Sidebar selected={selected} onSelect={selectSection} integrator={integrator} dark={dark}
+        collapsed={conceptSidebarCollapsed} onToggle={() => setConceptSidebarCollapsed(current => !current)} />}
       <div data-dashboard-header-notice="" />
       <HostingHeader
         compact={compact}
+        conceptLayout={conceptLayout}
         menuOpen={moreOpen}
         onToggleMenu={() => setMenuOpen(open => !open)}
         menuToggleRef={menuToggleRef}
@@ -574,18 +630,6 @@ export default function HostingShell({
         onSelect={selectSection}
         dark={dark}
         onToggleTheme={() => setDark(value => !value)}
-        states={states}
-        activeState={activeState}
-        onChooseState={id => {
-          const switchingLayout = selected === 'Дашборд' && !moreOpen && dashboardLayoutIds.includes(id) && dashboardLayoutIds.includes(screenState.id)
-          setMenuOpen(false)
-          setDashboardLoad(null)
-          setScreenState(current => ({ id, version: switchingLayout ? current.version : current.version + 1 }))
-          onScreenStateChange?.(id, selected)
-          if (!switchingLayout) window.scrollTo(0, 0)
-        }}
-        previewView={previewView}
-        onPreviewChange={changePreview}
         integrator={integrator}
         integratorBalance={integrator ? getIntegratorBalance?.(screenState.id) : undefined}
         onDeposit={() => {
@@ -597,7 +641,7 @@ export default function HostingShell({
       <div className="hosting-workspace-viewport">
         <div className="hosting-workspace-content">
           <div className="hosting-frame hosting-layout" data-section={moreOpen ? undefined : selected}>
-            {!compact && selected !== designSystemSection && <Sidebar selected={selected} onSelect={selectSection} integrator={integrator} />}
+            {!compact && !conceptLayout && selected !== designSystemSection && <Sidebar selected={selected} onSelect={selectSection} integrator={integrator} />}
             {compact && <MobileMore open={moreOpen} onSelect={selectSection} integrator={integrator} />}
             <main className={content ? 'hosting-content' : 'hosting-sheet'} aria-label={selected} hidden={moreOpen}>
               <PendingChangesContext value={{ pending, navigate }}>
@@ -609,6 +653,17 @@ export default function HostingShell({
           </div>
         </div>
       </div>
+      <PrototypeToolbar selected={selected} integrator={integrator} isCurrentSection={isCurrentSection} onSelect={selectSection}
+        states={states} activeState={activeState}
+        onChooseState={id => {
+          const switchingLayout = dashboardSelected && !moreOpen && dashboardLayoutIds.includes(id) && dashboardLayoutIds.includes(screenState.id)
+          setMenuOpen(false)
+          setDashboardLoad(null)
+          setScreenState(current => ({ id, version: switchingLayout ? current.version : current.version + 1 }))
+          onScreenStateChange?.(id, selected)
+          if (!switchingLayout) window.scrollTo(0, 0)
+        }}
+        previewView={previewView} onPreviewChange={changePreview} />
       <HostingToast toast={toast} setToast={setToast} />
       {leaveDialog && <LeaveCheckoutDialog title={leaveDialog.title} description={leaveDialog.description} onClose={action => {
         setLeaveDialog(null)

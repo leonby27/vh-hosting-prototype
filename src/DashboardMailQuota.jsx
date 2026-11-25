@@ -10,9 +10,9 @@ const defaultSettings = { amount: 20, autoIncrease: false }
 const pricePerGigabyte = 49
 const maximumQuota = Math.floor(Number.MAX_SAFE_INTEGER / pricePerGigabyte)
 
-export function readMailQuota() {
+export function readMailQuota(storageKey = mailQuotaStorageKey) {
   try {
-    const saved = JSON.parse(sessionStorage.getItem(mailQuotaStorageKey))
+    const saved = JSON.parse(sessionStorage.getItem(storageKey))
     if (Number.isSafeInteger(saved?.amount) && saved.amount >= 1 && saved.amount <= maximumQuota &&
       typeof saved.autoIncrease === 'boolean') return saved
   } catch {

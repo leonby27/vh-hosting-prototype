@@ -4,7 +4,8 @@ import { designSystemSection } from './design-system-section.js'
 import './styles.css'
 import HostingShell from './HostingShell.jsx'
 import Dashboard from './Dashboard.jsx'
-import { dashboardStates, typicalDashboard } from './dashboard-variants.js'
+import DashboardConcept from './DashboardConcept.jsx'
+import { dashboardConceptSection, dashboardStates, isDashboardSection, typicalDashboard } from './dashboard-variants.js'
 import TariffSettings from './TariffSettings.jsx'
 import { topUpStates } from './balance-top-up-states.js'
 import PlanChangesPreview from './PlanChangesPreview.jsx'
@@ -39,13 +40,13 @@ const tariffServiceStates = [
 const dashboardAttackStates = networkAttackStates.filter(({ id }) => id === 'protection-attack-multiple')
 
 function getAttackStates(section) {
-  if (section === 'Дашборд') return dashboardAttackStates
+  if (isDashboardSection(section)) return dashboardAttackStates
   return section === sitesSection ? networkAttackStates : []
 }
 
 function getPrototypeStates(section, tab) {
   if (Object.values(integratorPages).includes(section)) return integratorStates
-  if (section === 'Дашборд') return [...dashboardStates, ...topUpStates, ...dashboardAttackStates]
+  if (isDashboardSection(section)) return [...dashboardStates, ...topUpStates, ...dashboardAttackStates]
   if (section === planChangesSection) return planChangesStates
   if (section === tariffSection && (!tab || tab === 'services')) return tariffServiceStates
   if (section === apiAgentsSection && (!tab || tab === 'keys')) return [apiKeysPreset]
@@ -77,6 +78,8 @@ function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
   else url.searchParams.delete('sites')
   if (section === apiAgentsSection) url.searchParams.set('api', tab === 'mine' ? 'connection' : tab)
   else url.searchParams.delete('api')
+  if (section === dashboardConceptSection) url.searchParams.set('concept', 'dashboard')
+  else url.searchParams.delete('concept')
   const integratorPage = Object.keys(integratorPages).find(page => integratorPages[page] === section)
   if (integratorPage) url.searchParams.set('integrator', integratorPage)
   else url.searchParams.delete('integrator')
@@ -89,7 +92,7 @@ function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
 
 function syncPrototypeState(id, section) {
   const url = new URL(window.location.href)
-  const dashboardHome = section === 'Дашборд' && id === typicalDashboard.id
+  const dashboardHome = isDashboardSection(section) && id === typicalDashboard.id
   if (!dashboardHome && getPrototypeStates(section).length) url.searchParams.set('state', id)
   else url.searchParams.delete('state')
   replacePrototypeUrl(url)
@@ -110,7 +113,8 @@ function HostingApp() {
   const integratorPage = requestedIntegratorPage === 'program' && ['operations', 'documents', 'details'].includes(legacyIntegratorTab)
     ? legacyIntegratorTab : requestedIntegratorPage
   const initialSection = query.has('integrator') ? (Object.hasOwn(integratorPages, integratorPage) ? integratorPages[integratorPage] : integratorSection) :
-    query.has('catalog') ? designSystemSection : query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection : query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : 'Дашборд'
+    query.has('catalog') ? designSystemSection : query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection :
+      query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : query.get('concept') === 'dashboard' ? dashboardConceptSection : 'Дашборд'
   const requestedState = query.get('state')
   const initialScreenState = requestedState === 'initial' || getPrototypeStates(initialSection).some(state => state.id === requestedState)
     ? requestedState : null
@@ -187,8 +191,11 @@ function HostingApp() {
         syncPrototypeLocation(apiAgentsSection, tab)
       }} />
     }
-    if (section === 'Дашборд') return <Dashboard onSelect={onSelect} compact={compact} screenState={screenState}
-      attackNotice={attackNotice} refreshing={dashboardLoading} />
+    if (isDashboardSection(section)) {
+      const DashboardPage = section === dashboardConceptSection ? DashboardConcept : Dashboard
+      return <DashboardPage onSelect={onSelect} compact={compact} screenState={screenState}
+        attackNotice={attackNotice} refreshing={dashboardLoading} />
+    }
     if (section === planChangesSection) {
       const scenario = planChangeScenarios.find(entry => screenState === `scenario-${entry.id}`)
       return <PlanChangesPreview startsWithSavedCard={screenState === 'saved-card'}
