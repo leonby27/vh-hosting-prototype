@@ -536,7 +536,7 @@ function JournalRow({ entry, keyName }) {
   </tr>
 }
 
-function Journal({ keys, compact }) {
+function Journal({ keys, compact, empty = false }) {
   const [query, setQuery] = useState('')
   const [source, setSource] = useState('')
   const [key, setKey] = useState('')
@@ -550,7 +550,7 @@ function Journal({ keys, compact }) {
   keys.forEach(({ suffix, name }) => keyNames.set(suffix, name))
   const selectedKey = keyNames.has(key) ? key : ''
   const hasActiveFilters = Boolean(source || selectedKey || result)
-  const rows = journal.filter(([, suffix, channel, call, ip, status]) =>
+  const rows = (empty ? [] : journal).filter(([, suffix, channel, call, ip, status]) =>
     (!source || source === channel) && (!selectedKey || selectedKey === suffix) &&
     (!result || (status < 400 ? 'success' : 'error') === result) &&
     [call, ip, channel, keyNames.get(suffix), keyMask(suffix)].some(value => value.toLowerCase().includes(search)),
@@ -597,9 +597,9 @@ function Journal({ keys, compact }) {
       <div className="api-stack">
         {rows.length ? <DataTable label="Журнал запросов" headings={['Дата и время', 'Запрос', 'Ключ', 'Результат']}>
           {rows.map(entry => <JournalRow key={`${entry[0]}-${entry[3]}`} entry={entry} keyName={keyNames.get(entry[1])} />)}
-        </DataTable> : <Surface elevation="card" className="api-card api-empty">
-          <h2>Запросы не найдены</h2>
-          <p>Измените запрос или сбросьте фильтры.</p>
+        </DataTable> : <Surface appearance="card" padding="none" className="plan-changes-card">
+          <PlanChangesEmpty icon={apiIcon} title={empty ? 'Запросов пока нет' : 'Запросы не найдены'}
+            description={empty ? 'Здесь появится история запросов к API, MCP и Terraform.' : 'Измените запрос или сбросьте фильтры.'} />
         </Surface>}
       </div>
     </AnimatedBlock>
@@ -611,7 +611,7 @@ function ApiTabs({ tab, onTabChange, tabs = apiTabs, idPrefix = 'api', label = a
     value={tab} onChange={onTabChange} idPrefix={idPrefix} label={label} variant={variant} surface={surface} size={size} indicator />
 }
 
-export default function ApiAgents({ tab, onTabChange, keys: accountKeys, setKeys: setAccountKeys, showDemoKeys, compact }) {
+export default function ApiAgents({ tab, onTabChange, keys: accountKeys, setKeys: setAccountKeys, showDemoKeys, emptyJournal = false, compact }) {
   const [demoKeys, setDemoKeys] = useState(() => {
     if (!showDemoKeys) return []
     const now = Date.now()
@@ -702,7 +702,7 @@ export default function ApiAgents({ tab, onTabChange, keys: accountKeys, setKeys
       {id === 'connection' && <Connection hasKeys={keys.length > 0} onKeys={showKeys} onCreate={client => edit(null, client)} />}
       {id === 'keys' && <Keys keys={keys} onCreate={() => edit(null)} onEdit={edit}
         onRemove={key => setConfirmation({ key, remove: true })} onRotate={key => setConfirmation({ key, remove: false })} />}
-      {id === 'journal' && <Journal keys={keys} compact={compact} />}
+      {id === 'journal' && <Journal keys={keys} compact={compact} empty={emptyJournal} />}
     </div>)}
     {confirmation && <WarningDialog title={confirmation.remove ? 'Удалить ключ?' : 'Перевыпустить ключ?'}
       description={`Интеграции с ключом «${confirmation.key.name}» потеряют доступ.`}

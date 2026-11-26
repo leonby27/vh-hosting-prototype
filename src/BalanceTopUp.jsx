@@ -1,11 +1,11 @@
 import { MenuItem, MenuPanel, moveMenuFocus } from './ui/navigation.jsx'
 import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { ModalClose, ModalFrame } from './ui/feedback.jsx'
-import { Button, Chip, TextInput } from './ui/controls.jsx'
+import { Button, Chip, TextField, TextInput } from './ui/controls.jsx'
 import { CheckLine, PaymentOptionLabel } from './PlanChanges.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import { SelectionCard } from './ui/selection.jsx'
-import { AnimatedBlock, DropdownPanel } from './hosting-motion.jsx'
+import { AnimatedBlock, DropdownPanel, useAnimatedHeight } from './hosting-motion.jsx'
 import { newCard, paymentActions, paymentMethods, savedCard, savedSbp, securePaymentNote } from './plan-payment-options.js'
 import { formatTopUpAmount } from './balance-top-up-states.js'
 import cardIcon from './assets/plan-changes/pay-card-24.svg'
@@ -59,11 +59,13 @@ function PeriodOptions({ annualPlan, selected, highlightYear, onSelect }) {
 }
 
 export default function BalanceTopUp({
-  preset, compact, savedMethods, onUnlink, onPay, onClose, forClients = false, description, amountPresets,
-  describeCredit, availableBalance, onCreateInvoice, mobileSheet = false,
+  preset, compact, savedMethods, onUnlink, onPay, onClose, forClients = false, title: dialogTitle = 'Пополнить баланс', description, amountPresets,
+  describeCredit, creditInDescription = false, availableBalance, onCreateInvoice, mobileSheet = false,
+  initialAmount, amountDisabled = false, invoiceOnly = false,
 }) {
   const id = useId()
   const dialog = useRef(null)
+  const animatedForm = useAnimatedHeight(undefined, forClients)
   const title = useRef(null)
   const scrollArea = useRef(null)
   const input = useRef(null)
@@ -71,11 +73,12 @@ export default function BalanceTopUp({
   const menu = useRef(null)
   const menuClose = useRef(null)
   const restoreTriggerFocus = useRef(false)
-  const [amount, setAmount] = useState(() => forClients ? '' : formatTopUpAmount(preset?.amount ?? 1578))
+  const [amount, setAmount] = useState(() => initialAmount !== undefined
+    ? formatTopUpAmount(initialAmount) : forClients ? '' : formatTopUpAmount(preset?.amount ?? 1578))
   const [selectedPeriod, setSelectedPeriod] = useState(forClients || preset?.annualPlan || preset?.saved ? null : preset?.amount ?? 1578)
   const [method, setMethod] = useState(preset?.method ?? savedMethods[0]?.id ?? 'bank')
   const [save, setSave] = useState(true)
-  const [useBalance, setUseBalance] = useState(false)
+  const [useBalance, setUseBalance] = useState(availableBalance !== undefined)
   const [methodsOpen, setMethodsOpen] = useState(Boolean(preset?.methodsOpen && savedMethods.length))
   const [unlinkChoice, setUnlinkChoice] = useState(null)
   const [documentAction, setDocumentAction] = useState(null)
@@ -96,10 +99,17 @@ export default function BalanceTopUp({
   const formattedAmount = formatTopUpAmount(numericAmount)
   const balanceAmount = valid && useBalance ? Math.min(numericAmount, availableBalance ?? 0) : 0
   const externalAmount = Math.round((numericAmount - balanceAmount) * 100) / 100
-  const balanceOnly = balanceAmount > 0 && externalAmount === 0
+  const balanceOnly = availableBalance !== undefined && useBalance
+  const balanceRemaining = availableBalance - numericAmount
+  const insufficientBalance = balanceOnly && valid && balanceRemaining < 0
+  const canSubmit = valid && (!invoiceOnly || Number.isSafeInteger(numericAmount))
+    && (!balanceOnly || numericAmount <= availableBalance)
   const splitPayment = balanceAmount > 0 && !balanceOnly
   const formattedExternalAmount = formatTopUpAmount(externalAmount)
   const otherSelected = !visibleMethods.some(option => option.id === method)
+  const subtitle = creditInDescription
+    ? describeCredit?.(valid ? numericAmount : 0)
+    : description ?? (forClients ? null : 'Для оплаты хостинга, доменов, SSL и других сервисов')
 
   useLayoutEffect(() => {
     title.current.focus({ preventScroll: true })
@@ -201,7 +211,13 @@ export default function BalanceTopUp({
 
   function submit(event) {
     event.preventDefault()
-    if (!valid || methodsOpen || documentAction) return
+    if (!canSubmit || methodsOpen || documentAction) return
+
+    if (invoiceOnly) {
+      onCreateInvoice(numericAmount)
+      dialog.current.close()
+      return
+    }
 
     if (!balanceOnly && !action.demoPayment) {
       if (method === 'invoice') onCreateInvoice?.(externalAmount)
@@ -218,6 +234,9 @@ export default function BalanceTopUp({
     <ModalFrame
       ref={dialog}
       className={`hosting-dialog top-up-dialog${mobileSheet ? ' hosting-dialog--sheet' : ''}`}
+      data-for-clients={forClients || undefined}
+      data-credit-in-description={creditInDescription || undefined}
+      data-client-balance={availableBalance !== undefined || undefined}
       aria-labelledby={`${id}-title`}
       onClose={event => { if (event.target === event.currentTarget) onClose() }}
       onCancel={event => {
@@ -232,27 +251,27 @@ export default function BalanceTopUp({
         if (event.target === event.currentTarget) dialog.current.close()
       }}
     >
-      <form className="top-up-form" onSubmit={submit} inert={methodsOpen}>
+      <form ref={animatedForm} className="top-up-form" onSubmit={submit} inert={methodsOpen}>
         <div ref={scrollArea} className="top-up-scroll">
           <header className="top-up-header">
-            <h2 className="hosting-dialog-title" ref={title} id={`${id}-title`} tabIndex={-1}>Пополнить баланс</h2>
+            <h2 className="hosting-dialog-title" ref={title} id={`${id}-title`} tabIndex={-1}>{dialogTitle}</h2>
             <CloseButton onClick={() => dialog.current.close()} />
           </header>
           <div className="top-up-body">
-            <p className="top-up-description">{description ?? (forClients
-              ? 'Для пополнения счетов клиентов' : 'Для оплаты хостинга, доменов, SSL и других сервисов')}</p>
+            {subtitle && <p className="top-up-description" aria-live={creditInDescription ? 'polite' : undefined}>{subtitle}</p>}
             {!forClients && <p className="top-up-notice">Не хватает 309 ₽ для продления 14 ноября</p>}
             <div>
-              <label className="top-up-amount">
-                <TextInput variant="inset" ref={input} aria-label="Сумма пополнения в рублях" inputMode="decimal" value={amount} onChange={editAmount}
+              {amountDisabled ? <TextField label="Сумма пополнения в рублях" size={52} hideLabel disabled
+                value={amount} caption="₽" /> : <label className="top-up-amount">
+                <TextInput variant="inset" ref={input} aria-label={invoiceOnly ? 'Сумма счёта в рублях' : 'Сумма пополнения в рублях'} inputMode="decimal" value={amount} disabled={amountDisabled} onChange={editAmount}
                   onBlur={() => { if (valid) setAmount(formattedAmount) }} />
                 <span aria-hidden="true">₽</span>
-              </label>
+              </label>}
               {amountPresets && <div className="top-up-amount-presets" role="group" aria-label="Готовые суммы">
-                {amountPresets.map(value => <Chip key={value} selected={numericAmount === value}
+                {amountPresets.map(value => <Chip key={value} size={forClients ? 28 : 32} selected={numericAmount === value}
                   onSelect={() => setAmount(formatTopUpAmount(value))}>{formatTopUpAmount(value)} ₽</Chip>)}
               </div>}
-              {forClients ? (
+              {forClients ? !creditInDescription && describeCredit && (
                 <AnimatedBlock open={valid}>
                   <p className="top-up-estimate">{describeCredit?.(numericAmount)}</p>
                 </AnimatedBlock>
@@ -264,12 +283,13 @@ export default function BalanceTopUp({
               highlightYear={selectedPeriod === 6120 || (preset?.annualPlan && selectedPeriod === null)}
               onSelect={selectPeriod}
             />}
-            {availableBalance !== undefined && <CheckLine option={{
-              label: 'Пополнить с баланса для клиентов',
-              hint: `Доступно ${formatTopUpAmount(availableBalance)} ₽`,
-              checked: useBalance,
-              amount: balanceAmount > 0 ? `${formatTopUpAmount(balanceAmount)} ₽` : undefined,
-            }} onChange={setUseBalance} />}
+            {!invoiceOnly && <div className="top-up-payment-section">
+            {availableBalance !== undefined && <div className="top-up-balance-option">
+              <CheckLine option={{
+                label: <>Списать с баланса{useBalance && valid && <>. <span className="top-up-balance-before"><del>{formatTopUpAmount(availableBalance)} ₽</del> →</span> <span className="top-up-balance-remaining" data-insufficient={insufficientBalance || undefined}>{formatTopUpAmount(balanceRemaining)} ₽</span></>}</>,
+                checked: useBalance,
+              }} onChange={setUseBalance} />
+            </div>}
             <AnimatedBlock open={!balanceOnly}>
               <div className="top-up-payment-methods">
                 <fieldset className="plan-payment-group top-up-payment">
@@ -278,14 +298,15 @@ export default function BalanceTopUp({
                     {visibleMethods.map(option => (
                       <SelectionCard key={option.id} className="plan-payment-option" name={`${id}-payment`}
                         value={option.id} checked={method === option.id} onChange={() => setMethod(option.id)}>
-                        <PaymentOptionLabel option={option} icon={icons[option.icon] && <img src={icons[option.icon]} alt="" />} />
+                        <PaymentOptionLabel option={option} hint={forClients ? null : option.hint}
+                          icon={icons[option.icon] && <img src={icons[option.icon]} alt="" />} />
                       </SelectionCard>
                     ))}
                     {hasSaved && (
                       <Button appearance="choice-card" variant="neutral" pressable={false} ref={methodTrigger} type="button" className="plan-payment-option plan-payment-trigger top-up-other-methods"
                         data-selected={otherSelected} aria-expanded={methodsOpen} aria-controls={`${id}-methods`}
                         onClick={() => setMethodsOpen(true)}>
-                        <PaymentOptionLabel option={otherMethods} />
+                        <PaymentOptionLabel option={otherMethods} hint={forClients ? null : otherMethods.hint} />
                       </Button>
                     )}
                   </div>
@@ -293,6 +314,7 @@ export default function BalanceTopUp({
                 <CheckLine option={{ label: forClients ? 'Сохранить — оплата в один клик' : 'Сохранить — оплата в один клик и автопродление', checked: save }} onChange={setSave} />
               </div>
             </AnimatedBlock>
+            </div>}
           </div>
         </div>
         <footer className="top-up-footer" data-can-scroll-down={canScrollDown}>
@@ -304,12 +326,12 @@ export default function BalanceTopUp({
               <Button variant="outline" onClick={() => setDocumentAction(null)}>Вернуться к оплате</Button>
             </>
           ) : (
-            <Button appearance="top-up" tone="success" type="submit" disabled={!valid}>
-              {!balanceOnly && action.icon === 'pay-card' && <img src={cardIcon} alt="" />}
-              {balanceOnly ? 'Пополнить с баланса' : action.label}
+            <Button appearance="top-up" tone="success" type="submit" disabled={!canSubmit}>
+              {!invoiceOnly && !balanceOnly && action.icon === 'pay-card' && <img src={cardIcon} alt="" />}
+              {invoiceOnly ? 'Выставить счёт' : balanceOnly ? 'Пополнить с баланса' : action.label}
             </Button>
           )}
-          {!balanceOnly && <p className="top-up-security"><img src={lockIcon} alt="" />{securePaymentNote.mobile}</p>}
+          {!invoiceOnly && !balanceOnly && <p className="top-up-security"><img src={lockIcon} alt="" />{securePaymentNote.mobile}</p>}
         </footer>
       </form>
       {hasSaved && (

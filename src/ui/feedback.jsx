@@ -87,22 +87,34 @@ export function Tooltip({ children, content, size, variant, placement = 'top', c
   const [open, setOpen] = useState(false)
 
   useLayoutEffect(() => {
-    if (!open || placement !== 'top') return
     const trigger = root.current
     const panel = bubble.current
+    if (!open) {
+      const duration = Math.max(...getComputedStyle(panel).transitionDuration.split(',').map(value =>
+        parseFloat(value) * (value.trim().endsWith('ms') ? 1 : 1000)))
+      const timeout = setTimeout(() => {
+        if (panel.matches(':popover-open')) panel.hidePopover()
+      }, duration)
+      return () => clearTimeout(timeout)
+    }
+
+    if (!panel.matches(':popover-open')) panel.showPopover()
 
     function positionTooltip() {
       const { left, top, bottom, width } = trigger.getBoundingClientRect()
       const { width: panelWidth, height: panelHeight } = panel.getBoundingClientRect()
       const { clientWidth, clientHeight } = document.documentElement
       const edge = 8
-      const centeredLeft = left + (width - panelWidth) / 2
-      const fittedLeft = Math.max(edge, Math.min(centeredLeft, clientWidth - panelWidth - edge))
+      const preferredLeft = placement === 'top' ? left + (width - panelWidth) / 2 : left
+      const fittedLeft = Math.max(edge, Math.min(preferredLeft, clientWidth - panelWidth - edge))
       const spaceBelow = clientHeight - bottom
-      const placeBelow = top < panelHeight + 2 * edge && spaceBelow > top
+      const placeBelow = placement === 'top'
+        ? top < panelHeight + 2 * edge && spaceBelow > top
+        : spaceBelow >= panelHeight + 2 * edge || spaceBelow > top
+      const preferredTop = placeBelow ? bottom + edge : top - panelHeight - edge
+      const fittedTop = Math.max(edge, Math.min(preferredTop, clientHeight - panelHeight - edge))
 
-      panel.style.setProperty('--vh-tooltip-offset', `${fittedLeft - centeredLeft}px`)
-      panel.toggleAttribute('data-below', placeBelow)
+      panel.style.inset = `${fittedTop}px auto auto ${fittedLeft}px`
     }
 
     positionTooltip()
@@ -144,7 +156,7 @@ export function Tooltip({ children, content, size, variant, placement = 'top', c
       }
     }}>
     {children(id)}
-    <TooltipBubble ref={bubble} className={`vh-tooltip-content ${contentClassName}`.trim()} id={id} role="tooltip"
+    <TooltipBubble ref={bubble} popover="manual" className={`vh-tooltip-content ${contentClassName}`.trim()} id={id} role="tooltip"
       aria-hidden={!open} size={size} variant={variant}>{content}</TooltipBubble>
   </span>
 }
@@ -181,20 +193,26 @@ export function ProgressBar({ label, className = '', ...props }) {
   return <progress {...props} aria-label={label} className={`vh-progress-bar ${className}`.trim()} />
 }
 
-export function Dialog({ open, title, description, onClose, children, actions }) {
+export function Dialog({ open, title, description, onClose, children, actions, className = '', closeOnBackdrop = false, illustration }) {
   const id = useId()
 
-  return <ModalFrame className="vh-dialog" open={Boolean(open)} aria-labelledby={`${id}-title`}
+  return <ModalFrame className={`vh-dialog ${className}`.trim()} open={Boolean(open)} aria-labelledby={`${id}-title`}
     aria-describedby={description ? `${id}-description` : undefined}
+    onClick={event => {
+      if (!closeOnBackdrop || event.target !== event.currentTarget) return
+      const { left, right, top, bottom } = event.currentTarget.getBoundingClientRect()
+      if (event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom) onClose()
+    }}
     onCancel={event => {
       event.preventDefault()
       event.stopPropagation()
       onClose()
     }}>
     <ModalClose className="vh-dialog-close" onClick={onClose} />
+    {illustration}
     <h2 className="hosting-dialog-title" id={`${id}-title`}>{title}</h2>
     {description && <p id={`${id}-description`}>{description}</p>}
     {children}
-    <div className="vh-dialog-actions">{actions ?? <Button variant="secondary" onClick={onClose}>Закрыть</Button>}</div>
+    {actions !== false && <div className="vh-dialog-actions">{actions ?? <Button variant="secondary" onClick={onClose}>Закрыть</Button>}</div>}
   </ModalFrame>
 }

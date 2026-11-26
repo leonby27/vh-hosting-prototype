@@ -406,6 +406,18 @@ html:has(.hosting-scroll-spacer) {
   gap: clamp(10px, 1.8vw, 26px);
 }
 
+.hosting-shell[data-integrator] .hosting-header-actions {
+  grid-column: -2 / -1;
+  justify-self: end;
+}
+
+.hosting-integrator-label {
+  color: var(--hosting-secondary);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
 .hosting-expiration {
   padding: 2px 10px;
   border-radius: 999px;

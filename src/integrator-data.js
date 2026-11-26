@@ -8,8 +8,6 @@ export const integratorPages = {
   program: integratorSection,
   operations: 'Операции',
   documents: 'Документы',
-  details: 'Реквизиты и выплаты',
-  notifications: 'Уведомления',
   settings: integratorSettings,
   knowledge: integratorKnowledge,
   support: integratorSupport,
@@ -17,19 +15,10 @@ export const integratorPages = {
 }
 
 export const integratorProgramSections = [
-  integratorSection, integratorPages.operations, integratorPages.documents, integratorPages.details, integratorPages.notifications,
-]
-
-export const integratorSettingsTabs = [
-  { id: 'account', label: 'Аккаунт' },
-  { id: 'users', label: 'Пользователи' },
-  { id: 'security', label: 'Доступ и безопасность' },
-  { id: 'history', label: 'История действий' },
+  integratorSection, integratorPages.operations, integratorPages.documents,
 ]
 
 export const integratorStates = [
-  { id: 'integrator-low-balance', label: 'Мало денег · 1 200 ₽', requiresPreset: true },
-  { id: 'integrator-former-partner', label: 'Бывший партнёр', requiresPreset: true },
   { id: 'integrator-new', label: 'Новый без клиентов', requiresPreset: true },
 ]
 
@@ -93,7 +82,7 @@ export const dateLabel = date => date.split('-').reverse().join('.')
 export function getIntegratorDemo(state) {
   if (state === 'integrator-new') return { balance: 0, clients: [], operations: [], documents: [] }
   return {
-    balance: state === 'integrator-low-balance' ? 1200 : defaultBalance,
+    balance: defaultBalance,
     clients: demoClients,
     operations: demoOperations,
     documents: demoDocuments,

@@ -5,6 +5,7 @@ import { Example } from './Preview.jsx'
 import { OptionsSelect } from './OptionsSelect.jsx'
 
 const fieldSizes = [44, 40, 36, 32].map(value => ({ value, label: `${value} px` }))
+const textFieldSizes = [{ value: 52, label: '52 px' }, ...fieldSizes]
 
 const plans = [
   { value: 'start', label: 'Старт' },
@@ -55,7 +56,7 @@ export function TextFieldExample() {
   return <div className="catalog-example-flow">
     <div className="catalog-toolbar" role="group" aria-label="Параметры примеров инпутов">
       <Select label="Состояние" options={textFieldStates} value={state} onChange={setState} />
-      <Select label="Размер" options={fieldSizes} value={size} onChange={setSize} />
+      <Select label="Размер" options={textFieldSizes} value={size} onChange={setSize} />
       <OptionsSelect options={textFieldOptions} value={options} onChange={setOptions} />
     </div>
     {textFieldSamples.map(({ title, sample, invalidSample, error, showDecoration, ...props }) => {

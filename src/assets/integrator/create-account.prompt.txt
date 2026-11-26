@@ -1,0 +1,3 @@
+Generated with the built-in image_gen tool.
+
+Use case: stylized-concept. Create a single polished 3D icon for a hosting integrator panel's Create account dialog: a rounded blue user bust with a small white plus sign on a blue circular badge, symbolizing a new client account. Straight-on frontal orthographic view, symmetric silhouette, no isometric angle or tilt. Match the project's existing service icons: glossy bright cyan and azure blue molded material, subtle translucent blue edge, soft studio highlights, white accent, rounded bevels, simple readable shape at 96px. Isolated centered object, ample transparent margin, genuinely transparent background. No text, letters, watermark, scenery, or rectangular background. Square 1024x1024.

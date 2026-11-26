@@ -240,11 +240,16 @@
 .integrator-table .integrator-table-action { text-align: end; }
 
 .integrator-operations-table { --integrator-table-min-width: 410px; }
-.integrator-documents-table { --integrator-table-min-width: 600px; }
+.integrator-documents-table { --integrator-table-min-width: 800px; }
 .integrator-table thead .integrator-table-date { inline-size: 112px; }
 .integrator-table thead .integrator-table-amount { inline-size: 136px; }
 .integrator-table thead .integrator-table-status { inline-size: 108px; }
 .integrator-table thead .integrator-table-action { inline-size: 116px; }
+
+.integrator-documents-table thead .integrator-table-document { inline-size: auto; }
+.integrator-documents-table thead .integrator-table-amount { inline-size: 168px; }
+.integrator-documents-table thead .integrator-table-status { inline-size: 180px; }
+.integrator-documents-table thead .integrator-table-action { inline-size: 136px; }
 
 .integrator-client-table {
   --integrator-select-width: 42px;
@@ -276,7 +281,7 @@
 }
 .integrator-client-auto-heading {
   position: relative;
-  inset-inline-start: calc(var(--integrator-auto-shift) - 15px);
+  inset-inline-start: var(--integrator-auto-shift);
   inline-size: max-content;
   margin-inline: auto;
 }
@@ -357,6 +362,7 @@
   overflow-x: auto;
   scrollbar-width: none;
   padding: 2px;
+  margin-block: -2px;
 }
 
 .integrator-total > .integrator-chips > * {
@@ -417,6 +423,13 @@
 
 .integrator-metrics dt { font-weight: 400; }
 
+.integrator-requisites-dialog { --vh-modal-width: 720px; }
+
+.integrator-requisites-dialog .integrator-metrics {
+  font-size: 16px;
+  line-height: 20px;
+}
+
 .integrator-metrics > :last-child,
 .integrator-rows > :last-child {
   border-block-end: 0;
@@ -427,6 +440,8 @@
   min-block-size: 52px;
 }
 
+.integrator-requisite > dt { font-weight: 500; }
+
 .integrator-requisite > dd {
   display: flex;
   align-items: center;
@@ -435,31 +450,22 @@
 }
 
 .integrator-requisite-action {
-  position: relative;
   display: flex;
   flex: none;
 }
 
-.integrator-requisite-feedback {
-  position: absolute;
-  z-index: 3;
-  inset-block-end: calc(100% + 8px);
-  inset-inline-end: 0;
-  inline-size: max-content;
-  max-inline-size: none;
-  pointer-events: none;
-}
-
-.integrator-requisite-action:not([data-feedback]) .integrator-requisite-feedback {
-  opacity: 0;
+.integrator-requisite-copy {
+  --vh-button-text-override: var(--hosting-secondary);
+  --vh-button-hover-override: transparent;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .integrator-requisite:not(:hover, :focus-within) .integrator-requisite-action:not([data-feedback]) > .vh-button {
-    opacity: 0;
-    pointer-events: none;
+  .integrator-requisite-copy:hover {
+    --vh-button-text-override: var(--hosting-title);
   }
 }
+
+.integrator-requisite-copy:focus-visible { --vh-button-text-override: var(--hosting-title); }
 
 .integrator-notification-list {
   display: grid;
@@ -484,12 +490,12 @@
 }
 
 .integrator-notification:has(input:focus-visible) {
-  background-color: var(--hosting-card-surface);
+  background-color: var(--hosting-surface-3);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .integrator-notification:hover {
-    background-color: var(--hosting-card-surface);
+    background-color: var(--hosting-surface-3);
   }
 }
 
@@ -503,9 +509,108 @@
   color: var(--vh-white);
 }
 
+.integrator-notification-icon[data-enabled="false"] {
+  background: var(--vh-panel);
+  color: var(--hosting-secondary);
+}
+
+.integrator-setting {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.integrator-settings-section {
+  display: grid;
+  gap: 12px;
+}
+
+.integrator-settings-section-title {
+  margin: 0;
+  color: var(--hosting-secondary);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.integrator-setting-copy {
+  display: grid;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.integrator-page .integrator-setting-copy small {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+
 .integrator-form {
   justify-items: start;
   gap: 12px;
+}
+
+.integrator-create-account-icon {
+  display: block;
+  object-fit: contain;
+  margin: 0 auto 8px;
+}
+
+.integrator-create-account > .hosting-dialog-title {
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.integrator-create-account > p {
+  margin: 0 0 24px;
+  text-align: center;
+  font-weight: 400;
+}
+
+.integrator-create-account-form {
+  display: grid;
+  gap: 16px;
+}
+
+.integrator-create-account-form > .vh-button {
+  margin-block-start: 16px;
+}
+
+.integrator-edit-account > .hosting-dialog-title {
+  margin: 0 0 24px;
+  text-align: center;
+}
+
+.integrator-edit-account-form {
+  display: grid;
+  gap: 32px;
+}
+
+.integrator-password-fields {
+  display: grid;
+  gap: 16px;
+}
+
+.integrator-custom-amount-slot {
+  inline-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.integrator-custom-amount-slot[data-open="true"] {
+  inline-size: 132px;
+  visibility: visible;
+  opacity: 1;
+}
+.integrator-custom-amount-field { inline-size: 132px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .integrator-custom-amount-slot {
+    transition: opacity var(--hosting-motion-fast) ease;
+  }
 }
 
 .integrator-form .vh-field {

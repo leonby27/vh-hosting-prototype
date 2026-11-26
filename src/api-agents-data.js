@@ -5,6 +5,7 @@ export const mcpAddress = `${apiAddress}/mcp`
 export const secretPlaceholder = 'twh_ВАШ_КЛЮЧ'
 
 export const apiKeysPreset = { id: 'api-keys-filled', label: 'Выпущено 5 ключей', requiresPreset: true }
+export const apiJournalEmptyPreset = { id: 'api-journal-empty', label: 'Журнал без запросов', requiresPreset: true }
 
 export const demoApiKeys = [
   { name: 'Claude Desktop', suffix: '3fQa', age: 6, duration: '90', preset: 'Только чтение' },

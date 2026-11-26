@@ -84,8 +84,6 @@ const integratorSidebarGroups = [
     ['partner', integratorSection],
     ['logs', integratorPages.operations],
     ['files', integratorPages.documents],
-    ['balance', integratorPages.details],
-    ['mail', integratorPages.notifications],
   ],
   [['plan', integratorSettings, 'Настройки'], ['knowledge', integratorKnowledge, 'База знаний']],
 ]
@@ -100,10 +98,6 @@ const supportLinks = [
   ['support-help', 'База знаний'],
   ['support-phone', '8 (800) 700-1081'],
   ['support-tickets', 'Тикеты'],
-]
-const integratorSupportLinks = [
-  ['support-tickets', 'Поддержка', integratorSupport],
-  ['support-help', 'База знаний', integratorKnowledge],
 ]
 const demoAccounts = [
   ['demo002', 'Партнёрский аккаунт'],
@@ -316,7 +310,7 @@ function HostingHeader({ compact, conceptLayout, menuOpen, onToggleMenu, menuTog
     >
       {close => <>
         <li><MenuItem onClick={() => { close(); select(integrator ? integratorSettings : 'Настройка аккаунта') }}>Настройка аккаунта</MenuItem></li>
-        <li><MenuItem onClick={() => { close(); integrator ? select(integratorSettings, 'security') : select('Безопасность') }}>Безопасность</MenuItem></li>
+        {!integrator && <li><MenuItem onClick={() => { close(); select('Безопасность') }}>Безопасность</MenuItem></li>}
         <li>
           <MenuItem as={Switch} checked={dark} aria-label="Тёмная тема" onClick={onToggleTheme} trackAfter>
             Тёмная тема <span className="hosting-beta">Бета</span>
@@ -351,26 +345,23 @@ function HostingHeader({ compact, conceptLayout, menuOpen, onToggleMenu, menuTog
                 : <img src={dark ? darkLogo : logo} width="186" height="26" alt="timeweb hosting" />}
             </a>
           </div>}
-          {compact ? (
+          {integrator && !compact && <span className="hosting-integrator-label">Панель интегратора</span>}
+          {compact ? !integrator && (
             <Button appearance="nav-action" pressable={false} type="button" className="hosting-mobile-balance" aria-label={`Пополнить баланс, ${integrator ? integratorBalance : '2 784 ₽'}`}
               onClick={openBalance}>
               {integrator ? integratorBalance : '2 784 ₽'} <span><img src={mobileBalanceAdd} width="24" height="24" alt="" /></span>
             </Button>
           ) : <>
-            {integrator ? <nav className="hosting-quick-links" aria-label="Ссылки в шапке">
-              <Button appearance="nav-action" pressable={false} type="button" aria-current={selected === integratorNews ? 'page' : undefined} onClick={() => select(integratorNews)}>
-                Новости <span className="hosting-count">1</span>
-              </Button>
-            </nav> : <QuickLinks selected={selected} onSelect={select} />}
+            {!integrator && <QuickLinks selected={selected} onSelect={select} />}
             <div className="hosting-header-actions">
-              <Button appearance="nav-action" pressable={false} type="button" className="hosting-balance" onClick={openBalance}>
-                <Icon name="wallet" />
+              {!integrator && <Button appearance="nav-action" pressable={false} type="button" className="hosting-balance" onClick={openBalance}>
+                {!integrator && <Icon name="wallet" />}
                 <span>{integrator ? integratorBalance : '3 990 ₽'}</span>
                 {!integrator && <span className="hosting-expiration">до 6 дек. 2026</span>}
-              </Button>
+              </Button>}
               <HeaderMenu label="Поддержка" icon="support" open={dropdown === 'support'} onOpenChange={open => changeDropdown('support', open)}>
-                {close => (integrator ? integratorSupportLinks : supportLinks).map(([icon, label, section = label]) => (
-                  <li key={icon} className={!integrator && icon === 'support-tickets' ? 'hosting-menu-divider' : undefined}>
+                {close => supportLinks.map(([icon, label, section = label]) => (
+                  <li key={icon} className={icon === 'support-tickets' ? 'hosting-menu-divider' : undefined}>
                     <MenuItem icon={<Icon name={icon} />} onClick={() => { close(); select(section) }}>{label}</MenuItem>
                   </li>
                 ))}
@@ -418,7 +409,7 @@ const toSidebarNavigation = groups => groups.map(group =>
 const sidebarNavigation = toSidebarNavigation(sidebarGroups)
 const conceptSidebarNavigation = sidebarNavigation.map(group => group.map(item =>
   item.id === 'Дашборд' ? { ...item, id: dashboardConceptSection } : item))
-const integratorSidebarNavigation = toSidebarNavigation([integratorSidebarGroups.flat()])
+const integratorSidebarNavigation = toSidebarNavigation(integratorSidebarGroups)
 
 const sidebarSocialIconSize = 20
 const socialLinks = [
@@ -575,6 +566,7 @@ export default function HostingShell({
   }
 
   function selectSection(label, tab) {
+    if (label === integratorKnowledge) return
     const opensDashboard = isDashboardSection(label)
     if (!opensDashboard && label === selected && (isCurrentSection?.(label, tab) ?? true)) {
       setMenuOpen(false)

@@ -1,15 +1,18 @@
 import { useContext, useEffect, useState } from 'react'
 import BalanceTopUp from './BalanceTopUp.jsx'
 import { AnimatedBlock } from './hosting-motion.jsx'
-import { Button, Choice, Dialog, HostingToastContext, Icon, IconButton, Link, MultiSelect, PageHeader, SearchField, Select, SortHeader, Surface, TabList, TextField, TooltipBubble } from './ui/index.js'
+import { Badge, Button, Choice, Dialog, HostingToastContext, Icon, IconButton, Link, MultiSelect, PageHeader, SearchField, Select, SortHeader, Surface, TextField, Tooltip } from './ui/index.js'
 import { IntegratorClients, IntegratorTable } from './IntegratorClients.jsx'
 import { countRecentClients, dateLabel, daysLabel, daysLeft, integratorKnowledge, integratorNews, integratorPages, integratorProgramSections, integratorSection, integratorSettings,
-  integratorSettingsTabs, integratorSupport, money, organization } from './integrator-data.js'
+  integratorSupport, money, organization } from './integrator-data.js'
 import './integrator.css'
+import operationsIcon from './assets/hosting/logs.svg'
+import documentsIcon from './assets/hosting/files.svg'
 
 const newDraft = () => ({ term: '365', selected: new Set(), customAmount: 0 })
 const depositBonus = amount => Math.round(amount * 40) / 100
-const clientTopUpPresets = [500, 1000, 3000]
+const clientTopUpPresets = [1000, 3000, 5000, 10000, 20000]
+const documentStatusTones = { 'Оплачен': 'success', 'Подписан': 'info', 'Ожидает оплаты': 'warning' }
 const operationTypes = [['Пополнение', 'Пополнения'], ['Премия', 'Премии'],
   ['Перевод клиентам', 'Переводы клиентам'], ['Автопополнение', 'Автопополнение']]
   .map(([value, label]) => ({ value, label }))
@@ -25,7 +28,8 @@ const notifications = [
 const requisites = [
   ['Организация и плательщик', organization],
   ['Подписант', 'Смирнов Алексей Викторович'],
-  ['Счёт для выплат', 'Уральский банк ПАО Сбербанк · •••• 4417'],
+  ['Счёт для выплат', '•••• 4417'],
+  ['Банк', 'Уральский банк ПАО Сбербанк'],
   ['ИНН', '6658123456'],
   ['КПП', '665801001'],
   ['БИК', '046577964'],
@@ -47,7 +51,7 @@ function IntegratorOperations({ operations }) {
   const [search, setSearch] = useState('')
   const [types, setTypes] = useState([])
   const [period, setPeriod] = useState('90')
-  const [sort, setSort] = useState({ key: 'date', direction: 'descending' })
+  const [sort, setSort] = useState({ key: 'date', direction: 'none' })
   const cutoff = Date.now() - Number(period) * 86400000
   const query = normalizeSearch(search)
   const rows = operations.filter(row => (!types.length || types.includes(row.type))
@@ -68,13 +72,17 @@ function IntegratorOperations({ operations }) {
         options={operationPeriods} value={period} onChange={setPeriod} />
     </div>
     <AnimatedBlock>
-      <IntegratorTable label="Операции по балансу" className="integrator-operations-table">
+      <IntegratorTable label="Операции по балансу" className="integrator-operations-table" empty={!rows.length && {
+        icon: operationsIcon,
+        title: !operations.length ? 'Операций пока нет' : query ? 'Операции не найдены' : 'Нет операций за выбранный период',
+        description: operations.length ? 'Измените запрос, период или параметры фильтров.' : 'Здесь появится история пополнений и переводов клиентам.',
+      }}>
         <thead>
           <tr>
-            <SortHeader className="integrator-table-date" icon="arrowup-outline" iconButtonLabel="Сортировать по дате"
+            <SortHeader sortType="date" className="integrator-table-date" icon="arrowup-outline" iconButtonLabel="Сортировать по дате"
               direction={sort.key === 'date' ? sort.direction : 'none'} onChange={direction => setSort({ key: 'date', direction })}>Дата</SortHeader>
             <th scope="col">Операция</th>
-            <SortHeader className="integrator-table-amount" icon="arrowup-outline" iconButtonLabel="Сортировать по сумме"
+            <SortHeader sortType="number" className="integrator-table-amount" icon="arrowup-outline" iconButtonLabel="Сортировать по сумме"
               direction={sort.key === 'amount' ? sort.direction : 'none'} onChange={direction => setSort({ key: 'amount', direction })}>Сумма</SortHeader>
           </tr>
         </thead>
@@ -89,15 +97,14 @@ function IntegratorOperations({ operations }) {
             </th>
             <td className="integrator-table-primary">{row.amount > 0 ? '+' : ''}{money(row.amount)}</td>
           </tr>)}
-          {!rows.length && <tr><td colSpan={3}>{query ? 'Операции не найдены' : 'Нет операций за выбранный период'}</td></tr>}
         </tbody>
       </IntegratorTable>
     </AnimatedBlock>
   </div>
 }
 
-function IntegratorDocuments({ documents, onDetails, onInvoice }) {
-  const [document, setDocument] = useState(null)
+function IntegratorDocuments({ documents, onInvoice }) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [search, setSearch] = useState('')
   const query = normalizeSearch(search)
   const rows = documents.filter(row => matchesTableSearch(query, row, row.title, row.status, organization))
@@ -107,15 +114,19 @@ function IntegratorDocuments({ documents, onDetails, onInvoice }) {
         <SearchField label="Поиск по документам" placeholder="Поиск по документам"
           variant="toolbar" size={40} value={search} onChange={event => setSearch(event.target.value)} />
         <div className="integrator-documents-actions">
-          <Button variant="neutral-solid" size={40} onClick={onDetails}>Мои реквизиты</Button>
+          <Button variant="neutral-solid" size={40} onClick={() => setDetailsOpen(true)}>Мои реквизиты</Button>
           <Button size={40} onClick={onInvoice}>Выставить счёт</Button>
         </div>
       </div>
-      <IntegratorTable label="Документы" className="integrator-documents-table">
+      <IntegratorTable label="Документы" className="integrator-documents-table" empty={!rows.length && {
+        icon: documentsIcon,
+        title: documents.length ? 'Документы не найдены' : 'Документов пока нет',
+        description: documents.length ? 'Попробуйте изменить поисковый запрос.' : 'Здесь появятся ваши счета и акты.',
+      }}>
         <thead>
           <tr>
             <th scope="col" className="integrator-table-date">Дата</th>
-            <th scope="col">Документ</th>
+            <th scope="col" className="integrator-table-document">Документ</th>
             <th scope="col" className="integrator-table-amount">Сумма</th>
             <th scope="col" className="integrator-table-status">Статус</th>
             <th scope="col" className="integrator-table-action" aria-label="Открытие документа" />
@@ -131,20 +142,14 @@ function IntegratorDocuments({ documents, onDetails, onInvoice }) {
               </div>
             </th>
             <td className="integrator-table-primary">{money(row.amount)}</td>
-            <td>{row.status}</td>
-            <td className="integrator-table-action"><Button variant="neutral-solid" size={36} onClick={() => setDocument(row)}>Открыть</Button></td>
+            <td><Badge tone={documentStatusTones[row.status] ?? 'neutral'}>{row.status}</Badge></td>
+            <td className="integrator-table-action"><Button variant="neutral-solid" size={36}>Открыть</Button></td>
           </tr>)}
-          {!rows.length && <tr><td colSpan={5}>{query ? 'Документы не найдены' : 'Документов пока нет'}</td></tr>}
         </tbody>
       </IntegratorTable>
     </div>
-    <Dialog open={Boolean(document)} title={document?.title} onClose={() => setDocument(null)}>
-      {document && <dl className="integrator-metrics">
-        <div><dt>Плательщик</dt><dd>{organization}</dd></div>
-        <div><dt>Дата</dt><dd>{dateLabel(document.date)}</dd></div>
-        <div><dt>Сумма</dt><dd>{money(document.amount)}</dd></div>
-        <div><dt>Статус</dt><dd>{document.status}</dd></div>
-      </dl>}
+    <Dialog open={detailsOpen} className="integrator-requisites-dialog" title="Мои реквизиты" actions={false} closeOnBackdrop onClose={() => setDetailsOpen(false)}>
+      <IntegratorDetails />
     </Dialog>
   </>
 }
@@ -172,88 +177,126 @@ function RequisiteRow({ label, value }) {
     <dt>{label}</dt>
     <dd>
       <span>{value}</span>
-      <span className="integrator-requisite-action" data-feedback={feedback ? '' : undefined}>
-        <IconButton size={24} label={`Скопировать: ${label}`} icon={<Icon name="copy-outline" size={16} />} onClick={copy} />
-        <TooltipBubble className="integrator-requisite-feedback" role="status">{feedback?.message}</TooltipBubble>
-      </span>
+      <Tooltip className="integrator-requisite-action" content={feedback?.message ?? 'Скопировать'} pressable>
+        {id => <IconButton className="integrator-requisite-copy" size={24} label={`Скопировать: ${label}`}
+          aria-describedby={id} icon={<Icon name="copy-outline" size={16} />} onClick={copy} />}
+      </Tooltip>
     </dd>
   </div>
 }
 
 function IntegratorDetails() {
-  return <Surface elevation="card" className="integrator-card">
-    <dl className="integrator-metrics">
+  return <dl className="integrator-metrics">
       {requisites.map(([label, value]) => <RequisiteRow key={label} label={label} value={value} />)}
-    </dl>
-  </Surface>
+  </dl>
 }
 
 function IntegratorNotifications({ demo, updateDemo }) {
+  const showToast = useContext(HostingToastContext)
   const values = demo.notifications ?? [true, true, true, true, false]
   return <ul className="integrator-notification-list">
     {notifications.map(({ label, icon, channel }, index) => <li key={label}>
       <Surface as="label" appearance="card" elevation="card" className="integrator-notification">
-        <span className="integrator-notification-icon"><Icon name={icon} /></span>
+        <span className="integrator-notification-icon" data-enabled={values[index]}><Icon name={icon} /></span>
         <span><strong>{label}</strong><small>{channel}</small></span>
         <Choice as="span" kind="switch" aria-label={label} checked={values[index]} onChange={event => {
           const checked = event.target.checked
           updateDemo(current => ({ ...current, notifications: (current.notifications ?? values).map((value, entry) => entry === index ? checked : value) }))
+          showToast({ message: checked ? 'Уведомления включены' : 'Уведомления выключены', success: true })
         }} />
       </Surface>
     </li>)}
   </ul>
 }
 
-function IntegratorSettings({ tab, onTabChange, demo, updateDemo }) {
+function IntegratorSettings({ demo, updateDemo }) {
   const account = demo.account ?? { name: 'Мой кабинет', email: 'demo@example.com' }
-  const [edit, setEdit] = useState(false)
-  const [name, setName] = useState(account.name)
-  const [email, setEmail] = useState(account.email)
-  const [copyStatus, setCopyStatus] = useState('')
+  const [edit, setEdit] = useState(null)
+  const [value, setValue] = useState('')
+  const [passwordOpen, setPasswordOpen] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [currentPasswordVisible, setCurrentPasswordVisible] = useState(false)
+  const [newPasswordVisible, setNewPasswordVisible] = useState(false)
+  const showToast = useContext(HostingToastContext)
+
+  function closePassword() {
+    setPasswordOpen(false)
+    setCurrentPassword('')
+    setNewPassword('')
+    setCurrentPasswordVisible(false)
+    setNewPasswordVisible(false)
+  }
+
+  function changePassword(event) {
+    event.preventDefault()
+    if (!currentPassword || !newPassword) return
+    closePassword()
+    showToast({ message: 'Пароль успешно изменён', success: true })
+  }
+
+  function startEdit(field) {
+    setValue(account[field])
+    setEdit(field)
+  }
 
   function save(event) {
     event.preventDefault()
-    if (!name.trim()) return
-    updateDemo(current => ({ ...current, account: { name: name.trim(), email } }))
-    setEdit(false)
+    if (!edit || !value.trim()) return
+    updateDemo(current => ({ ...current, account: { ...account, ...current.account, [edit]: value.trim() } }))
+    setEdit(null)
   }
+
+  const settings = [
+    { id: 'name', label: 'Название кабинета', value: account.name, icon: 'profile-solid', action: () => startEdit('name') },
+    { id: 'email', label: 'Почта для документов', value: account.email, icon: 'mail-solid', action: () => startEdit('email') },
+    { id: 'password', label: 'Пароль', value: 'Для входа в кабинет', icon: 'lock-solid', action: () => setPasswordOpen(true) },
+  ]
 
   return <>
     <PageHeader title="Настройки" />
-    <TabList idPrefix="integrator-settings" label="Настройки аккаунта" tabs={integratorSettingsTabs} value={tab} onChange={onTabChange} />
-    <AnimatedBlock>
-      <Surface elevation="card" className="integrator-card hosting-reveal" role="tabpanel" key={tab}
-        id={`integrator-settings-panel-${tab}`} aria-labelledby={`integrator-settings-tab-${tab}`}>
-        {tab === 'account' && <>
-          <PageHeader as="h2" title="Кабинет" actions={<Button variant="neutral" onClick={() => {
-            setName(account.name)
-            setEmail(account.email)
-            setEdit(true)
-          }}>Изменить</Button>} />
-          <dl className="integrator-metrics">
-            <div><dt>Название кабинета</dt><dd>{account.name}</dd></div>
-            <div><dt>Идентификатор</dt><dd>cu203223 <Button appearance="text" pressable={false} type="button" className="integrator-link" onClick={async () => {
-              try {
-                await navigator.clipboard.writeText('cu203223')
-                setCopyStatus('Скопировано')
-              } catch {
-                setCopyStatus('Не удалось скопировать')
-              }
-            }}>Скопировать</Button> <span role="status">{copyStatus}</span></dd></div>
-            <div><dt>Почта для документов</dt><dd>{account.email}</dd></div>
-          </dl>
-        </>}
-        {tab === 'users' && <><h2>Пользователи</h2><ul className="integrator-rows"><li><strong>cu203223</strong><span>Владелец кабинета</span></li></ul></>}
-        {tab === 'security' && <><h2>Доступ и безопасность</h2><p>Параметры доступа для аккаунта cu203223.</p>
-          <Link href="https://timeweb.com/ru/docs/">Инструкции по защите аккаунта</Link></>}
-        {tab === 'history' && <><h2>История действий</h2><p>Действий в настройках пока нет.</p></>}
-      </Surface>
-    </AnimatedBlock>
-    <Dialog open={edit} title="Данные кабинета" onClose={() => setEdit(false)}>
-      <form className="integrator-form" onSubmit={save}>
-        <TextField label="Название кабинета" required value={name} onChange={event => setName(event.target.value)} />
-        <TextField label="Почта для документов" type="email" required value={email} onChange={event => setEmail(event.target.value)} />
-        <Button type="submit">Сохранить</Button>
+    <section className="integrator-settings-section" aria-labelledby="integrator-management-title">
+    <h2 className="integrator-settings-section-title" id="integrator-management-title">Управление</h2>
+    <ul className="integrator-notification-list">
+      {settings.map(setting => <li key={setting.id}>
+        <Surface appearance="card" elevation="card" className="integrator-setting hosting-reveal">
+          <span className="integrator-notification-icon"><Icon name={setting.icon} /></span>
+          <div className="integrator-setting-copy"><strong>{setting.label}</strong><small>{setting.value}</small></div>
+          <Button variant="neutral-solid" size={40} onClick={setting.action}>
+            Изменить
+          </Button>
+        </Surface>
+      </li>)}
+    </ul>
+    </section>
+    <section className="integrator-settings-section" aria-labelledby="integrator-notifications-title">
+      <h2 className="integrator-settings-section-title" id="integrator-notifications-title">Уведомления</h2>
+      <IntegratorNotifications demo={demo} updateDemo={updateDemo} />
+    </section>
+    <Dialog open={Boolean(edit)} className="integrator-edit-account" title={edit === 'name' ? 'Название кабинета' : 'Почта для документов'}
+      actions={false} closeOnBackdrop onClose={() => setEdit(null)}>
+      <form className="integrator-edit-account-form" onSubmit={save}>
+        <TextField label={edit === 'name' ? 'Название кабинета' : 'Почта для документов'}
+          type={edit === 'email' ? 'email' : 'text'} required value={value} onChange={event => setValue(event.target.value)} />
+        <Button size={44} type="submit" disabled={!value.trim()}>Сохранить</Button>
+      </form>
+    </Dialog>
+    <Dialog open={passwordOpen} className="integrator-edit-account" title="Изменить пароль"
+      actions={false} closeOnBackdrop onClose={closePassword}>
+      <form className="integrator-edit-account-form" onSubmit={changePassword}>
+        <div className="integrator-password-fields">
+          <TextField label="Текущий пароль" type={currentPasswordVisible ? 'text' : 'password'} autoComplete="current-password" required
+            value={currentPassword} onChange={event => setCurrentPassword(event.target.value)}
+            trailing={<IconButton appearance="quiet" size={32} label={currentPasswordVisible ? 'Скрыть текущий пароль' : 'Показать текущий пароль'}
+              aria-pressed={currentPasswordVisible} icon={<Icon name={currentPasswordVisible ? 'eyehide-outline' : 'eye-outline'} size={20} />}
+              onClick={() => setCurrentPasswordVisible(visible => !visible)} />} />
+          <TextField label="Новый пароль" type={newPasswordVisible ? 'text' : 'password'} autoComplete="new-password" required
+            value={newPassword} onChange={event => setNewPassword(event.target.value)}
+            trailing={<IconButton appearance="quiet" size={32} label={newPasswordVisible ? 'Скрыть новый пароль' : 'Показать новый пароль'}
+              aria-pressed={newPasswordVisible} icon={<Icon name={newPasswordVisible ? 'eyehide-outline' : 'eye-outline'} size={20} />}
+              onClick={() => setNewPasswordVisible(visible => !visible)} />} />
+        </div>
+        <Button size={44} type="submit" disabled={!currentPassword || !newPassword}>Изменить</Button>
       </form>
     </Dialog>
   </>
@@ -313,27 +356,13 @@ function ClientSummary({ balance, clients, onDeposit, onCreate }) {
   </div>
 }
 
-export default function IntegratorPanel({ section, compact, tab, scenario, demo, updateDemo, onTabChange, onSelectSection, payment, setPayment }) {
+export default function IntegratorPanel({ section, compact, demo, updateDemo, payment, setPayment }) {
   const [draft, setDraft] = useState(newDraft)
-  const [invoiceAmount, setInvoiceAmount] = useState('')
   const [createClientOpen, setCreateClientOpen] = useState(false)
   const [topUpClientId, setTopUpClientId] = useState(null)
   const showToast = useContext(HostingToastContext)
   const clientsSection = section === integratorSection
   const topUpClient = clientsSection && demo.clients.find(client => client.id === topUpClientId)
-
-  function closeInvoice() {
-    setPayment(null)
-    setInvoiceAmount('')
-  }
-
-  function submitInvoice(event) {
-    event.preventDefault()
-    const amount = Number(invoiceAmount)
-    if (!Number.isSafeInteger(amount) || amount < 1 || amount > 10000000) return
-    createInvoice(amount)
-    closeInvoice()
-  }
 
   function createInvoice(amount) {
     const id = crypto.randomUUID()
@@ -389,48 +418,42 @@ export default function IntegratorPanel({ section, compact, tab, scenario, demo,
   }
 
   if (!integratorProgramSections.includes(section)) return <div className="integrator-page">
-    {section === integratorSettings ? <IntegratorSettings tab={tab} onTabChange={onTabChange} demo={demo} updateDemo={updateDemo} /> : <InfoPage section={section} />}
+    {section === integratorSettings ? <IntegratorSettings demo={demo} updateDemo={updateDemo} /> : <InfoPage section={section} />}
   </div>
 
-  const formerPartner = scenario === 'integrator-former-partner'
   const documentsSection = section === integratorPages.documents
-  const notificationsSection = section === integratorPages.notifications
 
   return <div className="integrator-page">
-    <PageHeader title={section} actions={formerPartner && <span className="integrator-role">Бывший партнёр</span>} />
+    <PageHeader title={section} />
     {clientsSection ? <>
       <ClientSummary balance={demo.balance} clients={demo.clients}
         onDeposit={() => setPayment('deposit')} onCreate={() => setCreateClientOpen(true)} />
       <IntegratorClients demo={demo} compact={compact}
         createOpen={createClientOpen} onCloseCreate={() => setCreateClientOpen(false)}
-        onTopUp={setTopUpClientId} updateDemo={updateDemo} draft={draft} setDraft={setDraft} />
+        onTopUp={setTopUpClientId} onCreateInvoice={createInvoice} updateDemo={updateDemo} draft={draft} setDraft={setDraft} />
     </> : (
       <div key={section} className="integrator-tab-content hosting-reveal">
         {section === integratorPages.operations && <IntegratorOperations operations={demo.operations} />}
         {documentsSection && <IntegratorDocuments documents={demo.documents}
-          onDetails={() => onSelectSection(integratorPages.details)} onInvoice={() => setPayment('invoice')} />}
-        {section === integratorPages.details && <IntegratorDetails />}
-        {notificationsSection && <IntegratorNotifications demo={demo} updateDemo={updateDemo} />}
+          onInvoice={() => setPayment('invoice')} />}
       </div>
     )}
     {(topUpClient || payment === 'deposit') && (
       <BalanceTopUp key={topUpClient?.id ?? 'deposit'} forClients compact={compact} savedMethods={demo.savedMethods ?? []}
-        description={topUpClient ? `Для клиента ${topUpClient.id}` : undefined}
-        amountPresets={topUpClient ? clientTopUpPresets : undefined}
+        title={topUpClient ? 'Пополнить счёт клиента' : undefined}
+        description={topUpClient ? topUpClient.name : undefined}
+        amountPresets={clientTopUpPresets}
+        creditInDescription
         availableBalance={topUpClient ? demo.balance : undefined}
         describeCredit={topUpClient
-          ? amount => <>После пополнения баланса хватит на <strong>{daysLabel(daysLeft(topUpClient, amount))}</strong></>
-          : amount => <>С премией 40 % зачислим <strong>{money(amount + depositBonus(amount))}</strong></>}
+          ? amount => <>{topUpClient.name}{amount > 0 && <>. Хватит баланса на {daysLabel(daysLeft(topUpClient, amount))}</>}</>
+          : amount => <>Зачислим с премией 40%{amount > 0 && <> — <strong>{money(amount + depositBonus(amount))}</strong></>}</>}
         onUnlink={id => updateDemo(current => ({ ...current, savedMethods: current.savedMethods.filter(method => method.id !== id) }))}
         onPay={topUpClient ? completeClientTopUp : completeDeposit} onCreateInvoice={createInvoice}
         onClose={() => topUpClient ? setTopUpClientId(null) : setPayment(null)} />
     )}
-    <Dialog open={payment === 'invoice'} title="Выставить счёт" description={organization} onClose={closeInvoice}>
-      <form className="integrator-form" onSubmit={submitInvoice}>
-        <TextField label="Сумма счёта, ₽" type="number" min="1" max="10000000" step="1"
-          required value={invoiceAmount} onChange={event => setInvoiceAmount(event.target.value)} />
-        <Button type="submit">Выставить счёт</Button>
-      </form>
-    </Dialog>
+    {payment === 'invoice' && <BalanceTopUp forClients invoiceOnly compact={compact}
+      title="Выставить счёт" description={organization} savedMethods={[]}
+      onCreateInvoice={createInvoice} onClose={() => setPayment(null)} />}
   </div>
 }

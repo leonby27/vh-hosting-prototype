@@ -39,9 +39,9 @@ export function SortHeaderExample() {
     <TableFrame appearance="surface" label="Пример сортируемой таблицы">
       <table>
         <thead><tr>
-          <SortHeader direction={sort.column === 'date' ? sort.direction : 'none'}
+          <SortHeader sortType="date" direction={sort.column === 'date' ? sort.direction : 'none'}
             onChange={direction => setSort({ column: 'date', direction })}>Дата</SortHeader>
-          <SortHeader icon="arrowup-outline" iconButtonLabel="Сортировать по балансу"
+          <SortHeader sortType="number" icon="arrowup-outline" iconButtonLabel="Сортировать по балансу"
             direction={sort.column === 'balance' ? sort.direction : 'none'}
             onChange={direction => setSort({ column: 'balance', direction })}>Баланс</SortHeader>
         </tr></thead>

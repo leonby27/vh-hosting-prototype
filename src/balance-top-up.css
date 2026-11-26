@@ -11,6 +11,18 @@
   color: var(--hosting-title);
 }
 
+.hosting-shell dialog.top-up-dialog[data-for-clients] {
+  inline-size: min(540px, calc(100% - 32px));
+  --hosting-motion-fast: 0ms;
+  --hosting-motion-color: 0ms;
+  --hosting-motion-menu: 0ms;
+}
+
+.hosting-shell .top-up-dialog[data-for-clients],
+.hosting-shell .top-up-dialog[data-for-clients] * {
+  transition: none;
+}
+
 .top-up-form {
   display: flex;
   flex-direction: column;
@@ -62,6 +74,10 @@
   padding: 40px 40px 4px;
 }
 
+.hosting-shell .top-up-dialog[data-for-clients] .top-up-header {
+  padding-block-end: 4px;
+}
+
 .top-up-close {
   --vh-button-radius: 50%;
   position: absolute;
@@ -84,6 +100,10 @@
 .top-up-estimate {
   color: var(--hosting-secondary);
   font-weight: 400;
+}
+
+.top-up-dialog[data-credit-in-description] .top-up-description strong {
+  color: var(--hosting-plan-credit);
 }
 
 .top-up-notice {
@@ -119,6 +139,10 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-block-start: 8px;
+}
+
+.top-up-dialog[data-for-clients] .top-up-amount-presets .vh-chip:not([data-selected]) {
+  box-shadow: inset 0 0 0 1px var(--hosting-neutral-border);
 }
 
 .top-up-estimate {
@@ -182,6 +206,31 @@
   gap: 12px;
 }
 
+.top-up-dialog[data-for-clients] .top-up-payment-methods {
+  padding-block-start: 8px;
+}
+
+.hosting-shell .top-up-dialog[data-client-balance] .top-up-body {
+  gap: 12px;
+  padding-block-end: 12px;
+}
+
+.top-up-balance-option { padding-block-start: 8px; }
+
+.top-up-dialog[data-client-balance] .top-up-payment-methods { padding-block-start: 20px; }
+
+.top-up-balance-before { color: var(--hosting-text); }
+
+.top-up-balance-before del { color: var(--hosting-muted); }
+
+.top-up-balance-remaining[data-insufficient] {
+  color: var(--hosting-warning-text-emphasis);
+}
+
+.hosting-shell .top-up-dialog[data-client-balance] .top-up-footer {
+  padding-block-start: 8px;
+}
+
 .top-up-payment {
   margin: 0;
   padding: 0;
@@ -214,9 +263,28 @@
   min-block-size: 118px;
 }
 
+.hosting-shell .top-up-dialog[data-for-clients] .plan-payment-option {
+  min-block-size: 0;
+  --vh-selection-back: var(--vh-panel);
+  --vh-selection-border: var(--hosting-neutral-border);
+}
+
+.top-up-dialog[data-for-clients] .vh-selection-card:not(:has(:checked)):not(:hover) {
+  background: var(--vh-selection-back);
+}
+
+.top-up-dialog[data-for-clients] .top-up-payment .plan-payment-options {
+  align-items: start;
+}
+
 .top-up-dialog .plan-payment-label strong {
   font-size: 14px;
   line-height: 16px;
+}
+
+.top-up-dialog[data-for-clients] .plan-payment-label strong {
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .top-up-dialog .plan-payment-label small {
@@ -234,6 +302,19 @@
 .top-up-dialog .plan-check-line {
   font-weight: 400;
   color: var(--hosting-text);
+}
+
+.top-up-dialog[data-for-clients] .plan-check-line {
+  align-items: center;
+}
+
+.top-up-dialog[data-for-clients] .plan-check-line .plan-check-text > span {
+  padding-block-start: 0;
+}
+
+.top-up-dialog[data-for-clients] .plan-check-line:has(input:checked) {
+  color: var(--hosting-title);
+  font-weight: 500;
 }
 
 .top-up-footer {
@@ -393,6 +474,10 @@
   align-items: center;
   gap: 12px;
   min-block-size: 58px;
+}
+
+.hosting-shell[data-compact="true"] .top-up-dialog[data-for-clients] .top-up-other-methods {
+  min-block-size: 0;
 }
 
 .hosting-shell[data-compact="true"] .top-up-other-methods .plan-payment-icon {

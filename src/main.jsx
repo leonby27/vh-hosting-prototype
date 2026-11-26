@@ -12,11 +12,11 @@ import PlanChangesPreview from './PlanChangesPreview.jsx'
 import { planChangeScenarios } from './PlanChangesScenarios.jsx'
 import SitesSection from './SitesSection.jsx'
 import ApiAgents, { apiTabs } from './ApiAgents.jsx'
-import { apiAgentsSection, apiKeysPreset } from './api-agents-data.js'
+import { apiAgentsSection, apiKeysPreset, apiJournalEmptyPreset } from './api-agents-data.js'
 import { antivirusStates } from './antivirus-states.js'
 import { getNetworkProtectionPreset, isNetworkDomainProtected, networkAttackStates, networkProtectionStates } from './network-protection-states.js'
 import IntegratorPanel from './IntegratorPanel.jsx'
-import { getIntegratorDemo, integratorPages, integratorSection, integratorSettings, integratorSettingsTabs, integratorStates, money } from './integrator-data.js'
+import { getIntegratorDemo, integratorPages, integratorSection, integratorStates, money } from './integrator-data.js'
 
 const DesignSystemCatalog = lazy(() => import('./DesignSystemCatalog.jsx'))
 const query = new URLSearchParams(window.location.search)
@@ -49,7 +49,11 @@ function getPrototypeStates(section, tab) {
   if (isDashboardSection(section)) return [...dashboardStates, ...topUpStates, ...dashboardAttackStates]
   if (section === planChangesSection) return planChangesStates
   if (section === tariffSection && (!tab || tab === 'services')) return tariffServiceStates
-  if (section === apiAgentsSection && (!tab || tab === 'keys')) return [apiKeysPreset]
+  if (section === apiAgentsSection) {
+    if (!tab) return [apiKeysPreset, apiJournalEmptyPreset]
+    if (tab === 'keys') return [apiKeysPreset]
+    if (tab === 'journal') return [apiJournalEmptyPreset]
+  }
   if (section === sitesSection) {
     if (!tab) return [...antivirusStates, ...networkProtectionStates]
     if (tab === 'antivirus') return antivirusStates
@@ -84,8 +88,7 @@ function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
   if (integratorPage) url.searchParams.set('integrator', integratorPage)
   else url.searchParams.delete('integrator')
   url.searchParams.delete('ptab')
-  if (section === integratorSettings && tab !== 'account') url.searchParams.set('settings-tab', tab)
-  else url.searchParams.delete('settings-tab')
+  url.searchParams.delete('settings-tab')
   if (!keepState) url.searchParams.delete('state')
   replacePrototypeUrl(url)
 }
@@ -105,14 +108,13 @@ function HostingApp() {
   const requestedApiTab = query.get('api')
   const [apiTab, setApiTab] = useState(apiTabs.some(([id]) => id === requestedApiTab) ? requestedApiTab : 'connection')
   const [apiKeys, setApiKeys] = useState([])
-  const [settingsTab, setSettingsTab] = useState(() => readTab(integratorSettingsTabs, query.get('settings-tab')))
   const [integratorDemos, setIntegratorDemos] = useState({})
   const [integratorPayment, setIntegratorPayment] = useState(null)
   const requestedIntegratorPage = query.get('integrator')
   const legacyIntegratorTab = query.get('ptab')
   const integratorPage = requestedIntegratorPage === 'program' && ['operations', 'documents', 'details'].includes(legacyIntegratorTab)
     ? legacyIntegratorTab : requestedIntegratorPage
-  const initialSection = query.has('integrator') ? (Object.hasOwn(integratorPages, integratorPage) ? integratorPages[integratorPage] : integratorSection) :
+  const initialSection = query.has('integrator') ? (integratorPage === 'details' ? integratorPages.documents : integratorPage === 'notifications' ? integratorPages.settings : Object.hasOwn(integratorPages, integratorPage) ? integratorPages[integratorPage] : integratorSection) :
     query.has('catalog') ? designSystemSection : query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection :
       query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : query.get('concept') === 'dashboard' ? dashboardConceptSection : 'Дашборд'
   const requestedState = query.get('state')
@@ -138,10 +140,6 @@ function HostingApp() {
     if (section === sitesSection) setSitesTab(tab)
     if (section === apiAgentsSection) setApiTab('connection')
     if (section === tariffSection) setTariffTab(tab === 'services' ? tab : 'tariff')
-    if (section === integratorSettings) {
-      tab = readTab(integratorSettingsTabs, tab)
-      setSettingsTab(tab)
-    }
     syncPrototypeLocation(section, tab, keepState)
   }
 
@@ -170,8 +168,7 @@ function HostingApp() {
     }
     if (Object.values(integratorPages).includes(section)) {
       const scenario = integratorScenario(screenState)
-      return <IntegratorPanel section={section} compact={compact} tab={settingsTab}
-        scenario={scenario} onTabChange={tab => selectSection(section, tab, true)} onSelectSection={onSelect}
+      return <IntegratorPanel section={section} compact={compact}
         payment={integratorPayment} setPayment={setIntegratorPayment}
         demo={integratorDemos[scenario] ?? getIntegratorDemo(scenario)}
         updateDemo={update => setIntegratorDemos(current => ({
@@ -186,7 +183,8 @@ function HostingApp() {
       )
     }
     if (section === apiAgentsSection) {
-      return <ApiAgents tab={apiTab} keys={apiKeys} setKeys={setApiKeys} compact={compact} showDemoKeys={screenState === apiKeysPreset.id} onTabChange={tab => {
+      return <ApiAgents tab={apiTab} keys={apiKeys} setKeys={setApiKeys} compact={compact}
+        emptyJournal={screenState === apiJournalEmptyPreset.id} showDemoKeys={screenState === apiKeysPreset.id} onTabChange={tab => {
         setApiTab(tab)
         syncPrototypeLocation(apiAgentsSection, tab)
       }} />
@@ -223,7 +221,7 @@ function HostingApp() {
       isCurrentSection={(section, tab) => section === sitesSection ? sitesTab === (tab ?? 'mine')
         : section === tariffSection ? tariffTab === (tab === 'services' ? tab : 'tariff')
           : section === apiAgentsSection ? !tab || apiTab === tab
-            : section === integratorSettings ? settingsTab === readTab(integratorSettingsTabs, tab) : true}
+            : true}
       getPageStates={getPageStates}
       renderSection={renderSection}
       onIntegratorDeposit={() => setIntegratorPayment('deposit')}

@@ -5,6 +5,7 @@ import { Icon } from './Icon.jsx'
 import { Button, IconButton } from './Button.jsx'
 import { useMenuDisclosure } from './menu-disclosure.js'
 import { Radio } from './selection.jsx'
+import { Tooltip } from './feedback.jsx'
 
 export const defaultSegmentedSize = 40
 export const segmentedSizes = [48, 44, defaultSegmentedSize, 32]
@@ -198,8 +199,14 @@ export function Pagination({ page, count, onChange, label = 'Страницы' }
   </nav>
 }
 
-export function SortHeader({ direction = 'none', icon = 'bold-arrow-up', iconButtonLabel, onChange, children, ...props }) {
+export function SortHeader({ direction = 'none', sortType = 'text', icon = 'bold-arrow-up', iconButtonLabel, onChange, children, ...props }) {
   const next = { none: 'ascending', ascending: 'descending', descending: 'none' }[direction]
+  const labels = {
+    text: { ascending: 'От А до Я', descending: 'От Я до А' },
+    number: { ascending: 'От меньшего к большему', descending: 'От большего к меньшему' },
+    date: { ascending: 'От старых к новым', descending: 'От новых к старым' },
+  }
+  const actionLabel = next === 'none' ? 'По умолчанию' : (labels[sortType] ?? labels.text)[next]
   const arrow = <Icon name={icon} size={16} />
   const sort = () => onChange(next)
 
@@ -207,11 +214,13 @@ export function SortHeader({ direction = 'none', icon = 'bold-arrow-up', iconBut
     {iconButtonLabel
       ? <span className="vh-sort-heading">
         {children}
-        <IconButton label={iconButtonLabel} icon={arrow} size={24} data-sort-direction={direction}
-          data-hover-as-pressed onClick={sort} />
+        <Tooltip content={actionLabel}>{id => <IconButton className="vh-sort-control" label={iconButtonLabel}
+          aria-describedby={id} icon={arrow} size={24} data-sort-direction={direction}
+          data-hover-as-pressed onClick={sort} />}</Tooltip>
       </span>
-      : <button className="vh-sort vh-focus" data-sort-direction={direction} type="button" onClick={sort}>
+      : <Tooltip content={actionLabel}>{id => <button className="vh-sort vh-sort-control vh-focus" aria-describedby={id}
+        data-sort-direction={direction} type="button" onClick={sort}>
         {children}{arrow}
-      </button>}
+      </button>}</Tooltip>}
   </th>
 }
