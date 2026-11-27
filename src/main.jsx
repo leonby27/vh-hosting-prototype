@@ -12,6 +12,7 @@ import { topUpStates } from './balance-top-up-states.js'
 import PlanChangesPreview from './PlanChangesPreview.jsx'
 import { planChangeScenarios } from './PlanChangesScenarios.jsx'
 import SitesSection from './SitesSection.jsx'
+import DnsEditorPreview from './DnsEditorPreview.jsx'
 import ApiAgents, { apiTabs } from './ApiAgents.jsx'
 import { apiAgentsSection, apiKeysPreset, apiJournalEmptyPreset } from './api-agents-data.js'
 import { antivirusStates } from './antivirus-states.js'
@@ -26,6 +27,7 @@ const query = new URLSearchParams(window.location.search)
 const hostingBalanceKey = 'vh-hosting-balance'
 const planChangesSection = 'Что изменится'
 const sitesSection = 'Сайты'
+const domainsSection = 'Домены и SSL'
 const tariffSection = 'Настройки тарифа'
 const planChangesStates = [
   { id: 'saved-card', label: 'Динамический блок с сохранённой картой' },
@@ -83,6 +85,8 @@ function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
   else url.searchParams.delete('tariff')
   if (section === sitesSection) url.searchParams.set('sites', tab)
   else url.searchParams.delete('sites')
+  if (section === domainsSection) url.searchParams.set('dns-editor', '')
+  else url.searchParams.delete('dns-editor')
   if (section === apiAgentsSection) url.searchParams.set('api', tab === 'mine' ? 'connection' : tab)
   else url.searchParams.delete('api')
   if (section === dashboardConceptSection) url.searchParams.set('concept', 'dashboard')
@@ -131,7 +135,8 @@ function HostingApp() {
     ? legacyIntegratorTab : requestedIntegratorPage
   const initialSection = query.has('login') ? loginSection : query.has('integrator') ? (integratorPage === 'details' ? integratorPages.documents : integratorPage === 'notifications' ? integratorPages.settings : Object.hasOwn(integratorPages, integratorPage) ? integratorPages[integratorPage] : integratorSection) :
     query.has('catalog') ? designSystemSection : query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection :
-      query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : query.get('concept') === 'dashboard' ? dashboardConceptSection : 'Дашборд'
+      query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : query.has('dns-editor') ? domainsSection :
+        query.get('concept') === 'dashboard' ? dashboardConceptSection : 'Дашборд'
   const requestedState = query.get('state')
   const initialScreenState = requestedState === 'initial' || getPrototypeStates(initialSection).some(state => state.id === requestedState)
     ? requestedState : null
@@ -244,6 +249,7 @@ function HostingApp() {
       return <TariffSettings compact={compact} tab={tariffTab} scenario={scenario}
         onTabChange={selectTariffTab} onSecurity={tab => onSelect(sitesSection, tab)} />
     }
+    if (section === domainsSection) return <DnsEditorPreview />
     if (section === sitesSection) {
       return <SitesSection tab={sitesTab} onTabChange={selectSitesTab} onOpenTariff={() => onSelect(tariffSection)} screenState={screenState} compact={compact}
         availableBalance={hostingBalance} onDebitBalance={debitHostingBalance}

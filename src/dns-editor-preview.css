@@ -1,0 +1,14 @@
+.dns-editor-preview {
+  display: grid;
+  gap: 16px;
+}
+
+.dns-editor-preview-placeholder {
+  display: grid;
+  place-items: center;
+  min-block-size: 320px;
+  color: var(--hosting-secondary);
+  font-size: 13px;
+  line-height: 16px;
+  text-align: center;
+}
