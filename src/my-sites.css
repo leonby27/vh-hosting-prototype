@@ -57,19 +57,21 @@
 .my-sites-table tbody tr:last-child > :last-child { border-end-end-radius: 12px; }
 .my-sites-table tbody th { font-weight: 500; }
 
-.my-sites-name,
-.my-sites-domains,
-.my-sites-domain {
+.my-sites-name {
   display: flex;
   min-inline-size: 0;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
-.my-sites-name { gap: 12px; }
 .my-sites-name > div { min-inline-size: 0; }
 .my-sites-name img { flex: none; }
 .my-sites-table .my-sites-speed-cell img { display: block; margin-inline: auto; }
+.my-sites-speed-icon {
+  color: var(--hosting-text-secondary-light);
+  transition: color var(--hosting-motion-color) ease;
+}
+.my-sites-speed-icon:hover { color: var(--vh-alert-danger-icon); }
 
 .my-sites-truncate {
   display: block;
@@ -87,29 +89,21 @@
 }
 
 .my-sites-note[data-paused="true"] { color: var(--hosting-warning-text-emphasis); }
-.my-sites-no-domains { color: var(--hosting-secondary); }
-.my-sites-domains { color: var(--hosting-text); font-weight: 400; }
-.my-sites-more-domains { flex: none; }
-
-.my-sites-domain-menu {
-  z-index: 3;
-  inset-block-start: calc(100% + 4px);
-  inset-inline-end: 0;
-  min-inline-size: max-content;
-  padding: 6px 0;
+.my-sites-table .linked-domains {
+  --linked-domain-entry-height: 24px;
+  padding-inline-end: 0;
 }
-
-.my-sites-domain-menu-list {
-  padding: 0;
-  list-style: none;
-}
-
-.my-sites-domain-menu-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  overflow-wrap: anywhere;
+.my-sites-table .linked-domains-summary,
+.my-sites-table .linked-domains-summary .linked-domain-entry,
+.my-sites-table .linked-domains-trigger { min-block-size: 24px; }
+.my-sites-table .linked-domains-list { display: grid; gap: 4px; padding-block-start: 4px; }
+.my-sites-table :is(.linked-domains-trigger, .linked-domains-collapse) { font-weight: 400; line-height: 16px; }
+.my-sites-table .linked-domains-collapse { margin-block-start: 4px; }
+.my-sites-table .linked-domain-link { border-radius: 6px; }
+.my-sites-table .linked-domain-link .sites-icon img { width: auto; height: auto; }
+.my-sites-table tbody tr[data-domains-aligned] > * {
+  vertical-align: top;
+  padding-block-start: var(--my-sites-cell-start, 8px);
 }
 .my-sites-table tbody .my-sites-empty { padding-inline: 16px; text-align: center; }
 .my-sites-pagination:not(:empty) { display: grid; justify-items: center; margin-block: 16px; }
@@ -120,8 +114,9 @@
   .my-sites-table :is(.my-sites-speed-column, .my-sites-speed-cell, .my-sites-details-column, .my-sites-details-cell) { display: none; }
   .my-sites-compact-details { display: block; overflow-wrap: anywhere; }
   .my-sites-domain-column { inline-size: 44%; }
-  .my-sites-domains { align-items: flex-start; flex-direction: column; gap: 4px; }
-  .my-sites-domain { max-inline-size: 100%; }
+  .my-sites-table .linked-domains-summary { position: relative; }
+  .my-sites-table .linked-domains-trigger { position: absolute; inset-block-start: calc(100% + 4px); inset-inline-start: 0; }
+  .my-sites-table .linked-domains-disclosure[data-expanded="false"] .linked-domains-extra { min-block-size: 28px; }
 }
 
 @container sites (max-width: 430px) {
@@ -131,5 +126,4 @@
   .my-sites-table tr > :first-child { padding-inline: 8px 0; }
   .my-sites-table :is(th, td) { padding-inline-end: 8px; }
   .my-sites-name { gap: 6px; }
-  .my-sites-domain-menu { min-inline-size: 0; inline-size: 176px; }
 }

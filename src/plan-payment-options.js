@@ -44,6 +44,8 @@ function getSavedPaymentMethods(savedMethods) {
 }
 
 const payByCard = { id: 'pay-card', icon: 'pay-card', label: 'Оплатить картой', demoPayment: true }
+export const balancePaymentMethod = { id: 'balance', icon: 'pay-balance', tone: 'pink', label: 'Списать с баланса' }
+export const payFromBalance = { id: 'pay-balance', label: balancePaymentMethod.label, icon: balancePaymentMethod.icon, demoPayment: true }
 
 export const paymentActions = {
   'saved-card': { ...payByCard, label: 'Оплатить картой •••• 2663' },

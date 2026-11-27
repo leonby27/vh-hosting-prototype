@@ -1,8 +1,7 @@
 import { TabList } from './ui/navigation.jsx'
 import { Badge, Dialog } from './ui/feedback.jsx'
 import TariffUsage from './TariffUsage.jsx'
-import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useCallback, useContext, useEffect, useId, useRef, useState } from 'react'
 import { Button as SharedButton, IconButton, Stepper } from './ui/controls.jsx'
 import { Surface } from './ui/layout.jsx'
 import { AnimatedBlock } from './hosting-motion.jsx'
@@ -13,7 +12,7 @@ import TariffServices, { ServiceSettings, additionalIp, availableServices, packa
 import { isHostingPlan, planPrice, TariffPeriodOptions, TariffPlanOptions, TariffSheet } from './TariffPlanOptions.jsx'
 import { TariffAccountAlert, TariffParkingDialogs, TariffParkingStatus, TariffReceipt, useParkingTransition } from './TariffScenarioUI.jsx'
 import LeaveCheckoutDialog from './LeaveCheckoutDialog.jsx'
-import { DashboardTrialNotice } from './DashboardNotices.jsx'
+import { HostingTrialNotice } from './DashboardNotices.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import { canSaveCard, getPaymentGroup, paymentActions, renewalOption, saveCardOption, savedCard, securePaymentNote } from './plan-payment-options.js'
 import { plusPackage, rubles } from './plan-preview-pricing.js'
@@ -150,8 +149,6 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
   const [alert, setAlert] = useState(scenario?.alert ?? null)
   const [debt, setDebt] = useState(scenario?.alert === 'blocked' ? 200 : scenario?.alert === 'deferred' ? 214 : 0)
   const [unpaid, setUnpaid] = useState(Boolean(scenario?.unpaid))
-  const settings = useRef(null)
-  const [headerNotice, setHeaderNotice] = useState(null)
   const [leaveOpen, setLeaveOpen] = useState(Boolean(scenario?.leaveOpen))
   const [quantities, setQuantities] = useState(() => ({ ...includedQuantities, ...scenario?.quantities }))
   const [applied, setApplied] = useState(() => ({ ...includedQuantities, ...scenario?.appliedResources }))
@@ -232,11 +229,6 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
   const showSaveOption = total > 0 && canSaveCard(paymentGroup.value)
 
   useEffect(() => () => cancelApplyScroll.current?.(), [])
-
-  useLayoutEffect(() => {
-    if (!unpaid || compact) return
-    setHeaderNotice(settings.current.closest('.hosting-shell')?.querySelector('[data-dashboard-header-notice]'))
-  }, [compact, unpaid])
 
   useEffect(() => {
     const request = pendingReviewScroll.current
@@ -598,11 +590,8 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
   }
 
   return (
-    <div className="tariff-settings" ref={settings}>
-      {!compact && unpaid && headerNotice && createPortal(<DashboardTrialNotice onPay={showTrialPayment} compact={false} />, headerNotice)}
-      {compact && <AnimatedBlock open={unpaid}>
-        <DashboardTrialNotice onPay={showTrialPayment} compact />
-      </AnimatedBlock>}
+    <div className="tariff-settings">
+      <HostingTrialNotice open={unpaid} compact={compact} onPay={showTrialPayment} />
       <TabList size={35} idPrefix={id} label="Настройки тарифа" value={tab}
         navigate={navigate} onChange={onTabChange} tabs={tabs.map(([key, label]) => ({
           id: key, label, elementId: `${id}-${key}`, panelId: `${id}-${key}-panel`,

@@ -148,7 +148,7 @@ function IntegratorDocuments({ documents, onInvoice }) {
         </tbody>
       </IntegratorTable>
     </div>
-    <Dialog open={detailsOpen} width={560} className="integrator-requisites-dialog" title="Мои реквизиты" closeOnBackdrop onClose={() => setDetailsOpen(false)}>
+    <Dialog open={detailsOpen} width={560} className="integrator-requisites-dialog" title="Мои реквизиты" onClose={() => setDetailsOpen(false)}>
       <IntegratorDetails />
     </Dialog>
   </>
@@ -274,7 +274,7 @@ function IntegratorSettings({ demo, updateDemo }) {
       <IntegratorNotifications demo={demo} updateDemo={updateDemo} />
     </section>
     <Dialog open={Boolean(edit)} className="integrator-edit-account" title={edit === 'name' ? 'Название кабинета' : 'Почта для документов'}
-      closeOnBackdrop onClose={() => setEdit(null)}>
+      closeOnBackdrop={value === account[edit]} onClose={() => setEdit(null)}>
       <form className="integrator-edit-account-form" onSubmit={save}>
         <TextField label={edit === 'name' ? 'Название кабинета' : 'Почта для документов'}
           type={edit === 'email' ? 'email' : 'text'} required value={value} onChange={event => setValue(event.target.value)} />
@@ -282,7 +282,7 @@ function IntegratorSettings({ demo, updateDemo }) {
       </form>
     </Dialog>
     <Dialog open={passwordOpen} className="integrator-edit-account" title="Изменить пароль"
-      closeOnBackdrop onClose={closePassword}>
+      closeOnBackdrop={!currentPassword && !newPassword} onClose={closePassword}>
       <form className="integrator-edit-account-form" onSubmit={changePassword}>
         <div className="integrator-password-fields">
           <TextField label="Текущий пароль" type={currentPasswordVisible ? 'text' : 'password'} autoComplete="current-password" required

@@ -7,7 +7,7 @@ import { PopoverMenu } from './ui/navigation.jsx'
 import { Button, Choice, SearchField, Switch } from './ui/controls.jsx'
 import PlanChanges, { PlanChangesEmpty } from './PlanChanges.jsx'
 import { serviceChangesPayment } from './ServiceChanges.jsx'
-import { canSaveCard, getPaymentGroup, paymentActions, renewalOption, saveCardOption, securePaymentNote } from './plan-payment-options.js'
+import { balancePaymentMethod, canSaveCard, getPaymentGroup, payFromBalance, paymentActions, renewalOption, saveCardOption, securePaymentNote } from './plan-payment-options.js'
 import settingsIcon from './assets/tariff-settings/settings.svg'
 import closeIcon from './assets/checkout/close.svg'
 
@@ -217,17 +217,21 @@ export function SitesTable({
                   </tr>
                 </thead>
                 <tbody role="rowgroup">
-                  {visible.map(domain => {
+                  {visible.map((domain, index) => {
                     const status = statuses[domain.name] ?? 'available'
                     const statusLabel = statusLabels[status]
                     const note = renderNote?.(domain, status)
                     const tone = protectionStatusTone(status, Boolean(note))
                     const checked = selecting && selected.has(domain.name)
+                    const showParentBranch = domain.parentDomain && visible.some((parent, parentIndex) =>
+                      parentIndex < index && parent.name === domain.parentDomain)
                     return (
                       <tr
-                        role="row"
                         key={domain.name}
+                        role="row"
                         className="sites-domain-row"
+                        data-subdomain={Boolean(domain.parentDomain) || undefined}
+                        data-subdomain-branch={showParentBranch || undefined}
                         data-status={status}
                         data-selectable={selecting || undefined}
                         data-selected={checked || undefined}
@@ -313,13 +317,17 @@ export function ProtectionCheckoutSlot({ open, children }) {
 
 export function ProtectionCheckout({
   title, empty, items, notices, total, totalLabel = 'К оплате', actionDescription, reveal, paymentDescription, headingId = 'sites-checkout-title',
-  payment, paymentContext, hasSavedCard, allowAutoRenew, onStart, onConfirm, onCancel, onClose, canDiscard, onUnlinkCard, serviceChanges,
+  payment, paymentContext, hasSavedCard, allowAutoRenew, availableBalance, onStart, onConfirm, onCancel, onClose, canDiscard, onUnlinkCard, serviceChanges,
 }) {
   const [method, setMethod] = useState(hasSavedCard ? 'saved-card' : 'bank')
+  const [useBalance, setUseBalance] = useState(false)
   const [renew, setRenew] = useState(true)
   const [save, setSave] = useState(true)
   const heading = useRef(null)
-  const showSaveOption = canSaveCard(method)
+  const paymentGroup = getPaymentGroup(method, hasSavedCard)
+  const canPayFromBalance = availableBalance >= total
+  const balanceSelected = canPayFromBalance && useBalance
+  const showSaveOption = !balanceSelected && canSaveCard(paymentGroup.value)
 
   useEffect(() => {
     if (reveal) revealProtectionCheckout(heading.current)
@@ -335,6 +343,7 @@ export function ProtectionCheckout({
     if (group === 'renewalOptions') setRenew(patch.checked)
     else if (group === 'saveOptions') setSave(patch.checked)
     else if (group === 'paymentGroups') setMethod(patch.value)
+    else if (group === 'adjustments' && id === balancePaymentMethod.id) setUseBalance(patch.checked)
   }
 
   function performAction(action) {
@@ -349,11 +358,14 @@ export function ProtectionCheckout({
 
   const paymentProps = serviceChanges ? serviceChangesPayment(serviceChanges) : {
     renewalOptions: allowAutoRenew ? [renewalOption(renew)] : [],
+    adjustments: canPayFromBalance ? [{
+      id: balancePaymentMethod.id, label: balancePaymentMethod.label, amount: formatPrice(total), checked: balanceSelected,
+    }] : [],
     totals: [{ label: totalLabel, amount: formatPrice(total) }],
-    paymentGroups: [getPaymentGroup(method, hasSavedCard)],
+    paymentGroups: balanceSelected ? [] : [paymentGroup],
     saveOptions: showSaveOption ? [saveCardOption(save)] : [],
-    actions: payment ? [] : [paymentActions[method]],
-    paymentNote: securePaymentNote,
+    actions: payment ? [] : [balanceSelected ? payFromBalance : paymentActions[paymentGroup.value]],
+    paymentNote: balanceSelected ? undefined : securePaymentNote,
     onAction: performAction,
   }
 

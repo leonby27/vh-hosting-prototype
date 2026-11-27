@@ -1,0 +1,125 @@
+.linked-domains {
+  --linked-domain-entry-height: 28px;
+  --linked-domains-collapse-height: 24px;
+  padding-inline-end: 8px;
+  color: color-mix(in srgb, var(--hosting-title) 60%, var(--hosting-text));
+  font-weight: 400;
+}
+
+.sites-mobile-dns .linked-domains {
+  color: var(--hosting-secondary);
+}
+
+.linked-domains-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-block-size: 26px;
+}
+
+.linked-domains-summary > span:first-child,
+.linked-domain-entry > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linked-domains-count,
+.linked-domains-trigger {
+  flex: none;
+}
+
+.sites-page .linked-domains-trigger {
+  box-sizing: border-box;
+  min-block-size: 26px;
+  padding: 3px 8px;
+  border: 1px solid var(--hosting-line);
+  border-radius: 8px;
+  color: inherit;
+  font-size: 14px;
+  line-height: 18px;
+  transition: background-color var(--hosting-motion-color) ease;
+}
+
+.sites-page .linked-domains-trigger:hover {
+  background: var(--hosting-card-surface);
+}
+
+.sites-page .linked-domains-collapse {
+  block-size: var(--linked-domains-collapse-height);
+  color: var(--hosting-link-text);
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.sites-page .linked-domains-collapse:hover {
+  color: var(--hosting-link-hover);
+}
+
+.sites-page .linked-domains-list {
+  padding: 1px 0 0;
+  list-style: none;
+}
+
+.linked-domain-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-block-size: var(--linked-domain-entry-height);
+}
+
+.linked-domains-summary .linked-domain-entry {
+  min-block-size: 26px;
+}
+
+.linked-domain-entry:is(:hover, :focus-within) {
+  color: var(--hosting-title);
+}
+
+.linked-domain-link {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 20px;
+  box-sizing: border-box;
+  border: 1px solid var(--hosting-line);
+  border-radius: 8px;
+  background: var(--hosting-surface);
+  transition: opacity var(--hosting-motion-fast) ease, background-color var(--hosting-motion-color) ease;
+}
+
+.linked-domain-link .sites-icon img {
+  width: 14px;
+  height: 14px;
+}
+
+.linked-domain-link:hover {
+  background: var(--hosting-card-surface);
+}
+
+@media (hover: hover) {
+  .linked-domain-link {
+    opacity: 0;
+  }
+
+  .linked-domain-entry:is(:hover, :focus-within) .linked-domain-link {
+    opacity: 1;
+  }
+}
+
+@container sites (max-width: 560px) {
+  .linked-domains {
+    padding-inline-end: 0;
+    font-size: 13px;
+  }
+
+  .linked-domains-summary {
+    gap: 4px;
+    min-block-size: 0;
+  }
+}

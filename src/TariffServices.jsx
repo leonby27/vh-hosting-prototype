@@ -154,24 +154,27 @@ export function ServiceSettings({ service, ptr, renew, onSave, onClose }) {
   const isIp = service.id === additionalIp.id
   const id = useId()
   const dialog = useRef(null)
+  const [draftPtr, setDraftPtr] = useState(ptr ?? '')
+  const [draftRenew, setDraftRenew] = useState(Boolean(renew))
+  const changed = isIp ? draftPtr !== (ptr ?? '') : draftRenew !== Boolean(renew)
 
   return (
-    <ModalFrame ref={dialog} width={400} className="hosting-dialog tariff-ip-dialog" aria-labelledby={id} onClose={onClose}>
+    <ModalFrame ref={dialog} width={400} className="hosting-dialog tariff-ip-dialog" aria-labelledby={id}
+      closeOnBackdrop={!changed} onClose={onClose}>
       <form onSubmit={event => {
         event.preventDefault()
-        const form = new FormData(event.currentTarget)
         dialog.current.close()
-        onSave(isIp ? { ptr: form.get('ptr').trim() } : { renew: form.has('renew') })
+        onSave(isIp ? { ptr: draftPtr.trim() } : { renew: draftRenew })
       }}>
         <h2 className="hosting-dialog-title" id={id}>{service.title}</h2>
         {isIp ? (
           <>
             <dl><dt>Адрес</dt><dd>{service.description}</dd><dt>Домен на этом адресе</dt><dd>davydov.ru</dd></dl>
-            <TextField name="ptr" label="PTR-запись" defaultValue={ptr} autoFocus />
+            <TextField name="ptr" label="PTR-запись" value={draftPtr} onChange={event => setDraftPtr(event.target.value)} autoFocus />
             <p>При отключении услуги домен вернётся на общий IP сервера.</p>
           </>
         ) : (
-          <Choice name="renew" size={20} defaultChecked={renew} label="Автопродление" />
+          <Choice name="renew" size={20} checked={draftRenew} onChange={event => setDraftRenew(event.target.checked)} label="Автопродление" />
         )}
         <div className="tariff-service-actions">
           <Action onClick={() => dialog.current.close()}>Отмена</Action>

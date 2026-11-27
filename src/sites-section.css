@@ -47,6 +47,22 @@
   color: var(--hosting-plan-danger);
 }
 
+.sites-attack-icon { display: inline-flex; }
+
+.sites-restore-instructions {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  text-align: start;
+}
+
+.sites-restore-instructions li {
+  display: grid;
+  gap: 4px;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
 .sites-protection:not([hidden]) {
   --sites-protection-gap: var(--hosting-section-gap);
   display: grid;
@@ -61,11 +77,11 @@
 .sites-checkout { --hosting-reveal-delay: 30ms; }
 .sites-faq { --hosting-reveal-delay: 45ms; }
 
-#sites-checkout-title {
+:is(#sites-domains-title, #sites-checkout-title) {
   scroll-margin-block-start: 16px;
 }
 
-.hosting-shell[data-compact="true"] #sites-checkout-title {
+.hosting-shell[data-compact="true"] :is(#sites-domains-title, #sites-checkout-title) {
   scroll-margin-block-start: calc(var(--hosting-header-height) + 16px);
 }
 
@@ -226,6 +242,14 @@
 .sites-active-count {
   font-size: 16px;
   line-height: 20px;
+}
+
+.sites-protection-inactive .sites-active-copy h2 {
+  color: #ffab48;
+}
+
+.sites-protection-inactive .sites-active-count {
+  font-weight: 400;
 }
 
 .sites-active-caption {
@@ -440,6 +464,24 @@
   font-weight: 500;
 }
 
+.sites-domain-row[data-subdomain] .sites-domain-name-line {
+  position: relative;
+  padding-inline-start: 17px;
+}
+
+.sites-domain-row[data-subdomain-branch] .sites-domain-name-line::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: calc(50% - 2px);
+  box-sizing: border-box;
+  inline-size: 9px;
+  block-size: 22px;
+  border-inline-start: 1px solid var(--hosting-plan-branch-line);
+  border-block-end: 1px solid var(--hosting-plan-branch-line);
+  pointer-events: none;
+}
+
 .sites-domain-row[data-selectable] {
   --sites-domain-tinted-badge: color-mix(in srgb, var(--hosting-text) 12%, transparent);
 }
@@ -518,27 +560,73 @@
 }
 
 .sites-domain-note .sites-text-button {
+  font-size: inherit;
+  line-height: inherit;
   font-weight: 500;
 }
 
-.sites-domain-address {
-  display: inline-flex;
+.sites-instructions-address {
+  margin-block-start: 24px;
+}
+
+.sites-domain-help {
+  display: grid;
+  gap: 16px;
+  margin-block-start: 20px;
+}
+
+.sites-domain-help section {
+  display: grid;
+  gap: 6px;
+}
+
+.sites-domain-help h3 {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.sites-instructions-row {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  vertical-align: middle;
+  gap: 10px;
+}
+
+.sites-instructions-label,
+.sites-instructions-ip {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.sites-domain-address button {
-  display: grid;
-  min-inline-size: 20px;
-  min-block-size: 20px;
-  place-items: center;
+.sites-instructions-leader {
+  flex: 1 1 10px;
+  block-size: 2px;
+  background: var(--hosting-plan-leader-line);
+  mask: url('./assets/plan-changes/leader.svg') left center repeat-x;
 }
 
-.sites-domain-address .sites-icon {
-  transition: background-color var(--hosting-motion-color) ease;
+.sites-instructions-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--hosting-secondary);
+  min-inline-size: 0;
+  white-space: nowrap;
 }
+
+.sites-instructions-value .vh-tooltip { flex: none; }
+
+.sites-instructions-copy {
+  --vh-button-text-override: var(--hosting-secondary);
+  --vh-button-hover-override: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sites-instructions-copy:hover { --vh-button-text-override: var(--hosting-title); }
+}
+
+.sites-instructions-copy:focus-visible { --vh-button-text-override: var(--hosting-title); }
 
 .sites-dialog.hosting-dialog .hosting-dialog-title {
   margin-block-end: 12px;

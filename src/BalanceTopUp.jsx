@@ -73,16 +73,21 @@ export default function BalanceTopUp({
   const menu = useRef(null)
   const menuClose = useRef(null)
   const restoreTriggerFocus = useRef(false)
-  const [amount, setAmount] = useState(() => initialAmount !== undefined
-    ? formatTopUpAmount(initialAmount) : forClients ? '' : formatTopUpAmount(preset?.amount ?? 1578))
+  const initialAmountText = initialAmount !== undefined
+    ? formatTopUpAmount(initialAmount) : forClients ? '' : formatTopUpAmount(preset?.amount ?? 1578)
+  const initialMethod = preset?.method ?? savedMethods[0]?.id ?? 'bank'
+  const initiallyUsesBalance = availableBalance !== undefined
+  const [amount, setAmount] = useState(initialAmountText)
   const [selectedPeriod, setSelectedPeriod] = useState(forClients || preset?.annualPlan || preset?.saved ? null : preset?.amount ?? 1578)
-  const [method, setMethod] = useState(preset?.method ?? savedMethods[0]?.id ?? 'bank')
+  const [method, setMethod] = useState(initialMethod)
   const [save, setSave] = useState(true)
-  const [useBalance, setUseBalance] = useState(availableBalance !== undefined)
+  const [useBalance, setUseBalance] = useState(initiallyUsesBalance)
   const [methodsOpen, setMethodsOpen] = useState(Boolean(preset?.methodsOpen && savedMethods.length))
   const [unlinkChoice, setUnlinkChoice] = useState(null)
   const [documentAction, setDocumentAction] = useState(null)
   const [canScrollDown, setCanScrollDown] = useState(false)
+  const hasUnsavedChanges = amount !== initialAmountText || method !== initialMethod || !save ||
+    useBalance !== initiallyUsesBalance || Boolean(documentAction)
 
   const hasSaved = savedMethods.length > 0
   const visibleMethods = hasSaved
@@ -234,6 +239,7 @@ export default function BalanceTopUp({
     <ModalFrame
       ref={dialog}
       width={560}
+      closeOnBackdrop={!hasUnsavedChanges}
       className={`hosting-dialog top-up-dialog${mobileSheet ? ' hosting-dialog--sheet' : ''}`}
       data-for-clients={forClients || undefined}
       data-credit-in-description={creditInDescription || undefined}
@@ -247,9 +253,6 @@ export default function BalanceTopUp({
       }}
       onKeyDown={event => {
         if (event.key === 'Escape') event.stopPropagation()
-      }}
-      onClick={event => {
-        if (event.target === event.currentTarget) dialog.current.close()
       }}
     >
       <form ref={animatedForm} className="top-up-form" onSubmit={submit} inert={methodsOpen}>

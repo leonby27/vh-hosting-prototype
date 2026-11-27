@@ -65,9 +65,9 @@ export function TabList({
   </div>
 }
 
-export function SegmentedOptions({ name, label, options, value, onChange, onReselect, indicator = true, size, surface, className = '' }) {
+export function SegmentedOptions({ name, label, options, value, onChange, onReselect, indicator = true, size, surface, fullWidth, className = '' }) {
   return <div className={`hosting-segmented${indicator ? ' hosting-indicator-track' : ''} ${className}`.trim()}
-    data-size={size} data-segment-surface={surface} style={segmentedSizeStyle(size)}
+    data-size={size} data-segment-surface={surface} data-full-width={fullWidth || undefined} style={segmentedSizeStyle(size)}
     role={label ? 'radiogroup' : undefined} aria-label={label}>
     {indicator && <TabIndicator selected={value} />}
     {options.map(option => <label key={option.value}>

@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
-import { Button, Choice, Dialog, Pagination, PopoverMenu, SearchField, SortHeader, TableFrame, TextField } from './ui/index.js'
+import { AssetIcon, Button, Choice, Dialog, Pagination, SearchField, SortHeader, TableFrame, TextField } from './ui/index.js'
 import { ProtectionFaq } from './SitesProtectionUI.jsx'
+import LinkedDomains from './LinkedDomains.jsx'
 import folderIcon from './assets/my-sites/folder.svg'
 import lowSpeedIcon from './assets/my-sites/speed-low.svg'
 import highSpeedIcon from './assets/my-sites/speed-high.svg'
+import domainLinkIcon from './assets/my-sites/arrow-out.svg'
 import createIcon from './assets/my-sites/create.svg'
 import searchIcon from './assets/my-sites/search.svg'
 import faqIcon from './assets/my-sites/faq.svg'
@@ -39,32 +41,42 @@ const questions = [
   { id: 'restore', title: 'Как восстановить сайт?', answer: 'В разделе «Резервные копии» выберите копию за нужную дату и восстановите файлы сайта. Если сайт использует базу данных, проверьте и её резервную копию.' },
 ]
 
-function SiteDomains({ domains, attackedDomains, renderAttackMark }) {
-  if (!domains.length) return <span className="my-sites-no-domains">Нет привязанных доменов</span>
+function SiteDomains({ site, attackedDomains, renderAttackMark }) {
+  const layoutRevision = useRef(0)
+  const primary = site.domains.find(domain => attackedDomains.includes(domain)) ?? site.domains[0]
+  const domains = primary === site.domains[0] ? site.domains : [primary, ...site.domains.filter(domain => domain !== primary)]
+  const additionalUnderAttack = domains.slice(1).some(domain => attackedDomains.includes(domain))
 
-  const primary = domains.find(domain => attackedDomains.includes(domain)) ?? domains[0]
-  const additional = domains.filter(domain => domain !== primary)
-  const additionalUnderAttack = additional.some(domain => attackedDomains.includes(domain))
+  function preserveRowAlignment(trigger, open) {
+    const row = trigger.closest('tr')
+    const revision = ++layoutRevision.current
+    if (open) {
+      if (row.hasAttribute('data-domains-aligned')) return
+      const positions = Array.from(row.cells, cell => {
+        if (!cell.getClientRects().length) return null
+        const contentTop = cell.firstElementChild.getBoundingClientRect().top
+        const border = parseFloat(getComputedStyle(cell).borderBlockStartWidth)
+        return contentTop - cell.getBoundingClientRect().top - border
+      })
+      Array.from(row.cells).forEach((cell, index) => {
+        if (positions[index] !== null) cell.style.setProperty('--my-sites-cell-start', `${positions[index]}px`)
+      })
+      row.setAttribute('data-domains-aligned', '')
+      return
+    }
 
-  return <div className="my-sites-domains">
-    <span className="my-sites-domain">
-      <span className="my-sites-truncate" title={primary}>{primary}</span>
-      {attackedDomains.includes(primary) && renderAttackMark()}
-    </span>
-    {additional.length > 0 && (
-      <PopoverMenu className="my-sites-more-domains" panelClassName="my-sites-domain-menu" panelLabel="Привязанные домены"
-        renderTrigger={props => (
-          <Button {...props} variant="neutral" size={24} aria-label={`Ещё ${additional.length} привязанных доменов`}
-            rightIcon={additionalUnderAttack ? renderAttackMark() : undefined}>
-            и ещё +{additional.length}
-          </Button>
-        )}>
-        {() => <ul className="my-sites-domain-menu-list">{additional.map(domain => (
-          <li key={domain}>{domain}{attackedDomains.includes(domain) && renderAttackMark()}</li>
-        ))}</ul>}
-      </PopoverMenu>
-    )}
-  </div>
+    const block = document.getElementById(trigger.getAttribute('aria-controls'))?.closest('.hosting-animated-block')
+    requestAnimationFrame(async () => {
+      await Promise.allSettled(block?.getAnimations().map(animation => animation.finished) ?? [])
+      if (layoutRevision.current !== revision) return
+      row.removeAttribute('data-domains-aligned')
+      Array.from(row.cells).forEach(cell => cell.style.removeProperty('--my-sites-cell-start'))
+    })
+  }
+
+  return <LinkedDomains domains={domains} siteName={site.name} reserveCounterSpace linkIcon={domainLinkIcon} onToggle={preserveRowAlignment}
+    renderMarker={domain => attackedDomains.includes(domain) ? renderAttackMark?.() : null}
+    moreMarker={additionalUnderAttack ? renderAttackMark?.(true) : undefined} />
 }
 
 export default function MySites({ attackedDomains = [], renderAttackMark }) {
@@ -154,9 +166,10 @@ export default function MySites({ attackedDomains = [], renderAttackMark }) {
                 </div>
               </th>
               <td className="my-sites-speed-cell">
-                <img src={site.fast ? highSpeedIcon : lowSpeedIcon} alt={site.fast ? 'Скорость 100%' : 'Скорость 30%'} />
+                {site.fast ? <img src={highSpeedIcon} alt="Скорость 100%" /> :
+                  <AssetIcon src={lowSpeedIcon} monochrome intrinsic label="Скорость 30%" className="my-sites-speed-icon" />}
               </td>
-              <td><SiteDomains domains={site.domains} attackedDomains={attackedDomains} renderAttackMark={renderAttackMark} /></td>
+              <td><SiteDomains site={site} attackedDomains={attackedDomains} renderAttackMark={renderAttackMark} /></td>
               <td className="my-sites-details-cell"><span className="my-sites-truncate" title={site.details}>{site.details}</span></td>
             </tr>
           ))}
@@ -168,7 +181,7 @@ export default function MySites({ attackedDomains = [], renderAttackMark }) {
     <div className="my-sites-pagination"><Pagination page={page} count={count} onChange={setPage} label="Страницы списка сайтов" /></div>
     <ProtectionFaq questions={questions} icon={<img src={faqIcon} alt="" />} />
 
-    <Dialog open={dialog === 'create'} title="Создать сайт" onClose={() => { setNewName(''); setDialog(null) }}>
+    <Dialog open={dialog === 'create'} title="Создать сайт" closeOnBackdrop={!newName} onClose={() => { setNewName(''); setDialog(null) }}>
       <form className="my-sites-create-form" onSubmit={createSite}>
         <TextField label="Название сайта" value={newName} required onChange={event => setNewName(event.target.value)} />
         <Button type="submit" disabled={!newName.trim()}>Создать сайт</Button>

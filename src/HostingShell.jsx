@@ -21,6 +21,7 @@ import { vhThemes } from './ui/theme.jsx'
 import { designSystemSection } from './design-system-section.js'
 import { dashboardConceptHref, dashboardConceptSection, isDashboardSection, richDashboard, typicalDashboard } from './dashboard-variants.js'
 import { apiAgentsSection } from './api-agents-data.js'
+import { loginSection } from './login-scenarios.js'
 import { integratorKnowledge, integratorNews, integratorPages, integratorProgramSections, integratorSection, integratorSettings, integratorSupport } from './integrator-data.js'
 import './hosting-shell.css'
 
@@ -195,6 +196,7 @@ const prototypePages = {
     { label: 'Сетевая защита', href: '?sites=network-protection', icon: 'vps', section: 'Сайты', tab: 'network-protection' },
     { label: 'Другие сервисы', href: '?tariff=services', icon: 'plan', section: 'Настройки тарифа', tab: 'services' },
     { label: apiAgentsSection, href: '?api=connection', icon: 'api', tab: 'connection' },
+    { label: loginSection, href: '?login', icon: 'account' },
   ],
 }
 
@@ -262,7 +264,10 @@ function PrototypeToolbar({ selected, integrator, isCurrentSection, onSelect, st
           open={dropdown === 'states'} onOpenChange={open => changeDropdown('states', open)}
           trigger={<><span>Сценарии</span><Icon name="caret" /></>}>
           {states.map(state => (
-            <li key={state.id}><MenuItem selected={activeState === state.id} onClick={() => onChooseState(state.id)}>
+            <li key={state.id}><MenuItem selected={activeState === state.id} onClick={() => {
+              if (selected === loginSection) setDropdown(null)
+              onChooseState(state.id)
+            }}>
               {state.label}
             </MenuItem></li>
           ))}
@@ -275,7 +280,7 @@ function PrototypeToolbar({ selected, integrator, isCurrentSection, onSelect, st
   )
 }
 
-function HostingHeader({ compact, conceptLayout, menuOpen, onToggleMenu, menuToggleRef, selected, onSelect, dark, onToggleTheme, integrator, integratorBalance, onDeposit }) {
+function HostingHeader({ compact, conceptLayout, menuOpen, onToggleMenu, menuToggleRef, selected, onSelect, dark, onToggleTheme, integrator, integratorBalance, hostingBalance, onDeposit, onSignOut }) {
   const [dropdown, setDropdown] = useState(null)
   const [account, setAccount] = useState('demo001')
   const productNavigation = integrator ? integratorMobileSections
@@ -316,7 +321,7 @@ function HostingHeader({ compact, conceptLayout, menuOpen, onToggleMenu, menuTog
             Тёмная тема <span className="hosting-beta">Бета</span>
           </MenuItem>
         </li>
-        {!integrator && <li><MenuItem tone="muted" onClick={close}>Выйти</MenuItem></li>}
+        {!integrator && <li><MenuItem tone="muted" onClick={() => { close(); onSignOut() }}>Выйти</MenuItem></li>}
         {!integrator && demoAccounts.map(([id, description], index) => (
           <li key={id} className={index === 0 ? 'hosting-menu-divider' : undefined}>
             <MenuItem icon={<Icon name="account" />} onClick={() => {
@@ -347,16 +352,16 @@ function HostingHeader({ compact, conceptLayout, menuOpen, onToggleMenu, menuTog
           </div>}
           {integrator && !compact && <span className="hosting-integrator-label">Панель интегратора</span>}
           {compact ? !integrator && (
-            <Button appearance="nav-action" pressable={false} type="button" className="hosting-mobile-balance" aria-label={`Пополнить баланс, ${integrator ? integratorBalance : '2 784 ₽'}`}
+            <Button appearance="nav-action" pressable={false} type="button" className="hosting-mobile-balance" aria-label={`Пополнить баланс, ${integrator ? integratorBalance : hostingBalance}`}
               onClick={openBalance}>
-              {integrator ? integratorBalance : '2 784 ₽'} <span><img src={mobileBalanceAdd} width="24" height="24" alt="" /></span>
+              {integrator ? integratorBalance : hostingBalance} <span><img src={mobileBalanceAdd} width="24" height="24" alt="" /></span>
             </Button>
           ) : <>
             {!integrator && <QuickLinks selected={selected} onSelect={select} />}
             <div className="hosting-header-actions">
               {!integrator && <Button appearance="nav-action" pressable={false} type="button" className="hosting-balance" onClick={openBalance}>
                 {!integrator && <Icon name="wallet" />}
-                <span>{integrator ? integratorBalance : '3 990 ₽'}</span>
+                <span>{integrator ? integratorBalance : hostingBalance}</span>
                 {!integrator && <span className="hosting-expiration">до 6 дек. 2026</span>}
               </Button>}
               <HeaderMenu label="Поддержка" icon="support" open={dropdown === 'support'} onOpenChange={open => changeDropdown('support', open)}>
@@ -513,7 +518,7 @@ function MobileMore({ open, onSelect, integrator }) {
 export default function HostingShell({
   children, renderSection, initialSection = 'Дашборд', initialScreenState = null,
   onSectionChange, onScreenStateChange, getPageStates, keepScreenStateOnNavigation,
-  isCurrentSection, getIntegratorBalance, onIntegratorDeposit,
+  isCurrentSection, getIntegratorBalance, onIntegratorDeposit, hostingBalance,
 }) {
   const [toast, setToast] = useState(null)
   const [selected, setSelected] = useState(initialSection)
@@ -528,6 +533,7 @@ export default function HostingShell({
   const pending = useRef(null)
   const [leaveDialog, setLeaveDialog] = useState(null)
   const compact = previewView === 'mobile' || narrowViewport
+  const loginSelected = selected === loginSection
   const conceptLayout = !compact && selected === dashboardConceptSection
   const moreOpen = compact && menuOpen
   const integrator = Object.values(integratorPages).includes(selected)
@@ -598,11 +604,17 @@ export default function HostingShell({
     }
   }
 
-  const initialState = dashboardSelected && !moreOpen ? typicalDashboard : { id: 'initial', label: 'Исходное состояние' }
+  function changeScreenState(id) {
+    setScreenState(current => ({ ...current, id }))
+    onScreenStateChange?.(id, selected)
+  }
+
+  const initialState = dashboardSelected && !moreOpen ? typicalDashboard
+    : { id: 'initial', label: loginSelected ? 'Базовая форма' : 'Исходное состояние' }
   const presets = moreOpen ? [] : (getPageStates?.(selected) ?? []).filter(state => state.requiresPreset && state.id !== initialState.id)
   const states = [initialState, ...presets]
   const activeState = presets.some(state => state.id === screenState.id) ? screenState.id : initialState.id
-  const content = renderSection ? renderSection(selected, selectSection, dark, screenState.id, compact, Boolean(dashboardLoad)) : children
+  const content = renderSection ? renderSection(selected, selectSection, dark, screenState.id, compact, Boolean(dashboardLoad), changeScreenState) : children
 
   return (
     <div className="hosting-shell" data-theme={dark ? 'dark' : 'light'} data-view={previewView} data-compact={compact}
@@ -611,40 +623,46 @@ export default function HostingShell({
       style={{ ...vhThemes[dark ? 'dark' : 'light'], ...darkBannerTokens }}>
       {conceptLayout && <Sidebar selected={selected} onSelect={selectSection} integrator={integrator} dark={dark}
         collapsed={conceptSidebarCollapsed} onToggle={() => setConceptSidebarCollapsed(current => !current)} />}
-      <div data-dashboard-header-notice="" />
-      <HostingHeader
-        compact={compact}
-        conceptLayout={conceptLayout}
-        menuOpen={moreOpen}
-        onToggleMenu={() => setMenuOpen(open => !open)}
-        menuToggleRef={menuToggleRef}
-        selected={selected}
-        onSelect={selectSection}
-        dark={dark}
-        onToggleTheme={() => setDark(value => !value)}
-        integrator={integrator}
-        integratorBalance={integrator ? getIntegratorBalance?.(screenState.id) : undefined}
-        onDeposit={() => {
-          setMenuOpen(false)
-          if (!integratorProgramSections.includes(selected)) selectSection(integratorSection)
-          onIntegratorDeposit?.()
-        }}
-      />
-      <div className="hosting-workspace-viewport">
-        <div className="hosting-workspace-content">
-          <div className="hosting-frame hosting-layout" data-section={moreOpen ? undefined : selected}>
-            {!compact && !conceptLayout && selected !== designSystemSection && <Sidebar selected={selected} onSelect={selectSection} integrator={integrator} />}
-            {compact && <MobileMore open={moreOpen} onSelect={selectSection} integrator={integrator} />}
-            <main className={content ? 'hosting-content' : 'hosting-sheet'} aria-label={selected} hidden={moreOpen}>
-              <PendingChangesContext value={{ pending, navigate }}>
-                <HostingToastContext value={setToast}>
-                  <Fragment key={screenState.version}>{content}</Fragment>
-                </HostingToastContext>
-              </PendingChangesContext>
-            </main>
+      {loginSelected ? <main aria-label={loginSection}>
+        <Fragment key={screenState.version}>{content}</Fragment>
+      </main> : <>
+        <div data-dashboard-header-notice="" />
+        <HostingHeader
+          compact={compact}
+          conceptLayout={conceptLayout}
+          menuOpen={moreOpen}
+          onToggleMenu={() => setMenuOpen(open => !open)}
+          menuToggleRef={menuToggleRef}
+          selected={selected}
+          onSelect={selectSection}
+          dark={dark}
+          onToggleTheme={() => setDark(value => !value)}
+          onSignOut={() => selectSection(loginSection)}
+          integrator={integrator}
+          integratorBalance={integrator ? getIntegratorBalance?.(screenState.id) : undefined}
+          hostingBalance={hostingBalance}
+          onDeposit={() => {
+            setMenuOpen(false)
+            if (!integratorProgramSections.includes(selected)) selectSection(integratorSection)
+            onIntegratorDeposit?.()
+          }}
+        />
+        <div className="hosting-workspace-viewport">
+          <div className="hosting-workspace-content">
+            <div className="hosting-frame hosting-layout" data-section={moreOpen ? undefined : selected}>
+              {!compact && !conceptLayout && selected !== designSystemSection && <Sidebar selected={selected} onSelect={selectSection} integrator={integrator} />}
+              {compact && <MobileMore open={moreOpen} onSelect={selectSection} integrator={integrator} />}
+              <main className={content ? 'hosting-content' : 'hosting-sheet'} aria-label={selected} hidden={moreOpen}>
+                <PendingChangesContext value={{ pending, navigate }}>
+                  <HostingToastContext value={setToast}>
+                    <Fragment key={screenState.version}>{content}</Fragment>
+                  </HostingToastContext>
+                </PendingChangesContext>
+              </main>
+            </div>
           </div>
         </div>
-      </div>
+      </>}
       <PrototypeToolbar selected={selected} integrator={integrator} isCurrentSection={isCurrentSection} onSelect={selectSection}
         states={states} activeState={activeState}
         onChooseState={id => {

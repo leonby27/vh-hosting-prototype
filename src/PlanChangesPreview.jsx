@@ -7,17 +7,16 @@ import PlanChangesScenarios, { ScenarioExample } from './PlanChangesScenarios.js
 import { networkProtectionMonthlyRate } from './network-protection-states.js'
 import { addPlusAction, plusPackage, priceWithPlus, rubles } from './plan-preview-pricing.js'
 import {
-  canSaveCard, getPaymentGroup, paymentActions, renewalOption,
+  balancePaymentMethod, canSaveCard, getPaymentGroup, payFromBalance, paymentActions, renewalOption,
   saveCardOption, securePaymentNote,
 } from './plan-payment-options.js'
 
 const adjustmentAmounts = { bonus: 300, balance: 420 }
 const sufficientBalance = 5000
 const balanceMethod = {
-  id: 'balance', icon: 'pay-balance', tone: 'pink', label: 'Списать с баланса',
+  ...balancePaymentMethod,
   hint: `Доступно ${rubles(sufficientBalance)}`,
 }
-const payFromBalance = { id: 'pay-balance', label: 'Списать с баланса', icon: 'pay-balance', demoPayment: true }
 
 function withBalancePayment(group) {
   return {

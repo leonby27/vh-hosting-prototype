@@ -1,0 +1,27 @@
+export const loginSection = 'Вход в аккаунт'
+
+export const loginScenarios = [
+  ['empty', 'Поля не заполнены'],
+  ['focused', 'Фокус на логине'],
+  ['field-errors', 'Ошибки полей'],
+  ['captcha', 'Капча'],
+  ['wrong-password', 'Неверный логин или пароль'],
+  ['blocked-ip', 'Доступ с IP запрещён'],
+  ['blocked-country', 'Доступ из страны запрещён'],
+  ['unlinked-account', 'Социальный аккаунт не привязан'],
+  ['general-errors', 'Общие ошибки входа'],
+  ['mail', 'Вход в почту'],
+  ['mail-errors', 'Ошибки входа в почту'],
+  ['recovery', 'Восстановление пароля'],
+  ['recovery-sent', 'Проверьте почту'],
+  ['change-password', 'Смена пароля'],
+  ['mail-recovery', 'Восстановление доступа к почте'],
+  ['sms', 'SMS · пустое поле'],
+  ['sms-filled', 'SMS · код введён'],
+  ['email-code', 'Email · пустое поле'],
+  ['email-code-focused', 'Email · фокус на поле'],
+  ['email-code-filled', 'Email · код введён'],
+  ['email-code-error', 'Email · неверный код'],
+  ['email-code-resend', 'Email · повторная отправка'],
+  ['deactivated', 'Аккаунт деактивирован'],
+].map(([id, label]) => ({ id, label, requiresPreset: true }))

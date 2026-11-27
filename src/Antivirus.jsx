@@ -1,6 +1,6 @@
 import { MenuItem } from './ui/navigation.jsx'
-import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { Badge, ModalFrame, PageAlert, Tooltip } from './ui/feedback.jsx'
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Badge, ModalFrame, PageAlert } from './ui/feedback.jsx'
 import { Button, Choice, IconButton } from './ui/controls.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
 import { AnimatedBlock } from './hosting-motion.jsx'
@@ -12,7 +12,7 @@ import {
   ProtectionCheckoutSlot, ProtectionFaq, protectionStatusTone, revealProtectionCheckout, SitesIcon, SitesTable, useSitesFilterSpace,
 } from './SitesProtectionUI.jsx'
 import { antivirusPlans, antivirusStatusLabels, saveAntivirus } from './antivirus-states.js'
-import domainLinkIcon from './assets/dashboard/arrow-out.svg'
+import LinkedDomains from './LinkedDomains.jsx'
 import walletIcon from './assets/hosting/wallet.svg'
 import sitesIcon from './assets/hosting/sites.svg'
 import './antivirus.css'
@@ -160,79 +160,6 @@ function AntivirusPlans({ selected, onSelect, compact }) {
         ))}
       </div>
     </section>
-  )
-}
-
-function DesktopDomain({ name }) {
-  return (
-    <div className="antivirus-domain-entry">
-      <span title={name}>{name}</span>
-      <Tooltip placement="top" content="Перейти на сайт">
-        {id => <a className="antivirus-domain-link" href={`https://${name}`} target="_blank"
-          rel="noopener noreferrer" aria-label={`Открыть ${name} в новой вкладке`} aria-describedby={id}>
-          <SitesIcon src={domainLinkIcon} color="icon-primary" />
-        </a>}
-      </Tooltip>
-    </div>
-  )
-}
-
-function LinkedDomains({ site, mobile }) {
-  const listId = useId()
-  const list = useRef(null)
-  const moreButton = useRef(null)
-  const [expanded, setExpanded] = useState(false)
-  const [first, ...others] = site.domains
-  const more = others.length > 0 ? `и ещё +${others.length}` : null
-  const label = first ?? 'Нет привязанных доменов'
-
-  function expandDomains(event) {
-    setExpanded(true)
-    if (event.detail === 0) {
-      requestAnimationFrame(() => list.current?.querySelector('a')?.focus({ preventScroll: true }))
-    }
-  }
-
-  if (mobile) {
-    return (
-      <div className="antivirus-linked-domains antivirus-domains-summary">
-        <span title={first}>{label}</span>
-        {more && <span className="antivirus-domains-count">{more}</span>}
-      </div>
-    )
-  }
-
-  if (!more) {
-    return <div className="antivirus-linked-domains">{first ? <DesktopDomain name={first} /> : label}</div>
-  }
-
-  return (
-    <div className="antivirus-linked-domains antivirus-domain-disclosure" data-expanded={expanded}>
-      <div className="antivirus-domains-summary">
-        <DesktopDomain name={first} />
-        <Button appearance="text" pressable={false}
-          type="button"
-          ref={moreButton}
-          className="antivirus-domains-trigger"
-          aria-label={`${more} · показать домены сайта ${site.name}`}
-          aria-controls={listId}
-          aria-expanded={expanded}
-          hidden={expanded}
-          onClick={expandDomains}
-        >{more}</Button>
-      </div>
-      <AnimatedBlock open={expanded}>
-        <div id={listId} ref={list} onClick={event => event.stopPropagation()}>
-          <ul className="antivirus-domains-list">
-            {others.map(name => <li key={name}><DesktopDomain name={name} /></li>)}
-          </ul>
-          <Button appearance="text" pressable={false} type="button" className="antivirus-domains-collapse" onClick={() => {
-            setExpanded(false)
-            requestAnimationFrame(() => moreButton.current?.focus({ preventScroll: true }))
-          }}>Свернуть список</Button>
-        </div>
-      </AnimatedBlock>
-    </div>
   )
 }
 
@@ -589,13 +516,13 @@ export default function Antivirus({ screenState, compact, preset, plan, setPlan,
         onSelection={selectSites}
         matchesSearch={matchesSearch}
         isProtected={Boolean}
-        renderDetails={(site, mobile) => <LinkedDomains site={site} mobile={mobile} />}
+        renderDetails={(site, mobile) => <LinkedDomains domains={site.domains} siteName={site.name} summaryOnly={mobile} />}
         renderNote={(site, status) => status === 'missing' && (
           <div className="sites-domain-note">
-            <Button appearance="text" pressable={false} type="button" className="sites-text-button" aria-label={`Как сделать для ${site.name}`} onClick={() => {
+            <Button appearance="text" pressable={false} type="button" className="sites-text-button" aria-label={`Подробнее для ${site.name}`} onClick={() => {
               setMissingSite(site.name)
               setDialog('missing')
-            }}>Как сделать</Button>
+            }}>Подробнее</Button>
           </div>
         )}
       />

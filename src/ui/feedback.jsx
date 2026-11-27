@@ -178,32 +178,54 @@ export function ModalClose({ label = 'Закрыть окно', icon = <AssetIco
   return <IconButton size={32} label={label} icon={icon} {...props} />
 }
 
-export function ModalFrame({ open = true, ref, className = '', width, ...props }) {
+function isBackdropPress(event) {
+  if (event.target !== event.currentTarget) return false
+  const { left, top, right, bottom } = event.currentTarget.getBoundingClientRect()
+  return event.clientX < left || event.clientX >= right || event.clientY < top || event.clientY >= bottom
+}
+
+export function ModalFrame({ open = true, ref, className = '', width, closeOnBackdrop = true, onPointerDown, onClick, ...props }) {
   const dialog = useRef(null)
+  const backdropPress = useRef(false)
   useImperativeHandle(ref, () => dialog.current, [])
   useLayoutEffect(() => {
     const node = dialog.current
-    if (open && !node.open) node.showModal()
+    if (open && !node.open) {
+      node.returnValue = ''
+      backdropPress.current = false
+      node.showModal()
+    }
     if (!open && node.open) node.close()
   }, [open])
-  return <dialog {...props} data-modal-width={width} className={`vh-modal ${className}`.trim()} ref={dialog} />
+  return <dialog {...props} closedby={closeOnBackdrop ? 'any' : 'closerequest'}
+    data-modal-width={width} className={`vh-modal ${className}`.trim()} ref={dialog}
+    onPointerDown={event => {
+      onPointerDown?.(event)
+      backdropPress.current = !('closedBy' in event.currentTarget) && closeOnBackdrop && !event.defaultPrevented &&
+        event.button === 0 && isBackdropPress(event)
+    }}
+    onClick={event => {
+      onClick?.(event)
+      const startedOnBackdrop = backdropPress.current
+      backdropPress.current = false
+      if (!startedOnBackdrop || !closeOnBackdrop || event.defaultPrevented || !isBackdropPress(event)) return
+      const node = event.currentTarget
+      if (node.requestClose) node.requestClose()
+      else if (node.dispatchEvent(new Event('cancel', { cancelable: true }))) node.close()
+    }} />
 }
 
 export function ProgressBar({ label, className = '', ...props }) {
   return <progress {...props} aria-label={label} className={`vh-progress-bar ${className}`.trim()} />
 }
 
-export function Dialog({ open, title, description, onClose, children, actions, className = '', closeOnBackdrop = false, illustration, width }) {
+export function Dialog({ open, title, description, onClose, children, actions, className = '', closeOnBackdrop, illustration, width }) {
   const id = useId()
 
   return <ModalFrame width={width} className={`vh-dialog ${className}`.trim()} open={Boolean(open)} aria-labelledby={`${id}-title`}
-    aria-describedby={description ? `${id}-description` : undefined}
-    onClick={event => {
-      if (!closeOnBackdrop || event.target !== event.currentTarget) return
-      const { left, right, top, bottom } = event.currentTarget.getBoundingClientRect()
-      if (event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom) onClose()
-    }}
+    aria-describedby={description ? `${id}-description` : undefined} closeOnBackdrop={closeOnBackdrop}
     onCancel={event => {
+      if (event.target !== event.currentTarget) return
       event.preventDefault()
       event.stopPropagation()
       onClose()

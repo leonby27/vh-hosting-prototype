@@ -311,7 +311,7 @@ export function IntegratorClients({ demo, compact, createOpen, onCloseCreate, on
       </div>
     </section>
     <Dialog open={createOpen} className="integrator-create-account" title="Создать аккаунт"
-      description="Пароль для входа придёт на указанный email." onClose={closeCreate}
+      description="Пароль для входа придёт на указанный email." closeOnBackdrop={!email && !clientName && !fullName} onClose={closeCreate}
       illustration={<img src={createAccountIcon} alt="" />}>
       <form className="integrator-create-account-form" onSubmit={createClient}>
         <TextField label="Email" type="email" autoComplete="email" required value={email}

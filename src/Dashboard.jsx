@@ -598,7 +598,7 @@ export default function Dashboard({ onSelect, compact, screenState, attackNotice
     <div ref={dashboard} className="dashboard" data-mode={loading ? 'loading' : state.mode}>
       {trial && !compact && headerNotice && createPortal(trialNotice, headerNotice)}
       {trial && compact && trialNotice}
-      {attackNotice && <NetworkAttackNotice {...attackNotice} summarizeDomains onConnect={() => onSelect('Сайты', 'network-protection')} />}
+      {attackNotice && <NetworkAttackNotice {...attackNotice} onConnect={() => onSelect('Сайты', 'network-protection')} />}
       {loading && <span className="dashboard-sr-only" role="status">Дашборд загружается</span>}
       <div>
         <DashboardMigrationBanner visible={Boolean(state.migration)} compact={compact} onMigrate={() => onSelect('Перенести к нам')} />

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Button, IconButton, PopoverMenu, Surface } from './ui/index.js'
 import { AnimatedBlock } from './hosting-motion.jsx'
 import migrationIllustration from './assets/dashboard/migration-illustration.png'
@@ -15,6 +16,28 @@ const trialBenefits = [
   'Домен в подарок при оплате на 1 год',
   'При регистрации домена скидки 50% на SSL',
 ]
+
+export function HostingTrialNotice({ open, compact, onPay }) {
+  const anchor = useRef(null)
+  const [header, setHeader] = useState(null)
+
+  useLayoutEffect(() => {
+    if (open && !compact) {
+      setHeader(anchor.current.closest('.hosting-shell')?.querySelector('[data-dashboard-header-notice]'))
+    }
+  }, [open, compact])
+
+  if (compact) {
+    return <AnimatedBlock open={open}>
+      <DashboardTrialNotice compact onPay={onPay} />
+    </AnimatedBlock>
+  }
+
+  return <>
+    <span ref={anchor} hidden />
+    {open && header && createPortal(<DashboardTrialNotice onPay={onPay} />, header)}
+  </>
+}
 
 export function DashboardTrialNotice({ onPay, compact }) {
   const [openPanel, setOpenPanel] = useState(null)

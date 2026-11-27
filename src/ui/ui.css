@@ -615,6 +615,9 @@
   inline-size: max-content;
   background: var(--hosting-background);
 }
+.hosting-segmented[data-full-width] { inline-size: auto; }
+.hosting-segmented[data-full-width] > label { flex: 1 1 0; min-inline-size: 0; }
+.hosting-segmented[data-full-width] > label > span { justify-content: center; }
 .hosting-segmented > button { border: 0; background: transparent; }
 .hosting-segmented label { position: relative; cursor: pointer; }
 .hosting-segmented label input { position: absolute; inline-size: 1px; block-size: 1px; inset-inline-start: 50%; opacity: 0; }

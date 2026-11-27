@@ -20,6 +20,7 @@ export const networkProtectionStates = [
   { id: 'protection-selection', label: 'Выбраны 4 домена' },
   { id: 'protection-connected', label: 'Защита подключена · с автопродлением' },
   { id: 'protection-no-renewal', label: 'Защита подключена · без автопродления' },
+  { id: 'protection-no-protected-domains', label: 'Ни один домен не под защитой', requiresPreset: true },
   { id: 'protection-domain-statuses', label: 'Все статусы доменов', requiresPreset: true },
   { id: 'protection-many-domains', label: 'Длинный список · 50 доменов', requiresPreset: true },
   { id: 'no-saved-cards', label: 'Оплата без сохранённой карты' },
@@ -35,13 +36,18 @@ export const networkProtectionStates = [
   { id: 'protection-failed', label: 'Сбой подключения', requiresPreset: true },
   { id: 'protection-attack', label: 'Атака на домен под защитой', requiresPreset: true },
   { id: 'protection-attack-single', label: 'Атака на домен без защиты', requiresPreset: true },
+  { id: 'protection-attack-unadded', label: 'Атака на домен вне подключённой защиты', requiresPreset: true },
   { id: 'protection-attack-multiple', label: 'Атака на несколько доменов', requiresPreset: true },
   { id: 'protection-remove-domains', label: 'Отключение домена · Что изменится' },
+  { id: 'protection-remove-aaaa', label: 'Отключение домена с AAAA-записью', requiresPreset: true },
+  { id: 'protection-remove-cdn', label: 'Отключение домена со сторонним CDN', requiresPreset: true },
+  { id: 'protection-remove-last-domain', label: 'Отключение последнего домена' },
   { id: 'protection-disable', label: 'Подтверждение отключения услуги' },
 ]
 
 const domains = [
   { name: 'basketball-spb.ru', dns: 'DNS Timeweb' },
+  { name: 'shop.basketball-spb.ru', parentDomain: 'basketball-spb.ru', dns: 'DNS Timeweb' },
   { name: 'timeweb.ru', dns: 'Beget' },
   { name: 'coconote.ru', dns: 'DNS Timeweb', requiresCaa: true },
   { name: 'myreviews.ru', dns: 'Reg.RU' },
@@ -49,8 +55,11 @@ const domains = [
 ]
 
 const statusExamples = [
-  { name: 'ipv6.example', dns: 'Reg.RU', status: 'dns-aaaa' },
-  { name: 'cdn.example', dns: 'DNS Timeweb', status: 'cdn' },
+  { name: 'ipv6-only.example', dns: 'Reg.RU', status: 'dns-aaaa', originalIpv6: '2001:db8::10' },
+  { name: 'ipv6.example', dns: 'Reg.RU', status: 'dns-aaaa', originalIpv6: '2001:db8::10', wwwOriginalAddress: '192.0.2.11' },
+  { name: 'example.ru', dns: 'Reg.RU', status: 'dns', wwwOriginalAddress: '192.0.2.11' },
+  { name: 'example.com', dns: 'Reg.RU', status: 'dns', wwwOriginalAddress: '192.0.2.11', apexUsesProtectedIp: true },
+  { name: 'cdn.example', dns: 'DNS Timeweb', status: 'cdn', externalCdn: true },
   { name: 'ssl-external.example', dns: 'DNS Timeweb', status: 'ssl-upload' },
   { name: 'ssl-timeweb.example', dns: 'DNS Timeweb', status: 'ssl-timeweb' },
   { name: 'ssl-expired.example', dns: 'DNS Timeweb', status: 'ssl-expired' },
@@ -59,7 +68,7 @@ const statusExamples = [
 ]
 const statusDomains = [...domains, ...statusExamples]
 
-const manyDomains = [...domains, ...Array.from({ length: 45 }, (_, index) => ({
+const manyDomains = [...domains.filter(domain => !domain.parentDomain), ...Array.from({ length: 45 }, (_, index) => ({
   name: `site-${String(index + 6).padStart(2, '0')}.example`,
   dns: domains[index % domains.length].dns,
 }))]
@@ -71,10 +80,8 @@ const activeStatuses = {
   'myreviews.ru': 'protected',
 }
 
-const attackDomains = [...domains, { name: 'shop.basketball-spb.ru', dns: 'DNS Timeweb' }]
-
 export const networkAttackStates = networkProtectionStates.filter(({ id }) =>
-  ['protection-attack', 'protection-attack-single', 'protection-attack-multiple'].includes(id))
+  ['protection-attack', 'protection-attack-single', 'protection-attack-multiple', 'protection-attack-unadded'].includes(id))
 
 const protectedStatuses = new Set(['protected', 'ssl-upload', 'ssl-timeweb', 'ssl-expired'])
 export const isNetworkDomainProtected = status => protectedStatuses.has(status)
@@ -93,18 +100,32 @@ const presets = {
   'protection-failed': { statuses: { 'basketball-spb.ru': 'failed' }, renew: true },
   'protection-attack': { statuses: activeStatuses, renew: true, attackedDomains: ['timeweb.ru'] },
   'protection-attack-single': { attackedDomains: ['basketball-spb.ru'] },
-  'protection-attack-multiple': { domains: attackDomains, attackedDomains: [
+  'protection-attack-unadded': { statuses: activeStatuses, renew: true, attackedDomains: ['basketball-spb.ru'] },
+  'protection-attack-multiple': { attackedDomains: [
     'basketball-spb.ru', 'shop.basketball-spb.ru', 'timeweb.ru', 'coconote.ru', 'myreviews.ru',
   ] },
   'protection-remove-domains': {
     statuses: activeStatuses, renew: true, editingDomains: true,
     removedDomain: 'myreviews.ru',
   },
+  'protection-remove-aaaa': {
+    domains: statusDomains, statuses: { ...activeStatuses, 'ipv6.example': 'protected' }, renew: true,
+    editingDomains: true, removedDomain: 'ipv6.example', dialog: 'remove-domains',
+  },
+  'protection-remove-cdn': {
+    domains: statusDomains, statuses: { ...activeStatuses, 'cdn.example': 'protected' }, renew: true,
+    editingDomains: true, removedDomain: 'cdn.example', dialog: 'remove-domains',
+  },
+  'protection-remove-last-domain': {
+    statuses: { 'basketball-spb.ru': 'protected' }, renew: true,
+    editingDomains: true, removedDomain: 'basketball-spb.ru', dialog: 'remove-last-domains',
+  },
   'protection-disable': { statuses: activeStatuses, renew: true, dialog: 'disconnect-service' },
   'protection-selection': { selected: 4 },
   'no-saved-cards': { selected: 4, hasSavedCard: false },
   'protection-connected': { statuses: activeStatuses, renew: true },
   'protection-no-renewal': { statuses: activeStatuses },
+  'protection-no-protected-domains': { statuses: { 'timeweb.ru': 'dns', 'coconote.ru': 'action' }, renew: true },
   'protection-domain-statuses': {
     domains: statusDomains,
     statuses: {

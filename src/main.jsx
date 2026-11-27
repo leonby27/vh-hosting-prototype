@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState } from 'react'
+import { lazy, Suspense, useCallback, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { designSystemSection } from './design-system-section.js'
 import './styles.css'
@@ -17,10 +17,13 @@ import { apiAgentsSection, apiKeysPreset, apiJournalEmptyPreset } from './api-ag
 import { antivirusStates } from './antivirus-states.js'
 import { getNetworkProtectionPreset, isNetworkDomainProtected, networkAttackStates, networkProtectionStates } from './network-protection-states.js'
 import IntegratorPanel from './IntegratorPanel.jsx'
+import Login from './Login.jsx'
+import { loginSection, loginScenarios } from './login-scenarios.js'
 import { getIntegratorDemo, integratorPages, integratorSection, integratorStates, money } from './integrator-data.js'
 
 const DesignSystemCatalog = lazy(() => import('./DesignSystemCatalog.jsx'))
 const query = new URLSearchParams(window.location.search)
+const hostingBalanceKey = 'vh-hosting-balance'
 const planChangesSection = 'Что изменится'
 const sitesSection = 'Сайты'
 const tariffSection = 'Настройки тарифа'
@@ -30,7 +33,8 @@ const planChangesStates = [
   ...planChangeScenarios.map(scenario => ({ id: `scenario-${scenario.id}`, label: scenario.title })),
 ]
 
-const dashboardAttackStates = networkAttackStates.filter(({ id }) => id === 'protection-attack-multiple')
+const dashboardAttackStates = networkAttackStates.filter(({ id }) =>
+  id === 'protection-attack-multiple' || id === 'protection-attack-unadded')
 
 function getAttackStates(section) {
   if (isDashboardSection(section)) return dashboardAttackStates
@@ -38,6 +42,7 @@ function getAttackStates(section) {
 }
 
 function getPrototypeStates(section, tab) {
+  if (section === loginSection) return loginScenarios
   if (Object.values(integratorPages).includes(section)) return integratorStates
   if (isDashboardSection(section)) return [...dashboardStates, ...topUpStates, ...dashboardAttackStates]
   if (section === planChangesSection) return planChangesStates
@@ -65,6 +70,8 @@ function replacePrototypeUrl(url) {
 
 function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
   const url = new URL(window.location.href)
+  if (section === loginSection) url.searchParams.set('login', '')
+  else url.searchParams.delete('login')
   if (section === designSystemSection) url.searchParams.set('catalog', '')
   else if (url.searchParams.has('catalog')) {
     url.searchParams.delete('catalog')
@@ -92,7 +99,8 @@ function syncPrototypeLocation(section, tab = 'mine', keepState = true) {
 function syncPrototypeState(id, section) {
   const url = new URL(window.location.href)
   const dashboardHome = isDashboardSection(section) && id === typicalDashboard.id
-  if (!dashboardHome && getPrototypeStates(section).length) url.searchParams.set('state', id)
+  const loginHome = section === loginSection && id === 'initial'
+  if (!dashboardHome && !loginHome && getPrototypeStates(section).length) url.searchParams.set('state', id)
   else url.searchParams.delete('state')
   replacePrototypeUrl(url)
 }
@@ -106,11 +114,22 @@ function HostingApp() {
   const [apiKeys, setApiKeys] = useState([])
   const [integratorDemos, setIntegratorDemos] = useState({})
   const [integratorPayment, setIntegratorPayment] = useState(null)
+  const [hostingBalance, setHostingBalance] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(hostingBalanceKey)
+      const balance = Number(saved)
+      if (saved !== null && Number.isFinite(balance) && balance >= 0) return balance
+    } catch {
+      // The balance remains available in this page when storage is blocked.
+    }
+    return 3990
+  })
+  const currentHostingBalance = useRef(hostingBalance)
   const requestedIntegratorPage = query.get('integrator')
   const legacyIntegratorTab = query.get('ptab')
   const integratorPage = requestedIntegratorPage === 'program' && ['operations', 'documents', 'details'].includes(legacyIntegratorTab)
     ? legacyIntegratorTab : requestedIntegratorPage
-  const initialSection = query.has('integrator') ? (integratorPage === 'details' ? integratorPages.documents : integratorPage === 'notifications' ? integratorPages.settings : Object.hasOwn(integratorPages, integratorPage) ? integratorPages[integratorPage] : integratorSection) :
+  const initialSection = query.has('login') ? loginSection : query.has('integrator') ? (integratorPage === 'details' ? integratorPages.documents : integratorPage === 'notifications' ? integratorPages.settings : Object.hasOwn(integratorPages, integratorPage) ? integratorPages[integratorPage] : integratorSection) :
     query.has('catalog') ? designSystemSection : query.has('changes') ? planChangesSection : query.has('sites') ? sitesSection :
       query.has('tariff') ? tariffSection : query.has('api') ? apiAgentsSection : query.get('concept') === 'dashboard' ? dashboardConceptSection : 'Дашборд'
   const requestedState = query.get('state')
@@ -124,6 +143,19 @@ function HostingApp() {
     setIncidentRun(current => current.token === incidentToken
       ? { ...current, statuses: update(current.statuses) } : current)
   }, [incidentToken])
+
+  function debitHostingBalance(amount) {
+    if (currentHostingBalance.current < amount) return false
+    const remaining = currentHostingBalance.current - amount
+    currentHostingBalance.current = remaining
+    setHostingBalance(remaining)
+    try {
+      sessionStorage.setItem(hostingBalanceKey, String(remaining))
+    } catch {
+      // The updated balance is still visible in this page.
+    }
+    return true
+  }
 
   function chooseScreenState(id, section) {
     if (getAttackStates(section).some(state => state.id === id)) {
@@ -154,11 +186,23 @@ function HostingApp() {
     return getPrototypeStates(section, tabs[section])
   }
 
-  function renderSection(section, onSelect, dark, screenState, compact, dashboardLoading) {
+  function renderSection(section, onSelect, dark, screenState, compact, dashboardLoading, onChangeState) {
+    if (section === loginSection) {
+      return <Login scenario={screenState} compact={compact} onScenarioChange={onChangeState}
+        onSignIn={tab => onSelect(tab === 'mail' ? 'Почта' : 'Дашборд')} />
+    }
     const incident = getAttackStates(section).some(state => state.id === screenState)
       ? getNetworkProtectionPreset(screenState) : null
+    const attackedDomains = incident?.attackedDomains.filter(name => !isNetworkDomainProtected(incidentRun.statuses[name]))
+    const addToProtection = Object.keys(incidentRun.statuses).length > 0
+    const bannerDomains = attackedDomains?.filter(name =>
+      (!addToProtection || !Object.hasOwn(incidentRun.statuses, name)) &&
+      !incident.domains.some(domain => domain.name === name && domain.parentDomain))
     const attackNotice = incident && {
-      domains: incident.attackedDomains.filter(name => !isNetworkDomainProtected(incidentRun.statuses[name])),
+      domains: attackedDomains,
+      bannerDomains,
+      addToProtection,
+      onRequestAdd: () => setIncidentRun(current => ({ ...current, requestedDomains: bannerDomains })),
       dismissed: incidentRun.dismissed,
       onDismiss: () => setIncidentRun(current => ({ ...current, dismissed: true })),
     }
@@ -201,14 +245,18 @@ function HostingApp() {
         onTabChange={selectTariffTab} onSecurity={tab => onSelect(sitesSection, tab)} />
     }
     if (section === sitesSection) {
-      return <SitesSection tab={sitesTab} onTabChange={selectSitesTab} screenState={screenState} compact={compact}
-        attackNotice={attackNotice} incidentStatuses={incidentRun.statuses} setIncidentStatuses={setIncidentStatuses} />
+      return <SitesSection tab={sitesTab} onTabChange={selectSitesTab} onOpenTariff={() => onSelect(tariffSection)} screenState={screenState} compact={compact}
+        availableBalance={hostingBalance} onDebitBalance={debitHostingBalance}
+        attackNotice={attackNotice} incidentStatuses={incidentRun.statuses} setIncidentStatuses={setIncidentStatuses}
+        requestedAttackDomains={attackNotice && incidentRun.requestedDomains}
+        onAttackRequestHandled={() => setIncidentRun(current => ({ ...current, requestedDomains: null }))} />
     }
     return null
   }
 
   return (
     <HostingShell
+      hostingBalance={money(hostingBalance)}
       initialSection={initialSection}
       initialScreenState={initialScreenState}
       onSectionChange={selectSection}

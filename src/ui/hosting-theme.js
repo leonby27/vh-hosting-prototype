@@ -13,6 +13,7 @@ function themeTokens(modeId, dark = false) {
     '--hosting-empty-state-background': palette.get('Base/On Background'),
     '--hosting-surface': palette.get('Base/On Background'),
     '--hosting-text': palette.get('Text/Secondary Dark'),
+    '--hosting-text-secondary-light': palette.get('Text/Secondary Light'),
     '--hosting-muted': palette.get('Icons/Secondary'),
     '--hosting-title': palette.get('Text/Primary'),
     '--hosting-text-primary-light': palette.get('Text/Primary Light'),

@@ -181,129 +181,12 @@
   width: max(140px, 43cqi);
 }
 
-.antivirus-linked-domains {
-  --antivirus-domain-entry-height: 28px;
-  --antivirus-domains-collapse-height: 24px;
-  padding-inline-end: 8px;
-  color: color-mix(in srgb, var(--hosting-title) 60%, var(--hosting-text));
-  font-weight: 400;
-}
-
-.sites-mobile-dns .antivirus-linked-domains {
-  color: var(--hosting-secondary);
-}
-
-.antivirus-domains-summary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-block-size: 26px;
-}
-
-.antivirus-domains-summary > span:first-child,
-.antivirus-domain-entry > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.antivirus-domains-count,
-.antivirus-domains-trigger {
-  flex: none;
-}
-
-.sites-page .antivirus-domains-trigger {
-  box-sizing: border-box;
-  min-block-size: 26px;
-  padding: 3px 8px;
-  border: 1px solid var(--hosting-line);
-  border-radius: 8px;
-  color: inherit;
-  font-size: 14px;
-  line-height: 18px;
-  transition: background-color var(--hosting-motion-color) ease;
-}
-
-.sites-page .antivirus-domains-trigger:hover {
-  background: var(--hosting-card-surface);
-}
-
-.sites-page .antivirus-domains-collapse {
-  block-size: var(--antivirus-domains-collapse-height);
-  color: var(--hosting-link-text);
-  font-size: 14px;
-  line-height: 18px;
-}
-
-.sites-page .antivirus-domains-collapse:hover {
-  color: var(--hosting-link-hover);
-}
-
-.sites-page .antivirus-domains-list {
-  padding: 1px 0 0;
-  list-style: none;
-}
-
-.antivirus-domain-entry {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-inline-size: 0;
-  inline-size: fit-content;
-  max-inline-size: 100%;
-  min-block-size: var(--antivirus-domain-entry-height);
-}
-
-.antivirus-domains-summary .antivirus-domain-entry {
-  min-block-size: 26px;
-}
-
-.antivirus-domain-disclosure[data-expanded="false"] .antivirus-domains-summary .antivirus-domain-link {
-  display: none;
-}
-
-.antivirus-domain-entry:is(:hover, :focus-within) {
-  color: var(--hosting-title);
-}
-
-.antivirus-domain-link {
-  position: relative;
-  display: grid;
-  place-items: center;
-  inline-size: 20px;
-  block-size: 20px;
-  box-sizing: border-box;
-  border: 1px solid var(--hosting-line);
-  border-radius: 8px;
-  background: var(--hosting-surface);
-  transition: opacity var(--hosting-motion-fast) ease, background-color var(--hosting-motion-color) ease;
-}
-
-.antivirus-domain-link .sites-icon img {
-  width: 14px;
-  height: 14px;
-}
-
-.antivirus-domain-link:hover {
-  background: var(--hosting-card-surface);
-}
-
-@media (hover: hover) {
-  .antivirus-domain-link {
-    opacity: 0;
-  }
-
-  .antivirus-domain-entry:is(:hover, :focus-within) .antivirus-domain-link {
-    opacity: 1;
-  }
-}
-
 @container sites (width > 560px) {
-  .sites-antivirus .sites-domain-row:has(.antivirus-domain-disclosure) > * {
+  .sites-antivirus .sites-domain-row:has(.linked-domains-disclosure) > * {
     padding-block: 15px;
   }
 
-  .sites-antivirus .sites-domain-row:not([data-selected]):has(.antivirus-domain-disclosure[data-expanded="true"]) {
+  .sites-antivirus .sites-domain-row:not([data-selected]):has(.linked-domains-disclosure[data-expanded="true"]) {
     --sites-domain-row-background: var(--hosting-surface);
     --vh-badge-back: var(--hosting-card-surface);
   }
@@ -393,16 +276,6 @@
 }
 
 @container sites (max-width: 560px) {
-  .antivirus-linked-domains {
-    padding-inline-end: 0;
-    font-size: 13px;
-  }
-
-  .antivirus-domains-summary {
-    gap: 4px;
-    min-block-size: 0;
-  }
-
   .antivirus-intro {
     min-block-size: 0;
   }

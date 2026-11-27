@@ -1,18 +1,21 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import { ModalFrame, PageAlert } from './ui/feedback.jsx'
+import { Dialog, PageAlert, Tooltip } from './ui/feedback.jsx'
 import { Button, IconButton, Link } from './ui/controls.jsx'
 import { Icon } from './ui/Icon.jsx'
+import { Surface } from './ui/layout.jsx'
 import { AnimatedBlock } from './hosting-motion.jsx'
 import { TabList, MenuItem } from './ui/navigation.jsx'
 import { PendingChangesContext, usePendingChanges } from './pending-changes.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
 import { removesAllServiceTargets } from './ServiceChanges.jsx'
 import WarningDialog from './WarningDialog.jsx'
+import { HostingTrialNotice } from './DashboardNotices.jsx'
 import Antivirus from './Antivirus.jsx'
 import NetworkAttackNotice from './NetworkAttackNotice.jsx'
 import MySites from './MySites.jsx'
 import { antivirusStates, getAntivirusPreset } from './antivirus-states.js'
 import { getNetworkProtectionPreset, isNetworkDomainProtected, networkProtectionMonthlyRate as monthlyRate, networkProtectionStates, networkProtectionStatusLabels, saveNetworkProtection } from './network-protection-states.js'
+import { payFromBalance } from './plan-payment-options.js'
 import domainsIcon from './assets/hosting/domains.svg'
 import walletIcon from './assets/hosting/wallet.svg'
 import disableIcon from './assets/plan-changes/disable.svg'
@@ -48,12 +51,13 @@ const demoOriginalAddress = '192.0.2.10'
 const sslPanelUrl = 'https://hosting.timeweb.ru/ssl'
 const supportUrl = 'https://timeweb.com/ru/contacts/'
 const sslFallbackNote = { text: 'Ваш SSL не подключён, работает бесплатный', label: 'Написать в поддержку', href: supportUrl }
+const dnsNote = { text: 'Укажите A-запись' }
 
 const domainNotes = {
-  dns: { text: 'Укажите A-запись:', showAddress: true },
-  'dns-aaaa': { text: 'Укажите A-запись', showAddress: true, suffix: 'и удалите AAAA' },
-  action: { text: 'Разрешите Let’s Encrypt в CAA-записи' },
-  cdn: { text: 'Укажите в CDN IP сервера:', showAddress: true },
+  dns: dnsNote,
+  'dns-aaaa': dnsNote,
+  action: { text: 'Разрешите Let’s Encrypt в CAA-записи', instructionsTitle: 'Разрешите Let’s Encrypt' },
+  cdn: { text: 'Укажите в CDN IP сервера' },
   'ssl-upload': sslFallbackNote,
   'ssl-timeweb': sslFallbackNote,
   'ssl-expired': { text: 'Ваш SSL истёк, работает бесплатный', label: 'Продлить / Купить', href: sslPanelUrl },
@@ -62,15 +66,13 @@ const domainNotes = {
 }
 
 const domainInstructions = {
-  dns: 'Откройте DNS-настройки у провайдера домена и укажите защищённый IP в A-записи.',
-  'dns-aaaa': 'Откройте DNS-настройки у провайдера домена, укажите защищённый IP в A-записи и удалите AAAA-запись.',
-  action: 'Чтобы выпустить бесплатный сертификат, добавьте значение issue “letsencrypt.org” в CAA-записи домена.',
-  cdn: 'Откройте настройки стороннего CDN и укажите защищённый IP в качестве адреса исходного сервера.',
+  action: name => `Укажите issue «letsencrypt.org» в CAA-записи домена ${name}.`,
+  cdn: name => `В настройках CDN для домена ${name} укажите защищённый IP как адрес исходного сервера.`,
 }
 
 const questions = [
   { id: 'how', title: 'Как работает защита?', answer: 'Во время атаки тысячи запросов от ботов могут перегрузить сервер, и сайт перестанет открываться. С защитой запросы к выбранным доменам проходят через фильтры DDoS-Guard, которые отсекают ботов и пропускают посетителей.' },
-  { id: 'domain', title: 'Что сделать с доменом?', answer: 'Может потребоваться обновить DNS-запись или разрешить выпуск сертификата. Нажмите «Как сделать» рядом со статусом домена.' },
+  { id: 'domain', title: 'Что сделать с доменом?', answer: 'Может потребоваться обновить DNS-запись или разрешить выпуск сертификата. Нажмите «Подробнее» рядом со статусом домена.' },
   { id: 'antivirus', title: 'Отличие от антивируса', answer: 'Сетевая защита фильтрует входящий трафик. Антивирус проверяет файлы сайта на вредоносный код.' },
 ]
 
@@ -151,10 +153,12 @@ function ProtectionBanner({ compact, protectedCount, total, renew, showRenewSwit
 
   return (
     <ActiveProtectionBanner
+      className={protectedCount ? undefined : 'sites-protection-inactive'}
       headingId="sites-active-title"
       eyebrow={`${formatPrice(monthlyRate)} / мес. за аккаунт`}
-      title={<>Защита <br className="sites-mobile-copy" />от DDoS включена</>}
-      status={`Под защитой ${formatDomainCount(protectedCount)} из ${total}`}
+      title={protectedCount ? <>Защита <br className="sites-mobile-copy" />от DDoS включена</> : 'Защита не работает'}
+      status={protectedCount ? `Под защитой ${formatDomainCount(protectedCount)} из ${total}` :
+        'Ни один домен не под защитой. Выполните действия, указанные у доменов в списке.'}
       background={asset(compact ? 'active-background-mobile' : 'active-background', 'png')}
       illustration={asset('active-gateway', 'png')}
       renew={renew}
@@ -205,71 +209,143 @@ function ProtectionBanner({ compact, protectedCount, total, renew, showRenewSwit
   )
 }
 
-function ProtectedAddress({ copyLabel, onCopy }) {
-  return (
-    <span className="sites-domain-address">
-      {demoDnsAddress}
-      <IconButton size={24} type="button" aria-label={copyLabel} onClick={onCopy}>
-        <SitesIcon name="copy-dns" color="network-warning" />
-      </IconButton>
-    </span>
-  )
+function waitsForDns(status) {
+  return status === 'dns' || status === 'dns-aaaa'
 }
 
-function DomainNote({ domain, status, onInstructions, onCopyAddress }) {
+function wwwDnsTargets({ name, apexUsesProtectedIp }) {
+  return apexUsesProtectedIp ? `www.${name}` : `${name} и www.${name}`
+}
+
+function DomainNote({ domain, status, onInstructions }) {
   const note = domainNotes[status]
   if (!note) return null
   return (
     <div className="sites-domain-note">
-      <span>
-        {note.text}
-        {note.showAddress && <> <ProtectedAddress copyLabel={`Скопировать IP для ${domain.name}`} onCopy={onCopyAddress} /></>}
-        {note.suffix && ` ${note.suffix}`}
-      </span>
+      <span>{note.text}</span>
       {note.href ? (
         <Link className="sites-text-button" href={note.href} target="_blank" rel="noopener"
           aria-label={`${note.label} для ${domain.name}`}>{note.label}</Link>
       ) : (
-        <Button appearance="text" pressable={false} type="button" className="sites-text-button" aria-haspopup="dialog" aria-label={`Как сделать для ${domain.name}`}
-          onClick={() => onInstructions({ name: domain.name, status })}>Как сделать</Button>
+        <Button appearance="text" pressable={false} type="button" className="sites-text-button" aria-haspopup="dialog" aria-label={`Подробнее для ${domain.name}`}
+          onClick={() => onInstructions({ domain, status })}>Подробнее</Button>
       )}
     </div>
   )
 }
 
-function DomainInstructions({ name, status, onVerify, onClose, onCopyAddress }) {
-  const dialog = useRef(null)
+function DnsRecordRow({ label, address, onCopy, copyLabel = 'Скопировать IP-адрес' }) {
+  return <div className="sites-instructions-row">
+    <span className="sites-instructions-label">{label}</span>
+    <span className="sites-instructions-leader" aria-hidden="true" />
+    <span className="sites-instructions-value">
+      <span className="sites-instructions-ip" title={address}>{address}</span>
+      <Tooltip content={copyLabel}>
+        {id => <IconButton size={24} className="sites-instructions-copy" label={copyLabel}
+          aria-describedby={id} icon={<Icon name="copy-outline" size={16} />}
+          onClick={() => onCopy(address)} />}
+      </Tooltip>
+    </span>
+  </div>
+}
+
+function DomainInstructions({ domain, status, onClose, onCopyAddress }) {
+  const [helpOpen, setHelpOpen] = useState(false)
+  const { name, wwwOriginalAddress } = domain
+  const note = domainNotes[status]
+  const isDns = waitsForDns(status)
+  const showAddress = isDns || status === 'cdn'
+  const recordTarget = wwwOriginalAddress ? `для ${wwwDnsTargets(domain)}` : `домена ${name}`
+  const instruction = isDns
+    ? `Укажите защищённый IP в A-записи ${recordTarget}.${status === 'dns-aaaa' ? ' Удалите запись AAAA.' : ''}`
+    : domainInstructions[status](name)
+
+  if (helpOpen) return (
+    <Dialog key="domain-help" open width={560} title="Что делать, если домену требуется действие?" onClose={onClose}
+      actions={<Button variant="neutral" onClick={() => setHelpOpen(false)}>К инструкции для домена</Button>}>
+      <article className="sites-domain-help">
+        <section>
+          <h3>Ждём DNS</h3>
+          <p>Откройте DNS-настройки у провайдера домена. Укажите защищённый IP в A-записях для адресов из инструкции. Если указан только www, обновите только его запись. Удалите AAAA-запись, если об этом сказано в инструкции.</p>
+          <p>DNS обычно обновляется за 24 часа. Статус домена изменится автоматически.</p>
+          <Link href="https://timeweb.com/ru/docs/virtualnyj-hosting/zaschita-ot-ddos/zashchita-ot-ddos-atak/" target="_blank" rel="noopener noreferrer">Защита от DDoS-атак в справке Timeweb</Link>
+        </section>
+        <section>
+          <h3>Требуется действие</h3>
+          <p>Если нужно разрешить Let’s Encrypt, укажите issue «letsencrypt.org» в CAA-записи. Если сайт работает через сторонний CDN, укажите защищённый IP как адрес исходного сервера в настройках CDN.</p>
+          <Link href="https://timeweb.com/ru/docs/domeny/resursnye-zapisi-domena-dns-zapisi/nastrojka-dns-zapisej/caa/" target="_blank" rel="noopener noreferrer">Настройка CAA-записи в справке Timeweb</Link>
+        </section>
+        <section>
+          <h3>Сертификат SSL или ошибка подключения</h3>
+          <p>Если платный сертификат истёк, продлите его или купите новый. Если сертификат не подключён, бесплатный SSL не продлился или защита не подключилась, обратитесь в поддержку.</p>
+        </section>
+      </article>
+    </Dialog>
+  )
 
   return (
-    <ModalFrame ref={dialog} width={400} className="hosting-dialog sites-dialog" aria-labelledby="sites-instructions-title" onClose={onClose}>
-      <h3 className="hosting-dialog-title" id="sites-instructions-title">Что делать, если домену требуется действие?</h3>
-      <p><strong>{name}</strong></p>
-      <p>{domainInstructions[status]}</p>
-      {domainNotes[status].showAddress && (
-        <p>Защищённый IP <ProtectedAddress copyLabel="Скопировать IP" onCopy={onCopyAddress} /></p>
+    <Dialog
+      open
+      title={note.instructionsTitle ?? note.text}
+      illustration={<img src={asset('domain-settings', 'png')} alt="" />}
+      description={`${instruction} ${status !== 'cdn' ? 'DNS обычно обновляется за 24 часа. ' : ''}Статус изменится автоматически.`}
+      onClose={onClose}
+      actions={<Button variant="outline" onClick={() => setHelpOpen(true)}>Перейти к документации</Button>}
+    >
+      {showAddress && (
+        <Surface level="panel" className="sites-instructions-address">
+          <DnsRecordRow label="IP" address={demoDnsAddress} onCopy={onCopyAddress} />
+        </Surface>
       )}
-      <div className="sites-payment-buttons">
-        <Button type="button" appearance="site-payment" pressable={false} onClick={() => { dialog.current.close(); onVerify(name) }}>Имитировать проверку</Button>
-        <Button type="button" appearance="site-payment" variant="neutral" pressable={false} onClick={() => dialog.current.close()}>Закрыть</Button>
-      </div>
-    </ModalFrame>
+    </Dialog>
   )
 }
 
-function AttackMark() {
-  return <span className="sites-attack-mark" title="Атака"><Icon name="alert-outline" size={16} label="Атака" /></span>
+function AttackMark({ summary = false }) {
+  const content = summary ? 'Среди привязанных доменов есть атакованные' : 'На этот домен идёт DDoS-атака'
+  return <Tooltip className="sites-attack-mark" placement="top" content={content} pressable={!summary}>
+    {id => <span className="sites-attack-icon" role="img" aria-label="Атака" aria-describedby={id}
+      tabIndex={summary ? undefined : 0}>
+      <Icon name="alert-outline" size={16} />
+    </span>}
+  </Tooltip>
 }
 
-function NetworkProtection({ screenState, compact, preset, statuses, setStatuses, attackedDomains, active }) {
+function DomainRestoreInstructions({ domains, onCopy, showDomainNames }) {
+  if (!domains.length) return null
+
+  return <Surface as="ul" level="panel" className="sites-restore-instructions" aria-label="Настройки после отключения защиты">
+    {domains.map(({ domain, pendingDns }) => {
+      const records = domain.externalCdn
+        ? [{ label: 'Укажите IP в CDN', type: 'IP', address: demoOriginalAddress }]
+        : [
+          { label: 'Верните A', type: 'A', address: demoOriginalAddress },
+          ...(domain.originalIpv6 ? [{ label: 'Верните AAAA', type: 'AAAA', address: domain.originalIpv6 }] : []),
+          ...(domain.wwwOriginalAddress && !pendingDns ? [{ label: 'Верните A для www', type: 'A (www)', address: domain.wwwOriginalAddress }] : []),
+        ]
+      return <li key={domain.name}>
+        {showDomainNames && <strong>{domain.name}</strong>}
+        {records.map(({ label, type, address }) => (
+          <DnsRecordRow key={type} label={label} address={address}
+            copyLabel={`Скопировать ${type} для ${domain.name}`} onCopy={onCopy} />
+        ))}
+      </li>
+    })}
+  </Surface>
+}
+
+function NetworkProtection({ screenState, compact, preset, statuses, setStatuses, attackedDomains, active,
+  requestedAttackDomains, onAttackRequestHandled, availableBalance, onDebitBalance }) {
   const [selected, setSelected] = useState(() => new Set(preset.editingDomains
     ? Object.keys(preset.statuses).filter(name => name !== preset.removedDomain)
-    : preset.domains.filter(domain => domain.name !== 'myreviews.ru')
+    : preset.domains.filter(domain => !domain.parentDomain && domain.name !== 'myreviews.ru')
       .slice(0, preset.selected).map(domain => domain.name)))
   const [editingDomains, setEditingDomains] = useState(preset.editingDomains)
   const [extending, setExtending] = useState(false)
   const [dialog, setDialog] = useState(preset.dialog ?? null)
   const [instructions, setInstructions] = useState(null)
   const [payment, setPayment] = useState(null)
+  const [dismissedFailures, setDismissedFailures] = useState([])
   const showToast = useContext(HostingToastContext)
   const [renew, setRenew] = useState(preset.renew)
   const [showRenewSwitch, setShowRenewSwitch] = useState(screenState !== null || !preset.renew)
@@ -295,6 +371,7 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
   const enrolled = Object.keys(statuses)
   const connectionStatuses = Object.values(statuses)
   const failedDomains = enrolled.filter(name => statuses[name] === 'failed')
+  const showFailure = failedDomains.some(name => !dismissedFailures.includes(name))
   const connectingDomains = connectionStatuses.includes('connecting')
   const additions = [...selected].filter(name => !statuses[name])
   const removals = editingDomains ? enrolled.filter(name => !selected.has(name)) : []
@@ -320,11 +397,27 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
   const protectedCount = connectionStatuses.filter(isNetworkDomainProtected).length
   const removingLastDomains = dialog === 'remove-last-domains'
   const disconnectingService = dialog === 'disconnect-service' || removingLastDomains
-  const externalDns = preset.domains.filter(domain => domain.dns !== 'DNS Timeweb' &&
-    (disconnectingService ? enrolled : removals).includes(domain.name))
-  const dnsNotice = externalDns.length
-    ? `Для доменов со сторонним DNS (${externalDns.map(domain => domain.name).join(', ')}) верните A-запись на ${demoOriginalAddress}.`
-    : ''
+  const removalNames = disconnectingService ? enrolled : removals
+  const restorationDomains = preset.domains.flatMap(domain => {
+    if (!removalNames.includes(domain.name)) return []
+    const status = statuses[domain.name]
+    const pendingDns = waitsForDns(status)
+    const restoreCdn = domain.externalCdn && !pendingDns
+    const restoreDns = domain.dns !== 'DNS Timeweb' &&
+      (domain.apexUsesProtectedIp || isNetworkDomainProtected(status))
+    return (domain.externalCdn ? restoreCdn : restoreDns) ? [{ domain, pendingDns }] : []
+  })
+
+  useEffect(() => {
+    if (!active || !hasProtection || !requestedAttackDomains?.length) return
+    setExtending(false)
+    setFilterSpace(0)
+    setSelected(current => new Set([...(editingDomains ? current : Object.keys(statuses)), ...requestedAttackDomains]))
+    setPayment(null)
+    setEditingDomains(true)
+    onAttackRequestHandled()
+    revealProtectionCheckout(document.getElementById('sites-domains-title'))
+  }, [active, hasProtection, requestedAttackDomains, editingDomains, statuses, setFilterSpace, onAttackRequestHandled])
 
   useEffect(() => {
     const pending = timers.current
@@ -347,6 +440,7 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
 
   function simulateActivation(names, next) {
     const connecting = Object.fromEntries(names.map(name => [name, 'connecting']))
+    setDismissedFailures(current => current.filter(name => !names.includes(name)))
     setStatuses(current => ({ ...current, ...connecting }))
     for (const name of names) {
       clearTimeout(timers.current.get(name)?.timeout)
@@ -381,9 +475,9 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
     })
   }
 
-  async function copyDnsAddress() {
+  async function copyDnsAddress(address) {
     try {
-      await navigator.clipboard.writeText(demoDnsAddress)
+      await navigator.clipboard.writeText(address)
       showToast({ message: 'IP скопирован' })
     } catch {
       showToast({ message: 'Не удалось скопировать IP' })
@@ -397,6 +491,10 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
 
   function startPayment(action, { autoRenew, saveCard }) {
     if (!hasPaidCheckout || payment) return false
+    if (action.id === payFromBalance.id && !onDebitBalance(monthlyRate)) {
+      showToast({ message: 'На балансе недостаточно средств.' })
+      return false
+    }
     const transaction = { action, names: extending ? enrolled : additions, total: monthlyRate, autoRenew, saveCard }
     if (action.document) setPayment({ ...transaction, step: 'confirm' })
     else completePayment(transaction)
@@ -457,6 +555,11 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
     showToast({ message: 'Список доменов изменён.', success: true })
   }
 
+  function applyDomainChanges() {
+    if (removals.length) setDialog('remove-domains')
+    else confirmDomainChanges()
+  }
+
   function disableProtection() {
     setSaveState(true)
     setPaidThrough(null)
@@ -472,12 +575,12 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
     setDialog(null)
     if (!confirmed) return
     if (disconnectingService) disableProtection()
+    if (dialog === 'remove-domains') confirmDomainChanges()
     if (dialog === 'transfer') showToast({ message: 'Демо-обращение на перенос создано.', success: true })
   }
 
   return (
     <>
-      {preset.trial && <PageAlert title="Идёт тестовый период хостинга" />}
       {availabilityNotice && (
         <PageAlert
           title={availabilityNotice[0]}
@@ -491,13 +594,14 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
         />
       )}
       <div>
-        <AnimatedBlock open={failedDomains.length > 0 || connectingDomains}>
+        <AnimatedBlock open={showFailure || connectingDomains}>
           <div className="sites-connection-alert-content">
-            {failedDomains.length > 0 ? (
+            {failedDomains.length > 0 && (showFailure || !connectingDomains) ? (
               <PageAlert
                 title="Не удалось подключить защиту"
                 description="В списке доменов отмечено, где возникла ошибка."
                 tone="error"
+                onDismiss={() => setDismissedFailures(failedDomains)}
                 action={<Button as="a" href={supportUrl} target="_blank" rel="noopener" variant="neutral"
                   appearance="alert-action" pressable={false} className="sites-page-alert-button">Написать в поддержку</Button>}
               />
@@ -549,6 +653,8 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
         <SitesTable
           compact={compact}
           domains={preset.domains}
+          matchesSearch={(domain, query) => domain.name.toLowerCase().includes(query) ||
+            (!domain.parentDomain && query.startsWith('www.') && `www.${domain.name.toLowerCase()}`.startsWith(query))}
           empty={emptyDomains}
           statuses={statuses}
           statusLabels={networkProtectionStatusLabels}
@@ -559,9 +665,10 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
           filterSpace={filterSpace}
           onFilterSpaceChange={setFilterSpace}
           onSelection={updateSelection}
-          renderNameSuffix={domain => attackedDomains.includes(domain.name) && <AttackMark />}
+          renderNameSuffix={({ name }) => (attackedDomains.includes(name) ||
+            (preset.attackedDomains?.includes(name) && isNetworkDomainProtected(preset.statuses[name]))) && <AttackMark />}
           renderNote={(domain, status) => domainNotes[status] && (
-            <DomainNote domain={domain} status={status} onInstructions={setInstructions} onCopyAddress={copyDnsAddress} />
+            <DomainNote domain={domain} status={status} onInstructions={setInstructions} />
           )}
         />
       )}
@@ -589,22 +696,19 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
               title: 'Сетевая защита',
               description: 'Отключение для всех доменов аккаунта',
             }] : domainChanges}
-            notices={removals.length ? [{
+            notices={removingAllDomains ? [{
               id: 'remove-protection-domains', tone: 'warning', icon: 'alert',
-              description: [
-                removingAllDomains ? 'При удалении всех доменов услуга «Сетевая защита» отключится.' : 'Защита для выбранных доменов будет снята сразу.',
-                'Деньги за оставшиеся дни оплаченного месяца не возвращаются.',
-                dnsNotice,
-              ].filter(Boolean).join(' '),
+              description: 'При удалении всех доменов услуга «Сетевая защита» отключится. Деньги за оставшиеся дни оплаченного месяца не возвращаются.',
             }] : []}
             serviceChanges={hasCheckout && !hasPaidCheckout
-              ? { disabling: removingAllDomains, onApply: confirmDomainChanges, onDisable: () => setDialog('remove-last-domains') }
+              ? { disabling: removingAllDomains, onApply: applyDomainChanges, onDisable: () => setDialog('remove-last-domains') }
               : undefined}
             total={monthlyRate}
             paymentDescription={extending ? 'Продление на 1 месяц' : formatDomainCount(additions.length)}
             payment={payment}
             paymentContext={JSON.stringify(extending ? enrolled : additions)}
             hasSavedCard={hasSavedCard}
+            availableBalance={availableBalance}
             reveal={extending}
             allowAutoRenew={!hasProtection}
             onStart={startPayment}
@@ -619,23 +723,29 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
       <ProtectionFaq questions={questions} />
       {scrollSpacer}
       {instructions && <DomainInstructions
-        name={instructions.name}
+        domain={instructions.domain}
         status={instructions.status}
         onClose={() => setInstructions(null)}
         onCopyAddress={copyDnsAddress}
-        onVerify={name => simulateActivation([name], { [name]: 'protected' })}
       />}
-      {disconnectingService && (
+      {(disconnectingService || dialog === 'remove-domains') && (
         <WarningDialog
-          title="Отключить сетевую защиту?"
+          width={restorationDomains.length ? 560 : undefined}
+          autoFocusClose={restorationDomains.length > 0}
+          title={disconnectingService ? 'Отключить сетевую защиту?' :
+            removals.length === 1 ? 'Отключить защиту домена?' : 'Отключить защиту доменов?'}
           description={[
-            removingLastDomains ? 'После удаления последнего домена услуга «Сетевая защита» отключится.' : 'Защита будет снята сразу со всех доменов аккаунта.',
-            'Деньги за оставшиеся дни оплаченного месяца не возвращаются.',
-            dnsNotice,
+            removingLastDomains ? 'После удаления последнего домена услуга «Сетевая защита» отключится.' :
+              disconnectingService ? 'Защита будет снята сразу со всех доменов аккаунта.' :
+                `Защита будет отключена для ${removals.join(', ')}.`,
+            disconnectingService && 'Деньги за оставшиеся дни оплаченного месяца не возвращаются.',
           ].filter(Boolean).join(' ')}
           confirmLabel="Отключить"
           onClose={closeDialog}
-        />
+        >
+          <DomainRestoreInstructions domains={restorationDomains} onCopy={copyDnsAddress}
+            showDomainNames={disconnectingService || removals.length > 1} />
+        </WarningDialog>
       )}
       {dialog === 'integrator' && (
         <WarningDialog
@@ -656,7 +766,8 @@ function NetworkProtection({ screenState, compact, preset, statuses, setStatuses
   )
 }
 
-export default function SitesSection({ tab, onTabChange, screenState, compact, attackNotice, incidentStatuses, setIncidentStatuses }) {
+export default function SitesSection({ tab, onTabChange, onOpenTariff, screenState, compact, attackNotice, incidentStatuses, availableBalance, onDebitBalance,
+  setIncidentStatuses, requestedAttackDomains, onAttackRequestHandled }) {
   const antivirusScreenState = antivirusStates.some(({ id }) => id === screenState) || (screenState === 'initial' && tab === 'antivirus')
     ? screenState : null
   const networkScreenState = networkProtectionStates.some(({ id }) => id === screenState) || (screenState === 'initial' && tab === 'network-protection')
@@ -677,13 +788,14 @@ export default function SitesSection({ tab, onTabChange, screenState, compact, a
 
   return (
     <div className="sites-page">
+      <HostingTrialNotice open={tab === 'network-protection' && Boolean(networkPreset.trial)} compact={compact} onPay={onOpenTariff} />
       <header className="sites-heading">
         <h1>Сайты</h1>
         <SiteTabs selected={tab} onSelect={onTabChange} statuses={tabStatuses} compact={compact} />
       </header>
       <div id="sites-panel-mine" className="sites-my-sites" role="tabpanel" aria-labelledby="sites-tab-mine" hidden={tab !== 'mine'}>
         {attackNotice && <NetworkAttackNotice {...attackNotice} onConnect={() => onTabChange('network-protection')} />}
-        <MySites attackedDomains={attackNotice?.domains} renderAttackMark={() => <AttackMark />} />
+        <MySites attackedDomains={attackNotice?.domains} renderAttackMark={summary => <AttackMark summary={summary} />} />
       </div>
       <div id="sites-panel-antivirus" className="sites-protection sites-antivirus" role="tabpanel" aria-labelledby="sites-tab-antivirus" hidden={tab !== 'antivirus'}>
         <Antivirus screenState={antivirusScreenState} compact={compact} preset={antivirusPreset} active={tab === 'antivirus'}
@@ -691,7 +803,9 @@ export default function SitesSection({ tab, onTabChange, screenState, compact, a
       </div>
       <div id="sites-panel-network-protection" className="sites-protection" role="tabpanel" aria-labelledby="sites-tab-network-protection" hidden={tab !== 'network-protection'}>
         <NetworkProtection screenState={networkScreenState} compact={compact} preset={networkPreset} active={tab === 'network-protection'}
-          statuses={networkStatuses} setStatuses={setNetworkStatuses} attackedDomains={attackNotice?.domains ?? []} />
+          availableBalance={availableBalance} onDebitBalance={onDebitBalance}
+          statuses={networkStatuses} setStatuses={setNetworkStatuses} attackedDomains={attackNotice?.domains ?? []}
+          requestedAttackDomains={requestedAttackDomains} onAttackRequestHandled={onAttackRequestHandled} />
       </div>
     </div>
   )

@@ -50,7 +50,7 @@ export default function DashboardMailQuota({ settings, used, onClose, onSave }) 
 
   return (
     <ModalFrame ref={dialog} width={480} className="hosting-dialog hosting-dialog--sheet dashboard-mail-quota" aria-labelledby={`${id}-title`}
-      aria-describedby={`${id}-description`} onClose={onClose}>
+      aria-describedby={`${id}-description`} closeOnBackdrop={!changed} onClose={onClose}>
       <ModalClose className="mail-quota-close" onClick={close} autoFocus />
       <form className="mail-quota-form" onSubmit={save}>
         <div className="mail-quota-body">
