@@ -1,7 +1,8 @@
-import { PopoverMenu, TabList, MenuItem } from './ui/navigation.jsx'
-import { Badge } from './ui/feedback.jsx'
+import { TabList } from './ui/navigation.jsx'
+import { Badge, Dialog } from './ui/feedback.jsx'
 import TariffUsage from './TariffUsage.jsx'
-import { useContext, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Button as SharedButton, IconButton, Stepper } from './ui/controls.jsx'
 import { Surface } from './ui/layout.jsx'
 import { AnimatedBlock } from './hosting-motion.jsx'
@@ -9,11 +10,17 @@ import { usePendingChanges } from './pending-changes.jsx'
 import { HostingToastContext } from './hosting-toast.jsx'
 import PlanChanges from './PlanChanges.jsx'
 import TariffServices, { ServiceSettings, additionalIp, availableServices, packagePrice, packages } from './TariffServices.jsx'
+import { isHostingPlan, planPrice, TariffPeriodOptions, TariffPlanOptions, TariffSheet } from './TariffPlanOptions.jsx'
+import { TariffAccountAlert, TariffParkingDialogs, TariffParkingStatus, TariffReceipt, useParkingTransition } from './TariffScenarioUI.jsx'
+import LeaveCheckoutDialog from './LeaveCheckoutDialog.jsx'
+import { DashboardTrialNotice } from './DashboardNotices.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import { canSaveCard, getPaymentGroup, paymentActions, renewalOption, saveCardOption, savedCard, securePaymentNote } from './plan-payment-options.js'
 import { plusPackage, rubles } from './plan-preview-pricing.js'
 import discount from './assets/plan-changes/discount.png'
+import transferIllustration from './assets/tariff-settings/server-transfer.png'
 import './tariff-settings.css'
+import './tariff-scenarios.css'
 
 const artwork = import.meta.glob('./assets/tariff-settings/*.svg', {
   eager: true, query: '?url', import: 'default',
@@ -50,7 +57,7 @@ const faqs = [
   ['Как управлять тарифом и доп. услугами?', 'Тариф и период оплаты меняются в верхней карточке. Дополнительные ресурсы можно выбрать ниже, а услуги доступны во вкладке «Другие сервисы».'],
   ['Чем отличаются тарифы?', 'У тарифов разные лимиты на сайты, дисковое пространство и нагрузку. Сравните их перед сменой тарифа.'],
 ]
-const tariffPaymentMethods = ['saved-card', 'new-card', 'bank', 'sbp', 'foreign', 'yoomoney']
+const tariffPaymentMethods = ['saved-card', 'saved-sbp', 'new-card', 'bank', 'sbp', 'foreign', 'yoomoney', 'invoice', 'sber']
 const tabs = [['tariff', 'Тариф'], ['services', 'Другие сервисы']]
 
 function Art({ name, className }) {
@@ -66,29 +73,17 @@ function Art({ name, className }) {
   )
 }
 
-function Button({ variant = 'neutral', className = '', children, ...props }) {
-  return <SharedButton appearance="tariff" variant={variant} className={`tariff-button ${className}`.trim()} {...props}>{children}</SharedButton>
-}
-
-function Choices({ label, title, options, value, onSelect, variant }) {
-  return <PopoverMenu className="tariff-disclosure" panelClassName="tariff-menu"
-    preventScroll
-    triggerProps={{ 'aria-label': title }} renderTrigger={props => <Button variant={variant} {...props}>{label}</Button>}>
-    {close => options.map(([key, option]) => (
-      <MenuItem key={key} selected={value === key} onClick={() => {
-        close()
-        onSelect(key)
-      }}>{option}</MenuItem>
-    ))}
-  </PopoverMenu>
-}
-
-function Offer({ title, description, label, onClick, annual }) {
+function AnnualPaymentOffer({ onClick, disabled }) {
   return (
-    <div className={`tariff-offer hosting-reveal${annual ? ' tariff-offer--annual' : ''}`}>
-      <span className="tariff-discount"><img src={discount} alt="" /></span>
-      <div className="tariff-offer-copy"><strong>{title}</strong><p>{description}</p></div>
-      <Button variant="outline" size={annual ? 44 : undefined} onClick={onClick}>{label}</Button>
+    <div className="tariff-offer hosting-reveal">
+      <div className="tariff-offer-content">
+        <span className="tariff-discount"><img src={discount} alt="" /></span>
+        <div className="tariff-offer-copy">
+          <strong>Годовая оплата дешевле на 30 %</strong>
+          <p>316 ₽ в месяц вместо 452 ₽. За год это 1 632 ₽, при том же тарифе и ресурсах</p>
+        </div>
+      </div>
+      <SharedButton appearance="tariff" variant="outline" size={44} disabled={disabled} onClick={onClick}>Перейти на год</SharedButton>
     </div>
   )
 }
@@ -108,7 +103,7 @@ function resourceUsage(resource, quantity) {
   }
 }
 
-function ResourceRow({ resource, quantity, packageId, onAdjust, onInfo }) {
+function ResourceRow({ resource, quantity, packageId, onAdjust, onInfo, disabled }) {
   const { id, name, min, step, unit, info } = resource
   const cost = resourceCost(resource, quantity)
   return (
@@ -116,14 +111,14 @@ function ResourceRow({ resource, quantity, packageId, onAdjust, onInfo }) {
       <div className="tariff-resource-title">
         <span className="tariff-resource-icon"><Art name={`${id}.svg`} /></span>
         <div>
-          <h3>{name}<IconButton size={24} type="button" className="tariff-resource-info" aria-label={`Подробнее: ${name}`} onClick={() => onInfo({ title: name, description: info })}><Art name="info.svg" /></IconButton></h3>
+          <h3>{name}<IconButton disabled={disabled} size={24} type="button" className="tariff-resource-info" aria-label={`Подробнее: ${name}`} onClick={() => onInfo({ title: name, description: info })}><Art name="info.svg" /></IconButton></h3>
           <p className={id === 'mysql' && 6900 / quantity >= 0.85 ? 'tariff-warning' : undefined}>{resourceUsage(resource, quantity)}</p>
         </div>
       </div>
       {step && (
         <Stepper className="tariff-stepper" label={name}
           value={`${number.format(quantity)}${unit && unit !== 'шт.' ? ` ${unit}` : ''}`}
-          atMin={quantity <= min} decreaseLabel={`Уменьшить: ${name}`} increaseLabel={`Увеличить: ${name}`}
+          atMin={disabled || quantity <= min} atMax={disabled} decreaseLabel={`Уменьшить: ${name}`} increaseLabel={`Увеличить: ${name}`}
           onDecrease={() => onAdjust(resource, -step)} onIncrease={() => onAdjust(resource, step)} />
       )}
       <div className="tariff-resource-price">
@@ -136,6 +131,7 @@ function ResourceRow({ resource, quantity, packageId, onAdjust, onInfo }) {
 }
 
 function scrollToReview(heading, focus) {
+  if (!heading) return
   const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
   if (focus) heading.focus({ preventScroll: true })
   heading.scrollIntoView({ behavior, block: 'start' })
@@ -144,14 +140,25 @@ function scrollToReview(heading, focus) {
 export default function TariffSettings({ compact, tab, scenario, onTabChange, onSecurity }) {
   const id = useId()
   const showToast = useContext(HostingToastContext)
-  const [plan, setPlan] = useState('Optimo')
-  const [period, setPeriod] = useState('month')
-  const [quantities, setQuantities] = useState(includedQuantities)
-  const [applied, setApplied] = useState(includedQuantities)
+  const [plan, setPlan] = useState(scenario?.plan ?? 'Optimo')
+  const [selectedPlan, setSelectedPlan] = useState(scenario?.selectedPlan ?? null)
+  const [appliedPeriod, setAppliedPeriod] = useState(scenario?.appliedPeriod ?? 'month')
+  const [period, setPeriod] = useState(scenario?.period ?? appliedPeriod)
+  const [plansOpen, setPlansOpen] = useState(Boolean(scenario?.plansOpen))
+  const [periodOpen, setPeriodOpen] = useState(Boolean(scenario?.periodOpen))
+  const [receipt, setReceipt] = useState(scenario?.receipt ?? null)
+  const [alert, setAlert] = useState(scenario?.alert ?? null)
+  const [debt, setDebt] = useState(scenario?.alert === 'blocked' ? 200 : scenario?.alert === 'deferred' ? 214 : 0)
+  const [unpaid, setUnpaid] = useState(Boolean(scenario?.unpaid))
+  const settings = useRef(null)
+  const [headerNotice, setHeaderNotice] = useState(null)
+  const [leaveOpen, setLeaveOpen] = useState(Boolean(scenario?.leaveOpen))
+  const [quantities, setQuantities] = useState(() => ({ ...includedQuantities, ...scenario?.quantities }))
+  const [applied, setApplied] = useState(() => ({ ...includedQuantities, ...scenario?.appliedResources }))
   const [appliedPackage, setAppliedPackage] = useState(scenario?.appliedPackage ?? null)
   const [packageId, setPackageId] = useState(scenario?.packageId ?? appliedPackage)
   const [appliedServices, setAppliedServices] = useState(() => Object.fromEntries(
-    [additionalIp.id, ...(scenario?.serviceIds ?? [])].map(id => [id, true]),
+    [...(isHostingPlan(plan) ? [additionalIp.id] : []), ...(scenario?.serviceIds ?? [])].map(id => [id, true]),
   ))
   const [services, setServices] = useState(appliedServices)
   const [serviceRenewals, setServiceRenewals] = useState(appliedServices)
@@ -163,8 +170,29 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
   const [renew, setRenew] = useState(true)
   const [save, setSave] = useState(true)
   const [hasSavedCard, setHasSavedCard] = useState(true)
-  const [method, setMethod] = useState(savedCard.id)
+  const [hasSavedSbp, setHasSavedSbp] = useState(Boolean(scenario?.hasSavedSbp))
+  const [method, setMethod] = useState(scenario?.invoice ? 'invoice' : savedCard.id)
   const [dialog, setDialog] = useState(null)
+  const [receiptOpen, setReceiptOpen] = useState(false)
+  const transferPlan = scenario?.transferPlan
+  const [showTransferDialog, setShowTransferDialog] = useState(tab === 'tariff' && Boolean(transferPlan))
+  const completeParking = useCallback(() => {
+    setPlan('Парковка')
+    setSelectedPlan(null)
+    setAppliedPackage(null)
+    setPackageId(null)
+    setAppliedServices({})
+    setServices({})
+    setServiceRenewals({})
+    setApplied(includedQuantities)
+    setQuantities(includedQuantities)
+    setPeriod('month')
+    setAppliedPeriod('month')
+    setPlansOpen(false)
+    setPeriodOpen(false)
+    setAlert('parking-success')
+  }, [])
+  const parking = useParkingTransition(scenario, completeParking)
   const changes = resources.filter(resource => quantities[resource.id] !== applied[resource.id])
 
   function changeCost(resource) {
@@ -178,27 +206,47 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
   const packageCost = packageChanged ? Math.max(0, (selectedPackage?.amount ?? 0) - (currentPackage?.amount ?? 0)) : 0
   const resourceTotal = changes.reduce((sum, resource) => sum + packagePrice(changeCost(resource), packageId), 0)
   const serviceTotal = serviceChanges.reduce((sum, service) => sum + (services[service.id] ? serviceCost(service) : 0), 0)
-  const total = resourceTotal + packageCost + serviceTotal
-  const hasChanges = changes.length > 0 || packageChanged || serviceChanges.length > 0
+  const planChanged = Boolean(selectedPlan && selectedPlan !== plan)
+  const periodChanged = period !== appliedPeriod
+  const scheduleChanged = planChanged || periodChanged
+  const effectivePlan = selectedPlan ?? plan
+  const annualQuote = !planChanged && scenario?.annualQuote ? scenario.annualQuote : Math.round(planPrice(effectivePlan) * 12 * 0.7)
+  const planCost = scheduleChanged
+    ? period === 'year' ? annualQuote
+      : planChanged ? Math.max(0, planPrice(effectivePlan) - planPrice(plan)) : 0
+    : 0
+  const reduction = changes.reduce((sum, resource) => sum + Math.max(0, resourceCost(resource, applied[resource.id]) - resourceCost(resource, quantities[resource.id])), 0)
+  const payable = resourceTotal + packageCost + serviceTotal + planCost + (scheduleChanged ? debt : 0)
+  const total = Math.max(0, payable - reduction)
+  const refund = Math.max(0, reduction - payable)
+  const hasChanges = changes.length > 0 || packageChanged || serviceChanges.length > 0 || scheduleChanged
   const navigate = usePendingChanges(hasChanges && !cancelApplyScroll.current, {
-    title: tab === 'services' ? 'Прервать оформление услуг?' : 'Прервать изменение тарифа?',
-    description: tab === 'services' ? 'Выбранные пакеты и изменения услуг будут сброшены.' : 'Выбранные изменения тарифа будут сброшены.',
+    title: tab === 'services' ? 'Прервать оформление услуг?' : 'Прервать настройку тарифа?',
+    description: tab === 'services' ? 'Выбранные пакеты и изменения услуг будут сброшены.' : 'Выбранные параметры не сохранятся',
+    checkoutLabel: tab === 'tariff' ? 'Вернуться к настройке тарифа' : undefined,
+    leaveLabel: tab === 'tariff' ? 'Прервать настройку тарифа' : undefined,
     revealCheckout: () => scrollToReview(review.current, true),
   }, resetChanges)
   const plusOfferTotal = changes.reduce((sum, resource) => sum + packagePrice(changeCost(resource), plusPackage.id), plusPackage.amount)
-  const paymentGroup = getPaymentGroup(method, hasSavedCard, false, tariffPaymentMethods)
+  const paymentGroup = { ...getPaymentGroup(method, hasSavedCard, hasSavedSbp, tariffPaymentMethods), defaultMenuOpen: scenario?.paymentMenuOpen }
   const showSaveOption = total > 0 && canSaveCard(paymentGroup.value)
 
   useEffect(() => () => cancelApplyScroll.current?.(), [])
+
+  useLayoutEffect(() => {
+    if (!unpaid || compact) return
+    setHeaderNotice(settings.current.closest('.hosting-shell')?.querySelector('[data-dashboard-header-notice]'))
+  }, [compact, unpaid])
 
   useEffect(() => {
     const request = pendingReviewScroll.current
     if (!request) return
     pendingReviewScroll.current = null
-    if (tab !== 'services' || !hasChanges) return
+    if (tab !== request.tab || !hasChanges) return
 
     const heading = review.current
-    const block = heading.closest('.hosting-animated-block')
+    const block = heading?.closest('.hosting-animated-block')
+    if (!block) return
     let cancelled = false
 
     function scrollWhenReady() {
@@ -210,7 +258,7 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
     else scrollWhenReady()
 
     return () => { cancelled = true }
-  }, [tab, packageId, services, hasChanges])
+  }, [tab, selectedPlan, packageId, services, hasChanges])
 
   function selectTab(next, focus = false, keepChanges = false) {
     if (next === tab) return
@@ -229,28 +277,73 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
     }))
   }
 
-  function confirmPeriod(value) {
-    if (value === period) return
-    setDialog({
-      title: 'Изменить период оплаты?',
-      description: value === 'year' ? 'Годовая оплата составит 3 792 ₽.' : 'Помесячная оплата составит 452 ₽ / мес.',
-      confirmLabel: 'Изменить период',
-      apply: () => setPeriod(value),
-    })
+  function selectPeriod(value) {
+    setPeriod(value)
+    if (compact) setPeriodOpen(false)
   }
 
-  function confirmPlan(value) {
-    if (value === plan) return
-    setDialog({
-      title: `Перейти на тариф ${value}?`,
-      description: 'Изменение применяется к демонстрационному аккаунту.',
-      confirmLabel: 'Сменить тариф',
-      apply: () => setPlan(value),
-    })
+  function showTrialPayment() {
+    function openPeriodOptions() {
+      if (tab !== 'tariff') onTabChange('tariff')
+      setPeriodOpen(true)
+      requestAnimationFrame(() => scrollToReview(document.getElementById(`${id}-period`), false))
+    }
+
+    if (tab === 'tariff') openPeriodOptions()
+    else navigate(openPeriodOptions)
   }
 
-  function applyChanges() {
+  function selectPlan(value) {
+    if (value === transferPlan) {
+      setPlansOpen(false)
+      setShowTransferDialog(true)
+      return
+    }
+    if (value === 'Парковка') {
+      setPlansOpen(false)
+      parking.open()
+      return
+    }
+    if (value !== plan) pendingReviewScroll.current = { tab: 'tariff', focus: true }
+    setSelectedPlan(value === plan ? null : value)
+    if (value === 'Почтовый') setPeriod('month')
+    if (compact) setPlansOpen(false)
+  }
+
+  function handleAlertAction(notice) {
+    if (notice.amount) {
+      setDialog({
+        title: `Погасить ${rubles(notice.amount)}?`,
+        description: 'В прототипе можно имитировать погашение задолженности.',
+        confirmLabel: 'Имитировать оплату',
+        apply: () => { setDebt(0); setAlert(null) },
+      })
+    } else {
+      setPlansOpen(true)
+      if (alert === 'payment-failed') setAlert(null)
+    }
+  }
+
+  function applyChanges({ immediate = false } = {}) {
     function commitChanges() {
+      if (scheduleChanged) {
+        setPlan(effectivePlan)
+        setSelectedPlan(null)
+        setAppliedPeriod(period)
+        setPlansOpen(false)
+        setPeriodOpen(false)
+        if (debt) { setDebt(0); setAlert(null) }
+      }
+      if (planChanged && !isHostingPlan(effectivePlan)) {
+        setAppliedPackage(null)
+        setPackageId(null)
+        setAppliedServices({})
+        setServices({})
+        setServiceRenewals({})
+        setApplied(includedQuantities)
+        setQuantities(includedQuantities)
+        return
+      }
       setApplied(quantities)
       setAppliedPackage(packageId)
       setAppliedServices(services)
@@ -260,7 +353,7 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
     }
 
     if (cancelApplyScroll.current) return
-    if (!packageChanged || !selectedPackage || window.scrollY <= 0) {
+    if (immediate || !packageChanged || !selectedPackage || window.scrollY <= 0) {
       commitChanges()
       return
     }
@@ -304,7 +397,9 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
     else if (group === 'saveOptions') setSave(patch.checked)
     else if (group === 'paymentGroups') setMethod(patch.value)
     else if (group === 'items' && patch.removed) {
-      if (id === 'package') setPackageId(appliedPackage)
+      if (id === 'tariff-plan') setSelectedPlan(null)
+      else if (id === 'tariff-period') setPeriod(appliedPeriod)
+      else if (id === 'package') setPackageId(appliedPackage)
       else if (serviceChanges.some(service => service.id === id)) updateService(id, appliedServices[id])
       else setQuantities(current => ({ ...current, [id]: applied[id] }))
     }
@@ -315,19 +410,39 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
       if (compact) selectTab('services', true, true)
       else setPackageId(plusPackage.id)
     } else if (action.id === 'unlink-payment-method') {
-      setHasSavedCard(false)
-      setMethod(getPaymentGroup(method, false, false, tariffPaymentMethods).value)
+      const cardRemains = hasSavedCard && action.method !== 'saved-card'
+      const sbpRemains = hasSavedSbp && action.method !== 'saved-sbp'
+      setHasSavedCard(cardRemains)
+      setHasSavedSbp(sbpRemains)
+      setMethod(getPaymentGroup(method, cardRemains, sbpRemains, tariffPaymentMethods).value)
     } else if (action.demoPayment) {
-      applyChanges()
-      if (showSaveOption && save) {
-        setHasSavedCard(true)
-        setMethod(savedCard.id)
-      }
-    } else if (action.id === 'apply') confirmApply()
+      confirmPayment()
+    } else if (action.document) setReceiptOpen(true)
+    else if (action.id === 'apply') confirmApply()
+  }
+
+  function confirmPayment() {
+    setUnpaid(false)
+    if (tab === 'tariff') {
+      const periodDetail = period === 'year' ? 'годовой' : 'помесячный'
+      const items = [
+        ...(scheduleChanged ? [{ title: `Тариф ${effectivePlan} ${periodDetail}`, detail: period === 'year' ? 'до 10.01.2028' : 'Помесячная оплата' }] : []),
+        ...changes.map(resource => ({
+          title: resource.name,
+          detail: `${quantities[resource.id] > applied[resource.id] ? '+' : '−'}${number.format(Math.abs(quantities[resource.id] - applied[resource.id]))}${resource.unit ? ` ${resource.unit}` : ''} сверх лимита`,
+        })),
+      ]
+      setReceipt({ amount: total, items })
+    }
+    applyChanges({ immediate: tab === 'tariff' })
+    if (showSaveOption && save) {
+      setHasSavedCard(true)
+      setMethod(savedCard.id)
+    }
   }
 
   function updateService(id, enabled) {
-    if (!enabled && appliedServices[id]) pendingReviewScroll.current = { focus: true }
+    if (!enabled && appliedServices[id]) pendingReviewScroll.current = { tab: 'services', focus: true }
     setServices(current => ({ ...current, [id]: Boolean(enabled) }))
   }
 
@@ -336,7 +451,7 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
       scrollToReview(review.current, focus)
       return
     }
-    pendingReviewScroll.current = { focus }
+    pendingReviewScroll.current = { tab: 'services', focus }
     setPackageId(nextPackageId)
   }
 
@@ -368,6 +483,8 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
     setQuantities(applied)
     setPackageId(appliedPackage)
     setServices(appliedServices)
+    setSelectedPlan(null)
+    setPeriod(appliedPeriod)
   }
 
   function renderChanges() {
@@ -382,6 +499,15 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
             } : undefined}
             animateHeight={false}
             items={[
+              ...(planChanged ? [{
+                id: 'tariff-plan', title: `Тариф ${effectivePlan}`, description: `Вместо тарифа ${plan}`,
+                amount: rubles(periodChanged ? 0 : planCost), removable: true,
+              }] : []),
+              ...(periodChanged ? [{
+                id: 'tariff-period', title: `Тариф ${effectivePlan}`, description: period === 'year' ? 'Ежегодная оплата' : 'Помесячная оплата',
+                amount: rubles(period === 'month' && appliedPeriod === 'year' ? annualQuote : planCost), detail: '/ год', removable: true,
+              }] : []),
+              ...(debt && scheduleChanged ? [{ id: 'tariff-debt', title: 'Задолженность', amount: rubles(debt) }] : []),
               ...changes.map(resource => {
                 const difference = quantities[resource.id] - applied[resource.id]
                 const cost = changeCost(resource)
@@ -390,7 +516,7 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
                   id: resource.id,
                   title: resource.name,
                   description: units + (difference > 0 ? ' сверх тарифа' : ''),
-                  amount: rubles(packagePrice(cost, packageId)),
+                  amount: rubles(difference < 0 ? resourceCost(resource, applied[resource.id]) - resourceCost(resource, quantities[resource.id]) : packagePrice(cost, packageId)),
                   detail: '/ мес.',
                   removable: true,
                   removeLabel: `Убрать изменение: ${resource.name}`,
@@ -415,21 +541,30 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
                 removeLabel: `Убрать изменение: ${service.title}`,
               })),
             ]}
-            notices={tab === 'tariff' && !packageId && !appliedPackage && plusOfferTotal < resourceTotal ? [{
+            notices={[...(tab === 'tariff' && !packageId && !appliedPackage && plusOfferTotal < resourceTotal ? [{
               id: 'plus-offer',
               tone: 'info',
               icon: 'discount',
               title: `С пакетом Плюс это расширение стоило бы ${rubles(plusOfferTotal)} вместо ${rubles(resourceTotal)}`,
               description: 'Скидка 20 % на ресурсы и настройка SSL-сертификата.',
               action: { id: 'add-plus', label: compact ? 'Посмотреть пакет' : plusActionLabel },
-            }] : []}
-            totals={[{ label: 'К оплате', amount: rubles(total), live: true }]}
+            }] : []), ...(periodChanged && period === 'month' ? [{
+              id: 'month-recalculation', tone: 'info',
+              title: 'Оплаченного хватит до 18 апреля 2027 вместо 22 мая 2027',
+              description: 'Годовая скидка перестанет действовать. Срок сократится на 34 дня — с 274 до 240.',
+            }] : [])]}
+            totals={[
+              { label: refund ? 'Вернётся на баланс' : periodChanged && period === 'month' ? 'К доплате' : 'К оплате', amount: rubles(refund || total), live: true },
+              ...(selectedPackage && resourceTotal > 0 ? [{ label: `Скидка ${selectedPackage.discount}% по пакету`, amount: `− ${rubles(changes.reduce((sum, resource) => sum + changeCost(resource), 0) - resourceTotal)}` }] : []),
+            ]}
             renewalOptions={total > 0 ? [renewalOption(renew)] : []}
             paymentGroups={total > 0 ? [paymentGroup] : []}
             saveOptions={showSaveOption ? [saveCardOption(save)] : []}
-            actions={[total > 0 ? paymentActions[paymentGroup.value] : { id: 'apply', label: 'Применить изменения' }]}
+            actions={[total > 0 ? { ...paymentActions[paymentGroup.value], defaultOpen: scenario?.invoice } : {
+              id: 'apply', label: periodChanged && period === 'month' ? 'Перейти на помесячную оплату' : 'Применить настройки',
+            }]}
             paymentNote={total > 0 ? securePaymentNote : undefined}
-            paymentContext={JSON.stringify([quantities, packageId, services])}
+            paymentContext={JSON.stringify([quantities, packageId, services, selectedPlan, period])}
             onChange={handleChange}
             onAction={handleAction}
           />
@@ -448,38 +583,94 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
     )
   }
 
+  const hostingPlan = isHostingPlan(plan)
+  const parkingPlan = plan === 'Парковка'
+  const inlinePlans = !hostingPlan || !compact
+  const checklistOnly = parking.stage === 'checklist' && !parking.skipDeletion
+  const planOptions = {
+    plan, selected: selectedPlan, compact, transferPlan, onSelect: selectPlan,
+    showAll: scenario?.showAllPlans, disabled: parking.locked,
+  }
+
+  function closeReceipt() {
+    setReceipt(null)
+    requestAnimationFrame(() => document.getElementById(`${id}-tariff-title`)?.focus())
+  }
+
   return (
-    <div className="tariff-settings">
+    <div className="tariff-settings" ref={settings}>
+      {!compact && unpaid && headerNotice && createPortal(<DashboardTrialNotice onPay={showTrialPayment} compact={false} />, headerNotice)}
+      {compact && <AnimatedBlock open={unpaid}>
+        <DashboardTrialNotice onPay={showTrialPayment} compact />
+      </AnimatedBlock>}
       <TabList size={35} idPrefix={id} label="Настройки тарифа" value={tab}
         navigate={navigate} onChange={onTabChange} tabs={tabs.map(([key, label]) => ({
           id: key, label, elementId: `${id}-${key}`, panelId: `${id}-${key}-panel`,
           count: key === 'services' ? Number(Boolean(appliedPackage)) + Object.values(appliedServices).filter(Boolean).length : undefined,
+          disabled: key === 'services' && parking.locked,
         }))} />
       <div className="tariff-panel" role="tabpanel" id={`${id}-tariff-panel`} aria-labelledby={`${id}-tariff`} hidden={tab !== 'tariff'}>
-        <h1>Настройки тарифа</h1>
-        <Surface appearance="card" elevation="card" padding="none" className="tariff-overview tariff-card hosting-reveal">
-          <div className="tariff-overview-cell">
-            <div><p>Тариф</p><strong>{plan}</strong><p>{period === 'year' ? 'годовая' : 'помесячная'} оплата, {currentPackage ? `с пакетом «${currentPackage.title}»` : 'без пакета'}</p></div>
-            <Choices label={compact ? 'Сменить' : 'Сменить тариф'} title="Сменить тариф" variant="primary" value={plan} options={['Optimo', 'Year'].map(name => [name, name])} onSelect={confirmPlan} />
+        <AnimatedBlock open={Boolean(alert)}>
+          <div className="tariff-top-state">
+            <TariffAccountAlert kind={alert} compact={compact} plan={plan} onAction={handleAlertAction} onDismiss={() => setAlert(null)} />
           </div>
-          <TariffUsage className="tariff-usage tariff-overview-cell" />
-          <div className="tariff-overview-cell">
-            <div><p>Оплачен до</p><strong>12 сентября</strong><p>Это ещё 16 дней</p></div>
-            <Choices label="Изменить период" value={period} options={[['month', 'Месяц'], ['year', 'Год']]} onSelect={confirmPeriod} />
-          </div>
-        </Surface>
-        <AnimatedBlock open={period === 'month'}>
-          <Offer annual title="Годовая оплата дешевле на 30 %" description="316 ₽ / мес. вместо 452 ₽. За год это 1 632 ₽, при том же тарифе и ресурсах" label="Перейти на год" onClick={() => confirmPeriod('year')} />
         </AnimatedBlock>
-
+        <AnimatedBlock open={parking.showChecklist}>
+          <div className="tariff-top-state"><TariffParkingStatus transition={parking} /></div>
+        </AnimatedBlock>
+        {receipt ? <div className="tariff-receipt-section"><TariffReceipt receipt={receipt} onClose={closeReceipt} /></div> : <>
+        <h1 id={`${id}-tariff-title`} tabIndex={-1}>Настройки тарифа</h1>
+        <Surface appearance="card" elevation="card" padding="none" data-parking={parkingPlan || undefined} className="tariff-overview tariff-card hosting-reveal">
+          <div className="tariff-overview-cell">
+            <div><p>Тариф</p><strong>{plan}</strong><p>{parkingPlan ? 'Бесплатно, период не выбирается' : hostingPlan
+              ? `${appliedPeriod === 'year' ? 'годовая' : 'помесячная'} оплата, ${currentPackage ? `с пакетом «${currentPackage.title}»` : 'без пакета'}`
+              : 'Помесячно. Оплачено до 12.01.2027'}</p></div>
+            {hostingPlan && <SharedButton variant={plansOpen ? 'neutral' : 'primary'} disabled={parking.locked}
+              aria-expanded={plansOpen} aria-controls={inlinePlans ? `${id}-plans` : undefined} aria-haspopup={!inlinePlans ? 'dialog' : undefined}
+              aria-label={plansOpen ? 'Закрыть выбор тарифа' : 'Сменить тариф'}
+              onClick={() => setPlansOpen(value => !value)}>{plansOpen ? 'Закрыть' : compact ? 'Сменить' : 'Сменить тариф'}</SharedButton>}
+            {!hostingPlan && !parkingPlan && <SharedButton variant="neutral" aria-expanded={periodOpen} aria-controls={`${id}-period`}
+              onClick={() => setPeriodOpen(value => !value)}>{periodOpen ? 'Закрыть' : 'Изменить период'}</SharedButton>}
+          </div>
+          {hostingPlan ? <>
+            <TariffUsage className="tariff-usage tariff-overview-cell" tariffCpu={unpaid && !compact ? 430 : 0} />
+            <div className="tariff-overview-cell">
+              <div><p>Оплачен до</p><strong>{unpaid ? 'Не оплачено' : appliedPeriod === 'year' ? '10 января 2028' : '12 сентября'}</strong>
+                <p>{unpaid ? compact ? 'до 12 декабря' : 'Тестовый период до 12 декабря' : appliedPeriod === 'month' ? 'Это ещё 16 дней' : null}</p></div>
+              <SharedButton variant="neutral" disabled={parking.locked} aria-expanded={periodOpen} aria-controls={`${id}-period`}
+                aria-label={periodOpen ? 'Закрыть выбор периода' : 'Изменить период'}
+                onClick={() => setPeriodOpen(value => !value)}>{periodOpen ? 'Закрыть' : 'Изменить период'}</SharedButton>
+            </div>
+          </> : <>
+            <div className="tariff-overview-cell"><div><p>{parkingPlan ? 'Домены' : 'Ящики и домены'}</p><strong>{parkingPlan ? 'Нет' : 'Без ограничений'}</strong>
+              {parkingPlan && <p>Оплачивается отдельно, тариф на это не влияет</p>}</div></div>
+            <div className="tariff-overview-cell"><div><p>Абонентская плата</p><strong>{rubles(planPrice(plan))}</strong>
+              <p>{parkingPlan ? 'в месяц' : 'в месяц за 10 ГБ почты'}</p></div></div>
+          </>}
+        </Surface>
+        <AnimatedBlock open={periodOpen && !parkingPlan}>
+          <div id={`${id}-period`} className="tariff-inline-options"><TariffPeriodOptions value={period} onChange={selectPeriod} /></div>
+        </AnimatedBlock>
+        {inlinePlans && <AnimatedBlock open={!hostingPlan || plansOpen}>
+          <div id={`${id}-plans`} className="tariff-inline-options"><TariffPlanOptions {...planOptions} /></div>
+        </AnimatedBlock>}
+        {compact && <TariffSheet title={hostingPlan ? 'Сменить тариф' : 'Куда можно перейти'} open={plansOpen && tab === 'tariff'} onClose={() => setPlansOpen(false)}>
+          <TariffPlanOptions {...planOptions} inDialog />
+        </TariffSheet>}
+        <AnimatedBlock open={hostingPlan && !checklistOnly && appliedPeriod === 'month'}>
+          <AnnualPaymentOffer disabled={parking.locked} onClick={() => { setPeriod('year'); setPeriodOpen(true) }} />
+        </AnimatedBlock>
+        <AnimatedBlock open={hostingPlan && !checklistOnly}>
         <section className="tariff-section hosting-reveal">
           <h2>Ресурсы <Badge className="tariff-badge" tone="success">{selectedPackage ? `−${selectedPackage.discount} % по пакету «${selectedPackage.title}»` : '−20 % по пакету «Плюс»'}</Badge></h2>
           <Surface as="ul" appearance="card" elevation="card" padding="none" className="tariff-card tariff-resources">
-            {resources.map(resource => <ResourceRow key={resource.id} resource={resource} quantity={quantities[resource.id]} packageId={packageId} onAdjust={changeQuantity} onInfo={setDialog} />)}
+            {resources.map(resource => <ResourceRow key={resource.id} disabled={parking.locked} resource={resource} quantity={quantities[resource.id]} packageId={packageId} onAdjust={changeQuantity} onInfo={setDialog} />)}
           </Surface>
         </section>
 
-        {tab === 'tariff' && renderChanges()}
+        </AnimatedBlock>
+        {tab === 'tariff' && !parking.locked && renderChanges()}
+        </>}
         {renderFaq()}
       </div>
       <div className="tariff-panel" role="tabpanel" id={`${id}-services-panel`} aria-labelledby={`${id}-services`} hidden={tab !== 'services'}>
@@ -504,6 +695,25 @@ export default function TariffSettings({ compact, tab, scenario, onTabChange, on
         if (confirmed) dialog.apply?.()
         setDialog(null)
       }} />}
+      {tab === 'tariff' && <TariffParkingDialogs transition={parking} compact={compact} />}
+      {leaveOpen && <LeaveCheckoutDialog title="Прервать настройку тарифа?" description="Выбранные параметры не сохранятся"
+        checkoutLabel="Вернуться к настройке тарифа" leaveLabel="Прервать настройку тарифа"
+        onClose={action => {
+          setLeaveOpen(false)
+          if (action === 'leave') resetChanges()
+          if (action === 'checkout' && review.current) requestAnimationFrame(() => scrollToReview(review.current, true))
+        }} />}
+      <Dialog open={receiptOpen} title="Демо-квитанция сформирована" description={`Сумма к оплате — ${rubles(total)}.`}
+        onClose={() => setReceiptOpen(false)} actions={<SharedButton onClick={() => { setReceiptOpen(false); confirmPayment() }}>Имитировать оплату</SharedButton>} />
+      {transferPlan && <Dialog
+        open={showTransferDialog}
+        title="Для смены тарифа обратитесь в поддержку"
+        description={`Чтобы перейти на тариф «${transferPlan}», нужно перенести аккаунт на другой сервер. На нём защита от DDoS недоступна. Обратитесь в поддержку, чтобы согласовать переход.`}
+        illustration={<img src={transferIllustration} alt="" />}
+        onClose={() => setShowTransferDialog(false)}
+        actions={<SharedButton as="a" href="https://timeweb.com/ru/contacts/" target="_blank" rel="noopener noreferrer"
+          onClick={() => setShowTransferDialog(false)}>Обратиться в поддержку</SharedButton>}
+      />}
     </div>
   )
 }

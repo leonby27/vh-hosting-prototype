@@ -1,5 +1,4 @@
 .hosting-shell dialog.top-up-dialog {
-  inline-size: min(580px, calc(100% - 32px));
   max-inline-size: none;
   max-block-size: calc(100dvh - 32px);
   margin: auto;
@@ -12,7 +11,6 @@
 }
 
 .hosting-shell dialog.top-up-dialog[data-for-clients] {
-  inline-size: min(540px, calc(100% - 32px));
   --hosting-motion-fast: 0ms;
   --hosting-motion-color: 0ms;
   --hosting-motion-menu: 0ms;

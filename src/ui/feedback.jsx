@@ -33,14 +33,14 @@ export function Toast({ children, icon, action, onDismiss, announce = true }) {
   </div>
 }
 
-export function PageAlert({ title, description, tone = 'warning', action, onDismiss, icon, actionPosition = 'side' }) {
+export function PageAlert({ title, description, tone = 'warning', action, onDismiss, icon, actionPosition = 'side', className = '' }) {
   const actionBelow = actionPosition === 'below'
   const actionButton = !action || isValidElement(action) ? action : <Button variant="neutral" appearance="alert-action"
-    pressable={false} className="sites-page-alert-button" onClick={action.onClick}>{action.label}</Button>
+    size={action.size} pressable={false} className="sites-page-alert-button" onClick={action.onClick}>{action.label}</Button>
   return (
-    <div className="vh-alert-container">
+    <div className={`vh-alert-container ${className}`.trim()}>
       <section className="sites-page-alert hosting-reveal" data-tone={tone} aria-label={title}>
-        {icon ? <span className="sites-page-alert-icon sites-page-alert-custom-icon">{icon}</span> :
+        {icon === false ? null : icon ? <span className="sites-page-alert-icon sites-page-alert-custom-icon">{icon}</span> :
           pageAlertIcons[tone] ? <img className="sites-page-alert-icon" src={pageAlertIcons[tone]} width="28" height="28" alt="" />
           : <Icon name={tone === 'success' ? 'success-solid' : 'info-solid'} size={28} className="sites-page-alert-icon" />}
         <div className="sites-page-alert-copy">
@@ -64,8 +64,8 @@ export function PageAlert({ title, description, tone = 'warning', action, onDism
   )
 }
 
-export function Badge({ tone = 'neutral', className = '', children, ...props }) {
-  return <span {...props} className={`vh-badge ${className}`.trim()} data-tone={tone}>{children}</span>
+export function Badge({ tone = 'neutral', size, className = '', children, ...props }) {
+  return <span {...props} className={`vh-badge ${className}`.trim()} data-tone={tone} data-size={size}>{children}</span>
 }
 
 export function StatusBadge({ tone = 'success', code, children }) {
@@ -178,7 +178,7 @@ export function ModalClose({ label = 'Закрыть окно', icon = <AssetIco
   return <IconButton size={32} label={label} icon={icon} {...props} />
 }
 
-export function ModalFrame({ open = true, ref, className = '', ...props }) {
+export function ModalFrame({ open = true, ref, className = '', width, ...props }) {
   const dialog = useRef(null)
   useImperativeHandle(ref, () => dialog.current, [])
   useLayoutEffect(() => {
@@ -186,17 +186,17 @@ export function ModalFrame({ open = true, ref, className = '', ...props }) {
     if (open && !node.open) node.showModal()
     if (!open && node.open) node.close()
   }, [open])
-  return <dialog {...props} className={`vh-modal ${className}`.trim()} ref={dialog} />
+  return <dialog {...props} data-modal-width={width} className={`vh-modal ${className}`.trim()} ref={dialog} />
 }
 
 export function ProgressBar({ label, className = '', ...props }) {
   return <progress {...props} aria-label={label} className={`vh-progress-bar ${className}`.trim()} />
 }
 
-export function Dialog({ open, title, description, onClose, children, actions, className = '', closeOnBackdrop = false, illustration }) {
+export function Dialog({ open, title, description, onClose, children, actions, className = '', closeOnBackdrop = false, illustration, width }) {
   const id = useId()
 
-  return <ModalFrame className={`vh-dialog ${className}`.trim()} open={Boolean(open)} aria-labelledby={`${id}-title`}
+  return <ModalFrame width={width} className={`vh-dialog ${className}`.trim()} open={Boolean(open)} aria-labelledby={`${id}-title`}
     aria-describedby={description ? `${id}-description` : undefined}
     onClick={event => {
       if (!closeOnBackdrop || event.target !== event.currentTarget) return
@@ -209,10 +209,10 @@ export function Dialog({ open, title, description, onClose, children, actions, c
       onClose()
     }}>
     <ModalClose className="vh-dialog-close" onClick={onClose} />
-    {illustration}
+    {illustration && <div className="vh-dialog-illustration">{illustration}</div>}
     <h2 className="hosting-dialog-title" id={`${id}-title`}>{title}</h2>
-    {description && <p id={`${id}-description`}>{description}</p>}
+    {description && <p className="vh-dialog-description" id={`${id}-description`}>{description}</p>}
     {children}
-    {actions !== false && <div className="vh-dialog-actions">{actions ?? <Button variant="secondary" onClick={onClose}>Закрыть</Button>}</div>}
+    {actions && <div className="vh-dialog-actions">{actions}</div>}
   </ModalFrame>
 }

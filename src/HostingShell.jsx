@@ -657,7 +657,8 @@ export default function HostingShell({
         }}
         previewView={previewView} onPreviewChange={changePreview} />
       <HostingToast toast={toast} setToast={setToast} />
-      {leaveDialog && <LeaveCheckoutDialog title={leaveDialog.title} description={leaveDialog.description} onClose={action => {
+      {leaveDialog && <LeaveCheckoutDialog title={leaveDialog.title} description={leaveDialog.description}
+        checkoutLabel={leaveDialog.checkoutLabel} leaveLabel={leaveDialog.leaveLabel} onClose={action => {
         setLeaveDialog(null)
         if (action === 'checkout') {
           setMenuOpen(false)

@@ -151,8 +151,8 @@ export function PaymentOptionLabel({ option, hint = option.hint, icon }) {
   )
 }
 
-function OtherPaymentMethods({ option, value, selected, onChange, onAction }) {
-  const { id, open, close: closeMenu, setOpen, containerProps, triggerProps } = useMenuDisclosure({ preventScroll: true })
+function OtherPaymentMethods({ option, value, selected, onChange, onAction, defaultOpen }) {
+  const { id, open, close: closeMenu, setOpen, containerProps, triggerProps } = useMenuDisclosure({ preventScroll: true, defaultOpen })
   const panel = useRef(null)
   const [unlinkChoice, setUnlinkChoice] = useState(null)
   const current = selected && option.choices.find(choice => choice.id === value)
@@ -262,6 +262,7 @@ function PaymentGroup({ group, onChange, onAction }) {
             selected={!selectedCard}
             onChange={onChange}
             onAction={onAction}
+            defaultOpen={group.defaultMenuOpen}
           />
         ) : (
           <SelectionCard key={option.id} className={option.wide ? 'plan-payment-option plan-payment-option--wide' : 'plan-payment-option'}
@@ -278,8 +279,8 @@ function isPaymentAction(action) {
   return action.demoPayment || action.document || action.id === 'invoice'
 }
 
-function InvoiceAction({ label, amount = '', disabled, busy }) {
-  const [open, setOpen] = useState(false)
+function InvoiceAction({ label, amount = '', disabled, busy, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen)
   const trigger = useRef(null)
   const heading = useRef(null)
   const restoreFocus = useRef(false)
@@ -380,6 +381,7 @@ export default function PlanChanges({
   const [agreedToTerms, setAgreedToTerms] = useState(true)
   const [pendingAction, setPendingAction] = useState(null)
   const [failedAction, setFailedAction] = useState(null)
+  const hasPaymentAction = actions.some(isPaymentAction)
   const summary = Boolean(items.length || nextCharge || notices.length || renewalOptions.length)
   const payment = Boolean(adjustments.length || totals.length || paymentGroups.length || saveOptions.length || actions.length || actionDescription || paymentNote)
 
@@ -491,37 +493,37 @@ export default function PlanChanges({
                   ))}
                 </dl>
               )}
-              {(paymentGroups.length > 0 || saveOptions.length > 0) && (
+              {paymentGroups.length > 0 && (
                 <div className="plan-payment-methods">
                   {paymentGroups.map(group => (
                     <PaymentGroup key={group.id} group={group} onChange={value => change('paymentGroups', group.id, { value })} onAction={performAction} />
                   ))}
-                  {saveOptions.length > 0 && (
-                    <div className="plan-check-group">
-                      {saveOptions.map(option => <CheckLine key={option.id} option={option} onChange={checked => change('saveOptions', option.id, { checked })} />)}
-                    </div>
-                  )}
                 </div>
               )}
-              {(actions.length > 0 || actionDescription) && (
+              {(actions.length > 0 || actionDescription || saveOptions.length > 0) && (
                 <div className="plan-actions">
-                  {actions.some(isPaymentAction) && (
-                    <div className="plan-check-line plan-payment-consent">
-                      <Choice as="span" size={20}
-                        id={consentId}
-                        aria-labelledby={`${consentId}-label`}
-                        checked={agreedToTerms}
-                        disabled={Boolean(pendingAction)}
-                        onChange={event => setAgreedToTerms(event.target.checked)}
-                      />
-                      <span className="plan-check-text">
-                        <span id={`${consentId}-label`}>
-                          <label htmlFor={consentId}>Согласен с</label>{' '}
-                          <Link href="https://timeweb.com/ru/services/hosting/rules/" target="_blank" rel="noopener">правилами</Link>
-                          {' и '}
-                          <Link href="https://timeweb.com/ru/support/documents/" target="_blank" rel="noopener">условиями</Link>
-                        </span>
-                      </span>
+                  {(hasPaymentAction || saveOptions.length > 0) && (
+                    <div className="plan-payment-checks">
+                      {hasPaymentAction && (
+                        <div className="plan-check-line plan-payment-consent">
+                          <Choice as="span" size={20}
+                            id={consentId}
+                            aria-labelledby={`${consentId}-label`}
+                            checked={agreedToTerms}
+                            disabled={Boolean(pendingAction)}
+                            onChange={event => setAgreedToTerms(event.target.checked)}
+                          />
+                          <span className="plan-check-text">
+                            <span id={`${consentId}-label`}>
+                              <label htmlFor={consentId}>Согласен с</label>{' '}
+                              <Link href="https://timeweb.com/ru/services/hosting/rules/" target="_blank" rel="noopener">правилами</Link>
+                              {' и '}
+                              <Link href="https://timeweb.com/ru/support/documents/" target="_blank" rel="noopener">условиями</Link>
+                            </span>
+                          </span>
+                        </div>
+                      )}
+                      {saveOptions.map(option => <CheckLine key={option.id} option={option} onChange={checked => change('saveOptions', option.id, { checked })} />)}
                     </div>
                   )}
                   {actions.map(action => {
@@ -534,6 +536,7 @@ export default function PlanChanges({
                           amount={totals[0]?.amount}
                           disabled={disabled}
                           busy={Boolean(pendingAction)}
+                          defaultOpen={action.defaultOpen}
                         />
                       )
                     }

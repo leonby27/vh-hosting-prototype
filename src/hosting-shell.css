@@ -179,14 +179,6 @@ html:has(.hosting-scroll-spacer) {
   pointer-events: none;
 }
 
-.hosting-dialog {
-  --vh-modal-width: 400px;
-}
-
-.hosting-shell[data-view="mobile"] .hosting-dialog {
-  inline-size: calc(min(100%, var(--hosting-preview-width)) - 32px);
-}
-
 .hosting-shell[data-view="mobile"] .hosting-toast {
   inset-inline-end: max(16px, calc((100% - var(--hosting-preview-width)) / 2 + 16px));
   max-inline-size: calc(min(100%, var(--hosting-preview-width)) - 32px);

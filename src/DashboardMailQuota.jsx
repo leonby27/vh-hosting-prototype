@@ -49,14 +49,14 @@ export default function DashboardMailQuota({ settings, used, onClose, onSave }) 
   }
 
   return (
-    <ModalFrame ref={dialog} className="hosting-dialog hosting-dialog--sheet dashboard-mail-quota" aria-labelledby={`${id}-title`}
+    <ModalFrame ref={dialog} width={480} className="hosting-dialog hosting-dialog--sheet dashboard-mail-quota" aria-labelledby={`${id}-title`}
       aria-describedby={`${id}-description`} onClose={onClose}>
       <ModalClose className="mail-quota-close" onClick={close} autoFocus />
       <form className="mail-quota-form" onSubmit={save}>
         <div className="mail-quota-body">
           <div className="mail-quota-heading">
             <h2 id={`${id}-title`} className="hosting-dialog-title">Почтовая квота</h2>
-            <p id={`${id}-description`} className="mail-quota-description">Размер дискового пространства для почты</p>
+            <p id={`${id}-description`} className="vh-dialog-description">Размер дискового пространства для почты</p>
           </div>
           <div className="mail-quota-entry">
             <div className="mail-quota-controls">

@@ -79,6 +79,10 @@
   --vh-button-line-height: 16px;
 }
 
+.vh-button[data-appearance="alert-action"][data-size="32"] {
+  --vh-button-padding: 7px 10px;
+}
+
 :is(.hosting-shell[data-theme="light"], [data-vh-theme="light"]) .vh-button[data-appearance="alert-action"] {
   --vh-button-back-override: rgb(255 255 255 / 85%);
   --vh-button-hover-override: var(--hosting-light);

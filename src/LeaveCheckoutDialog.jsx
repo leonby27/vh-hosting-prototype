@@ -4,7 +4,7 @@ import { ModalClose, ModalFrame } from './ui/feedback.jsx'
 import basket from './assets/checkout/shopping-basket.png'
 import './leave-checkout-dialog.css'
 
-export default function LeaveCheckoutDialog({ title, description, onClose }) {
+export default function LeaveCheckoutDialog({ title, description, checkoutLabel = 'Перейти к оплате', leaveLabel = 'Прервать оплату', onClose }) {
   const id = useId()
   const dialog = useRef(null)
 
@@ -22,8 +22,8 @@ export default function LeaveCheckoutDialog({ title, description, onClose }) {
           </div>
         </div>
         <div className="hosting-leave-actions">
-          <Button size={44} type="submit" value="checkout" autoFocus>Перейти к оплате</Button>
-          <Button variant="outline" size={44} type="submit" value="leave">Прервать оплату</Button>
+          <Button size={44} type="submit" value="checkout" autoFocus>{checkoutLabel}</Button>
+          <Button variant="outline" size={44} type="submit" value="leave">{leaveLabel}</Button>
         </div>
       </form>
       <ModalClose className="hosting-leave-close" onClick={() => dialog.current.close('stay')} />

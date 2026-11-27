@@ -1,11 +1,6 @@
 .hosting-shell dialog.hosting-leave-checkout {
-  inline-size: min(440px, calc(100% - 32px));
   padding: 40px;
   border: 0;
-}
-
-.hosting-shell[data-view="mobile"] dialog.hosting-leave-checkout {
-  inline-size: calc(min(100%, var(--hosting-preview-width)) - 32px);
 }
 
 .hosting-leave-checkout form,

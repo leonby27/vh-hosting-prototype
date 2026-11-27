@@ -156,7 +156,7 @@ export function ServiceSettings({ service, ptr, renew, onSave, onClose }) {
   const dialog = useRef(null)
 
   return (
-    <ModalFrame ref={dialog} className="hosting-dialog tariff-ip-dialog" aria-labelledby={id} onClose={onClose}>
+    <ModalFrame ref={dialog} width={400} className="hosting-dialog tariff-ip-dialog" aria-labelledby={id} onClose={onClose}>
       <form onSubmit={event => {
         event.preventDefault()
         const form = new FormData(event.currentTarget)

@@ -7,6 +7,7 @@ import Dashboard from './Dashboard.jsx'
 import DashboardConcept from './DashboardConcept.jsx'
 import { dashboardConceptSection, dashboardStates, isDashboardSection, typicalDashboard } from './dashboard-variants.js'
 import TariffSettings from './TariffSettings.jsx'
+import { tariffStates, tariffServiceStates } from './tariff-states.js'
 import { topUpStates } from './balance-top-up-states.js'
 import PlanChangesPreview from './PlanChangesPreview.jsx'
 import { planChangeScenarios } from './PlanChangesScenarios.jsx'
@@ -28,14 +29,6 @@ const planChangesStates = [
   { id: 'sufficient-balance', label: 'Достаточно средств на балансе', requiresPreset: true },
   ...planChangeScenarios.map(scenario => ({ id: `scenario-${scenario.id}`, label: scenario.title })),
 ]
-const tariffServiceStates = [
-  { id: 'services-plus', label: 'Подключён пакет «Плюс»', appliedPackage: 'plus' },
-  { id: 'services-premium', label: 'Подключён пакет «Премиум»', appliedPackage: 'premium' },
-  { id: 'services-checkout', label: 'Подключение пакета «Плюс»', packageId: 'plus' },
-  { id: 'services-upgrade', label: 'Переход на «Премиум»', appliedPackage: 'plus', packageId: 'premium' },
-  { id: 'services-downgrade', label: 'Переход на «Плюс»', appliedPackage: 'premium', packageId: 'plus' },
-  { id: 'services-connected', label: 'Подключены дополнительные услуги', serviceIds: ['backups', 'builder'] },
-]
 
 const dashboardAttackStates = networkAttackStates.filter(({ id }) => id === 'protection-attack-multiple')
 
@@ -48,7 +41,10 @@ function getPrototypeStates(section, tab) {
   if (Object.values(integratorPages).includes(section)) return integratorStates
   if (isDashboardSection(section)) return [...dashboardStates, ...topUpStates, ...dashboardAttackStates]
   if (section === planChangesSection) return planChangesStates
-  if (section === tariffSection && (!tab || tab === 'services')) return tariffServiceStates
+  if (section === tariffSection) {
+    if (!tab) return [...tariffStates, ...tariffServiceStates]
+    return tab === 'tariff' ? tariffStates : tariffServiceStates
+  }
   if (section === apiAgentsSection) {
     if (!tab) return [apiKeysPreset, apiJournalEmptyPreset]
     if (tab === 'keys') return [apiKeysPreset]
@@ -200,7 +196,7 @@ function HostingApp() {
         startsWithSufficientBalance={screenState === 'sufficient-balance'} scenario={scenario} />
     }
     if (section === tariffSection) {
-      const scenario = tariffServiceStates.find(state => state.id === screenState)
+      const scenario = getPrototypeStates(section).find(state => state.id === screenState)
       return <TariffSettings compact={compact} tab={tariffTab} scenario={scenario}
         onTabChange={selectTariffTab} onSecurity={tab => onSelect(sitesSection, tab)} />
     }

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
-export function useMenuDisclosure({ disabled = false, preventScroll = false, open: controlledOpen, onOpenChange } = {}) {
+export function useMenuDisclosure({ disabled = false, preventScroll = false, open: controlledOpen, defaultOpen = false, onOpenChange } = {}) {
   const id = useId()
-  const [requestedOpen, setOpen] = useState(false)
+  const [requestedOpen, setOpen] = useState(defaultOpen)
   const container = useRef(null)
   const trigger = useRef(null)
   const open = (controlledOpen ?? requestedOpen) && !disabled

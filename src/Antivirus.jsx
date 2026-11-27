@@ -298,7 +298,7 @@ function AntivirusReport({ statuses, onClose }) {
   const dialog = useRef(null)
 
   return (
-    <ModalFrame className="hosting-dialog sites-dialog antivirus-report" ref={dialog} aria-labelledby="antivirus-report-title" onClose={onClose}>
+    <ModalFrame width={400} className="hosting-dialog sites-dialog antivirus-report" ref={dialog} aria-labelledby="antivirus-report-title" onClose={onClose}>
       <h3 className="hosting-dialog-title" id="antivirus-report-title">Отчёт антивируса</h3>
       <p>Статусы проверок в демо-режиме.</p>
       <ul>

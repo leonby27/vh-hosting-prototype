@@ -489,22 +489,42 @@
 .vh-hint > .vh-focus:focus-visible { outline-color: var(--vh-white); }
 
 .vh-modal {
-  inline-size: min(var(--vh-modal-width, 440px), calc(100% - 32px));
+  inline-size: min(var(--vh-modal-width, 440px), calc(min(100%, var(--hosting-preview-width, 100%)) - 32px));
   box-sizing: border-box;
-  padding: 24px;
+  padding: 40px;
   font: inherit;
   color: var(--hosting-title);
   background: var(--hosting-surface);
-  border: 1px solid var(--hosting-line);
+  border: 0;
   border-radius: 16px;
 }
+.vh-modal[data-modal-width="400"] { --vh-modal-width: 400px; }
+.vh-modal[data-modal-width="480"] { --vh-modal-width: 480px; }
+.vh-modal[data-modal-width="560"] { --vh-modal-width: 560px; }
 .vh-modal::backdrop { background: rgb(0 0 0 / 56%); }
 .vh-modal .hosting-dialog-title { margin: 0; font: 700 24px / 32px var(--hosting-font, Stem, system-ui, sans-serif); }
 .vh-dialog { max-block-size: calc(100% - 32px); overflow: auto; }
-.vh-dialog > .hosting-dialog-title { margin: 0 32px 8px 0; }
+.vh-dialog > .hosting-dialog-title { margin: 0 0 8px; text-align: center; }
 .vh-dialog p { color: var(--vh-muted); }
+.vh-modal .vh-dialog-description {
+  margin: 0;
+  color: var(--hosting-secondary);
+  font: 400 16px / 20px var(--hosting-font, Stem, system-ui, sans-serif);
+  text-align: center;
+}
 .vh-dialog-close { position: absolute; top: 12px; right: 12px; }
-.vh-dialog-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: 8px; margin-top: 20px; }
+.vh-dialog-illustration {
+  inline-size: 80px;
+  block-size: 80px;
+  margin: 0 auto 8px;
+}
+.vh-dialog-illustration > img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+}
+.vh-dialog-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-block-start: 24px; }
 
 :where(.vh-surface) {
   padding: var(--vh-surface-padding, 12px);
@@ -855,7 +875,25 @@ textarea.vh-text-input::-webkit-resizer { background: transparent; }
   font-weight: var(--vh-badge-weight, 400);
 }
 .vh-badge[data-tone="success"] { --vh-badge-back: var(--hosting-plan-success-back); --vh-badge-text: var(--hosting-plan-credit); }
+.vh-badge[data-size="22"] {
+  --vh-badge-radius: 15px;
+  --vh-badge-weight: 500;
+  font-size: 12px;
+  line-height: 14px;
+}
+.vh-badge[data-size="40"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 40px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  line-height: 18px;
+  font-weight: 500;
+}
 .vh-badge[data-tone="info"] { --vh-badge-back: var(--hosting-network-progress-back); --vh-badge-text: var(--hosting-link-text); }
+.vh-badge[data-tone="accent"] { --vh-badge-back: var(--vh-button-secondary-accent-back); --vh-badge-text: var(--vh-button-secondary-accent-text); }
 .vh-badge[data-tone="warning"] { --vh-badge-back: var(--hosting-plan-warning-back); --vh-badge-text: var(--hosting-network-warning); }
 .vh-badge[data-tone="danger"] { --vh-badge-back: var(--hosting-alert-error-back); --vh-badge-text: var(--hosting-plan-error-text); }
 .vh-badge[data-tone="critical"] { --vh-badge-back: var(--hosting-plan-danger); --vh-badge-text: var(--hosting-light); }

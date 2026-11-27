@@ -10,6 +10,7 @@ import { removesAllServiceTargets } from './ServiceChanges.jsx'
 import WarningDialog from './WarningDialog.jsx'
 import Antivirus from './Antivirus.jsx'
 import NetworkAttackNotice from './NetworkAttackNotice.jsx'
+import MySites from './MySites.jsx'
 import { antivirusStates, getAntivirusPreset } from './antivirus-states.js'
 import { getNetworkProtectionPreset, isNetworkDomainProtected, networkProtectionMonthlyRate as monthlyRate, networkProtectionStates, networkProtectionStatusLabels, saveNetworkProtection } from './network-protection-states.js'
 import domainsIcon from './assets/hosting/domains.svg'
@@ -240,7 +241,7 @@ function DomainInstructions({ name, status, onVerify, onClose, onCopyAddress }) 
   const dialog = useRef(null)
 
   return (
-    <ModalFrame ref={dialog} className="hosting-dialog sites-dialog" aria-labelledby="sites-instructions-title" onClose={onClose}>
+    <ModalFrame ref={dialog} width={400} className="hosting-dialog sites-dialog" aria-labelledby="sites-instructions-title" onClose={onClose}>
       <h3 className="hosting-dialog-title" id="sites-instructions-title">Что делать, если домену требуется действие?</h3>
       <p><strong>{name}</strong></p>
       <p>{domainInstructions[status]}</p>
@@ -680,18 +681,9 @@ export default function SitesSection({ tab, onTabChange, screenState, compact, a
         <h1>Сайты</h1>
         <SiteTabs selected={tab} onSelect={onTabChange} statuses={tabStatuses} compact={compact} />
       </header>
-      <div id="sites-panel-mine" className={attackNotice ? 'sites-my-sites' : 'hosting-sheet'} role="tabpanel" aria-labelledby="sites-tab-mine" hidden={tab !== 'mine'}>
-        {attackNotice && <>
-          <NetworkAttackNotice {...attackNotice} onConnect={() => onTabChange('network-protection')} />
-          <ul className="sites-my-domain-list hosting-sheet" aria-label="Домены моих сайтов">
-            {networkPreset.domains.map(domain => (
-              <li key={domain.name}>
-                <span>{domain.name}</span>
-                {attackNotice.domains.includes(domain.name) && <AttackMark />}
-              </li>
-            ))}
-          </ul>
-        </>}
+      <div id="sites-panel-mine" className="sites-my-sites" role="tabpanel" aria-labelledby="sites-tab-mine" hidden={tab !== 'mine'}>
+        {attackNotice && <NetworkAttackNotice {...attackNotice} onConnect={() => onTabChange('network-protection')} />}
+        <MySites attackedDomains={attackNotice?.domains} renderAttackMark={() => <AttackMark />} />
       </div>
       <div id="sites-panel-antivirus" className="sites-protection sites-antivirus" role="tabpanel" aria-labelledby="sites-tab-antivirus" hidden={tab !== 'antivirus'}>
         <Antivirus screenState={antivirusScreenState} compact={compact} preset={antivirusPreset} active={tab === 'antivirus'}

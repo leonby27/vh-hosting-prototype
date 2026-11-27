@@ -35,24 +35,6 @@
   padding-block-end: var(--hosting-section-gap);
 }
 
-.sites-page .sites-my-domain-list {
-  list-style: none;
-  padding: 0;
-}
-
-.sites-my-domain-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-block-size: 52px;
-  padding-inline: 16px;
-  overflow-wrap: anywhere;
-}
-
-.sites-my-domain-list li + li {
-  border-block-start: 1px solid var(--hosting-line);
-}
-
 .sites-domain-name-line {
   display: flex;
   align-items: center;

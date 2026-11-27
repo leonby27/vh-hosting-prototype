@@ -311,8 +311,8 @@ export function IntegratorClients({ demo, compact, createOpen, onCloseCreate, on
       </div>
     </section>
     <Dialog open={createOpen} className="integrator-create-account" title="Создать аккаунт"
-      description="Пароль для входа придёт на указанный email." actions={false} onClose={closeCreate}
-      illustration={<img className="integrator-create-account-icon" src={createAccountIcon} alt="" width="80" height="80" />}>
+      description="Пароль для входа придёт на указанный email." onClose={closeCreate}
+      illustration={<img src={createAccountIcon} alt="" />}>
       <form className="integrator-create-account-form" onSubmit={createClient}>
         <TextField label="Email" type="email" autoComplete="email" required value={email}
           error={duplicate ? 'Аккаунт с таким email уже есть' : ''} onChange={event => setEmail(event.target.value)} />

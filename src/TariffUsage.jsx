@@ -10,8 +10,9 @@ const dashboardOtherUsage = [
   { label: 'БД', used: 2, limit: 3 },
 ]
 
-export default function TariffUsage({ className, dashboard = false, diskWarning = false }) {
-  const usage = dashboard ? [diskWarning ? fullDashboardDisk : dashboardDisk, ...dashboardOtherUsage] : tariffUsage
+export default function TariffUsage({ className, dashboard = false, diskWarning = false, tariffCpu = 0 }) {
+  const usage = dashboard ? [diskWarning ? fullDashboardDisk : dashboardDisk, ...dashboardOtherUsage]
+    : tariffUsage.map(item => item === tariffUsage[2] ? { ...item, used: tariffCpu } : item)
   return <div className={className}>
     {usage.map(({ label, used, limit, unit = '', tone }) => (
       <div key={label} data-tone={tone}>

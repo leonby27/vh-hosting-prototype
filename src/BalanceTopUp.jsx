@@ -233,6 +233,7 @@ export default function BalanceTopUp({
   return (
     <ModalFrame
       ref={dialog}
+      width={560}
       className={`hosting-dialog top-up-dialog${mobileSheet ? ' hosting-dialog--sheet' : ''}`}
       data-for-clients={forClients || undefined}
       data-credit-in-description={creditInDescription || undefined}

@@ -1,9 +1,7 @@
 .hosting-shell .dashboard-mail-quota {
-  inline-size: min(480px, calc(100% - 32px));
   max-block-size: calc(100dvh - 32px);
   padding: 40px;
   overflow: auto;
-  border: 0;
 }
 
 .mail-quota-close {
@@ -22,13 +20,6 @@
 .mail-quota-form { gap: 24px; }
 .mail-quota-body { gap: 16px; }
 .mail-quota-heading { gap: 8px; text-align: center; }
-
-.mail-quota-description {
-  margin: 0;
-  color: var(--hosting-secondary);
-  font-size: 16px;
-  line-height: 20px;
-}
 
 .mail-quota-entry,
 .mail-quota-controls,

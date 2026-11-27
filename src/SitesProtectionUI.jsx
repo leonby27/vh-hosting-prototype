@@ -387,7 +387,7 @@ export function ProtectionCheckout({
   )
 }
 
-export function ProtectionFaq({ questions }) {
+export function ProtectionFaq({ questions, icon = <SitesIcon name="faq" color="icon-secondary" /> }) {
   const id = useId()
   const [selection, setSelection] = useState(null)
 
@@ -401,7 +401,7 @@ export function ProtectionFaq({ questions }) {
   return (
     <aside className="sites-faq hosting-reveal" aria-label="Частые вопросы">
       <div className="sites-faq-bar">
-        <p><SitesIcon name="faq" color="icon-secondary" />Частые вопросы</p>
+        <p>{icon}Частые вопросы</p>
         <div>
           {questions.map(question => (
             <Button appearance="text" pressable={false} type="button" key={question.id} aria-expanded={selection?.id === question.id && selection.expanded} aria-controls={`${id}-${question.id}`} onClick={() => toggleQuestion(question.id)}>

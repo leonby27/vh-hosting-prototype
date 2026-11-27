@@ -423,8 +423,6 @@
 
 .integrator-metrics dt { font-weight: 400; }
 
-.integrator-requisites-dialog { --vh-modal-width: 720px; }
-
 .integrator-requisites-dialog .integrator-metrics {
   font-size: 16px;
   line-height: 20px;
@@ -552,21 +550,8 @@
   gap: 12px;
 }
 
-.integrator-create-account-icon {
-  display: block;
-  object-fit: contain;
-  margin: 0 auto 8px;
-}
-
-.integrator-create-account > .hosting-dialog-title {
-  margin: 0 0 8px;
-  text-align: center;
-}
-
-.integrator-create-account > p {
-  margin: 0 0 24px;
-  text-align: center;
-  font-weight: 400;
+.integrator-create-account > .vh-dialog-description {
+  margin-block-end: 24px;
 }
 
 .integrator-create-account-form {
@@ -579,8 +564,7 @@
 }
 
 .integrator-edit-account > .hosting-dialog-title {
-  margin: 0 0 24px;
-  text-align: center;
+  margin-block-end: 24px;
 }
 
 .integrator-edit-account-form {

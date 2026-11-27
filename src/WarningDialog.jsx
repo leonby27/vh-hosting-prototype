@@ -28,8 +28,9 @@ export default function WarningDialog({ title, description, confirmLabel, onClos
           </div>
         </div>
         <div className="hosting-warning-actions">
-          <Button variant="neutral" type="submit" value="cancel">{confirmLabel ? 'Отменить' : 'Понятно'}</Button>
-          {confirmLabel && <Button tone="danger" type="submit" value="confirm">{confirmLabel}</Button>}
+          {confirmLabel
+            ? <Button tone="danger" type="submit" value="confirm">{confirmLabel}</Button>
+            : <Button variant="neutral" type="submit" value="cancel">Понятно</Button>}
         </div>
       </form>
       <ModalClose className="hosting-warning-close" onClick={() => dialog.current.close('cancel')} />

@@ -187,7 +187,7 @@
   align-items: flex-start;
   flex-direction: column;
   gap: 6px;
-  margin-block-end: calc(12px - var(--dashboard-section-gap));
+  margin-block-end: calc(12px - var(--dashboard-section-gap, 0px));
   padding: 12px;
   border-radius: 16px;
   font-size: 14px;
